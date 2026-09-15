@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"on-secondary":"#ffffff","tertiary":"#4b49c9","on-surface":"#1a1b1f","secondary":"#006e28","surface-container-lowest":"#ffffff","tertiary-fixed":"#e2dfff","on-surface-variant":"#414753","error-container":"#ffdad6","on-primary-fixed":"#001b3f","surface-container-low":"#f4f3f8","outline":"#717785","surface-tint":"#005cbb","on-tertiary-fixed-variant":"#3631b4","surface-bright":"#faf8fe","secondary-fixed":"#72fe88","on-primary-container":"#fcfbff","on-error-container":"#93000a","tertiary-container":"#6563e3","background":"#faf8fe","outline-variant":"#c1c6d6","on-secondary-container":"#00732a","surface-container-highest":"#e3e2e7","primary-fixed-dim":"#abc7ff","on-primary-fixed-variant":"#00458f","surface-container":"#eeedf3","on-tertiary-container":"#fefaff","on-tertiary":"#ffffff","inverse-primary":"#abc7ff","inverse-on-surface":"#f1f0f5","on-primary":"#ffffff","primary-container":"#0071e3","surface":"#faf8fe","primary":"#0059b5","on-secondary-fixed-variant":"#00531c","on-tertiary-fixed":"#0c006a","primary-fixed":"#d7e2ff","surface-container-high":"#e9e7ed","tertiary-fixed-dim":"#c2c1ff","secondary-fixed-dim":"#53e16f","inverse-surface":"#2f3034","on-secondary-fixed":"#002107","surface-variant":"#e3e2e7","on-error":"#ffffff","on-background":"#1a1b1f","error":"#ba1a1a","secondary-container":"#6ffb85","surface-dim":"#dad9df"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"gutter-2xl":"32px","sidebar-width":"260px","gutter-xs":"4px","gutter-md":"12px","gutter-base":"16px","gutter-lg":"20px","margin-tablet":"24px","margin-mobile":"16px","inspector-width":"300px","gutter-xl":"24px","margin-desktop":"32px","gutter-sm":"8px"},"fontFamily":{"headline-lg-mobile":["Inter"],"title":["Inter"],"headline-lg":["Inter"],"body-sm":["Inter"],"display":["Inter"],"caption":["Inter"],"headline-md":["Inter"],"label-md":["Inter"],"headline-sm":["Inter"],"body-md":["Inter"],"display-mobile":["Inter"],"body-lg":["Inter"],"label-sm":["Inter"]},"fontSize":{"headline-lg-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.014em","fontWeight":"600"}],"title":["17px",{"lineHeight":"22px","letterSpacing":"-0.004em","fontWeight":"600"}],"headline-lg":["32px",{"lineHeight":"38px","letterSpacing":"-0.016em","fontWeight":"600"}],"body-sm":["13px",{"lineHeight":"18px","letterSpacing":"0em","fontWeight":"400"}],"display":["56px",{"lineHeight":"64px","letterSpacing":"-0.022em","fontWeight":"600"}],"caption":["10px",{"lineHeight":"12px","letterSpacing":"0.02em","fontWeight":"500"}],"headline-md":["24px",{"lineHeight":"30px","letterSpacing":"-0.012em","fontWeight":"600"}],"label-md":["13px",{"lineHeight":"16px","letterSpacing":"0em","fontWeight":"500"}],"headline-sm":["20px",{"lineHeight":"26px","letterSpacing":"-0.008em","fontWeight":"600"}],"body-md":["15px",{"lineHeight":"21px","letterSpacing":"-0.002em","fontWeight":"400"}],"display-mobile":["38px",{"lineHeight":"46px","letterSpacing":"-0.019em","fontWeight":"600"}],"body-lg":["17px",{"lineHeight":"24px","letterSpacing":"-0.003em","fontWeight":"400"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.01em","fontWeight":"500"}]}}}}</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><aside class="fixed left-0 top-0 h-screen w-sidebar-width z-50 flex flex-col justify-between bg-surface-container-low/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] select-none"><div class="flex flex-col flex-1 min-h-0"><div class="pt-gutter-base px-gutter-base pb-gutter-md flex items-center gap-gutter-sm"><span class="w-3 h-3 rounded-full bg-error inline-block opacity-85 hover:opacity-100 transition-opacity cursor-pointer"></span><span class="w-3 h-3 rounded-full bg-secondary-fixed inline-block opacity-85 hover:opacity-100 transition-opacity cursor-pointer"></span><span class="w-3 h-3 rounded-full bg-secondary inline-block opacity-85 hover:opacity-100 transition-opacity cursor-pointer"></span></div><div class="px-gutter-base py-gutter-sm flex items-center justify-between"><div class="flex items-center gap-gutter-sm"><img alt="Momentum OS App Icon" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1WsfBb6ejjtr-5WptE0xDcQpWz94S_vr6yqEdLbBb4BEMWd_ZGWc-woaRXW4AFSS0XCu2NyfFCpJwOvSr4LWgIphSb2hPlulNGzfGOoJLS33JkMgVEnXkq1sYzv8l-8NMsEPrJ5IVWL0Ii4lfqSkqidnl0IfWigvmJ_A8uR1R6iiU6RQu8DwY1__rETrvZxnD_xCsxYE-hkc_ChXuxgzC65eO8bzTWiBckB7tIYTUAsKVIPVAGTiat2Mos"/><span class="font-title text-title text-on-surface tracking-tight">Momentum</span></div><span class="px-gutter-xs py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-caption text-caption uppercase tracking-wider">v3.0</span></div><div class="px-gutter-base py-gutter-md"><button class="w-full flex items-center justify-center gap-gutter-sm py-gutter-sm px-gutter-md rounded-full bg-primary-container text-on-primary-container font-label-md text-label-md shadow-sm active:scale-[0.98] transition-transform"><span class="material-symbols-outlined text-[18px]">add</span><span>Quick Add</span></button></div><nav class="flex-1 px-gutter-sm space-y-gutter-xs overflow-y-auto" data-active-classes="bg-surface-container-lowest text-primary shadow-[0_1px_3px_rgba(0,0,0,0.06)] font-label-md"><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="dashboard" href="#"><span class="material-symbols-outlined text-[20px]">space_dashboard</span><span class="font-label-md text-label-md">Dashboard</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="today" href="#"><span class="material-symbols-outlined text-[20px]">today</span><span class="font-label-md text-label-md">Today</span></a><a aria-current="page" class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg transition-colors bg-surface-container-lowest text-primary shadow-[0_1px_3px_rgba(0,0,0,0.06)] font-label-md" data-path="goals" href="#"><span class="material-symbols-outlined text-[20px]">flag_circle</span><span class="font-label-md text-label-md">Goals</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="projects" href="#"><span class="material-symbols-outlined text-[20px]">folder</span><span class="font-label-md text-label-md">Projects</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="habits" href="#"><span class="material-symbols-outlined text-[20px]">restart_alt</span><span class="font-label-md text-label-md">Habits</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="reflections" href="#"><span class="material-symbols-outlined text-[20px]">auto_awesome</span><span class="font-label-md text-label-md">Reflections</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="analytics" href="#"><span class="material-symbols-outlined text-[20px]">insights</span><span class="font-label-md text-label-md">Analytics</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[20px]">tune</span><span class="font-label-md text-label-md">Settings</span></a></nav></div><div class="p-gutter-base bg-surface-container/50 backdrop-blur-sm m-gutter-sm rounded-xl flex items-center justify-between"><div class="flex items-center gap-gutter-sm min-w-0"><img alt="Elena Vance" class="w-8 h-8 rounded-full object-cover flex-shrink-0" src="https://lh3.googleusercontent.com/aida/AEtjO1Ue4xsbXvXO-3RVxtBZMNAj9_OpFoQo4JA9VLo09KuapLwZdBCfNV9Ab37_h7Xsgy2tAtEWlqq53w3NmJ_5v2Gx84HBSj0Q1zF5JV4sC2M6RV0xRkOCsoM2EUQqPxrVNHEKcBROB2pi8txnLGClDebY76Z3UGGRvzOCCX6vYA2fQlmi8YZadzSniOxWkd20_-I6W1Mrcabe4rgghVyzRh8c6xxzYUZcyrEc3hgiILO454cXfgh-aImaoA"/><div class="flex flex-col min-w-0"><span class="font-label-md text-label-md text-on-surface truncate">Elena Vance</span><span class="font-caption text-caption text-on-surface-variant truncate">Product Lead</span></div></div><button class="p-gutter-xs rounded-full hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[18px]">settings</span></button></div></aside><div class="pl-sidebar-width"><header class="fixed top-0 left-sidebar-width right-0 h-14 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-margin-desktop"><div class="flex items-center gap-gutter-sm text-on-surface-variant font-label-md text-label-md"><span class="font-body-md text-body-md text-on-surface-variant/80">Momentum</span><span class="text-outline-variant font-caption text-caption">/</span><span class="text-on-surface font-label-md text-label-md">Workspace</span></div><div class="flex-1 max-w-md mx-gutter-xl"><div class="relative flex items-center w-full"><span class="material-symbols-outlined absolute left-gutter-md text-[18px] text-outline">search</span><input class="w-full h-8 pl-9 pr-3 rounded-full bg-surface-container-low text-on-surface placeholder:text-outline font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_3.5px_rgba(0,113,227,0.2)] transition-all" placeholder="Search or jump to... ⌘K" type="text"/><span class="absolute right-gutter-sm px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-caption text-caption tracking-wider pointer-events-none">⌘K</span></div></div><div class="flex items-center gap-gutter-md"><div class="hidden sm:flex items-center gap-gutter-xs px-gutter-sm py-0.5 rounded-full bg-surface-container-low text-secondary font-caption text-caption"><span class="material-symbols-outlined text-[14px]">check_circle</span><span>All changes saved</span></div><button class="relative p-gutter-xs rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-error"></span></button><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1Ue4xsbXvXO-3RVxtBZMNAj9_OpFoQo4JA9VLo09KuapLwZdBCfNV9Ab37_h7Xsgy2tAtEWlqq53w3NmJ_5v2Gx84HBSj0Q1zF5JV4sC2M6RV0xRkOCsoM2EUQqPxrVNHEKcBROB2pi8txnLGClDebY76Z3UGGRvzOCCX6vYA2fQlmi8YZadzSniOxWkd20_-I6W1Mrcabe4rgghVyzRh8c6xxzYUZcyrEc3hgiILO454cXfgh-aImaoA"/></div></header><main class="w-full pt-14 px-margin-desktop py-gutter-xl min-h-screen bg-surface"><div class="flex flex-col w-full">
+<!-- Visual Ambient Light Accents -->
+<div class="relative w-full overflow-hidden">
+<div class="absolute -top-24 right-10 w-96 h-96 bg-gradient-to-br from-primary/10 via-tertiary/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute top-48 left-1/3 w-80 h-80 bg-gradient-to-br from-secondary/10 via-secondary-fixed/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+<!-- Header Block -->
+<header class="relative flex flex-col md:flex-row md:items-end justify-between gap-gutter-base pb-gutter-xl">
+<div class="flex flex-col gap-gutter-xs">
+<div class="flex items-center gap-gutter-sm">
+<span class="font-caption text-caption uppercase tracking-wider text-primary font-semibold">Long-Term Trajectory</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="font-caption text-caption text-on-surface-variant">Q2 Cycle Active</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Goals &amp; Horizons</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-xl">
+          Calibrate purpose, maintain rigorous momentum, and measure velocity across your primary strategic vectors.
+        </p>
+</div>
+<!-- Actions & Segmented Control -->
+<div class="flex items-center gap-gutter-md flex-wrap self-start md:self-auto">
+<div class="p-1 rounded-full bg-surface-container flex items-center shadow-inner" id="viewToggleGroup">
+<button class="flex items-center gap-gutter-xs px-gutter-md py-1.5 rounded-full bg-surface-container-lowest text-primary shadow-sm font-label-md text-label-md transition-all" id="btnGridView">
+<span class="material-symbols-outlined text-[16px]">grid_view</span>
+<span>Grid View</span>
+</button>
+<button class="flex items-center gap-gutter-xs px-gutter-md py-1.5 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-all" id="btnMatrixView">
+<span class="material-symbols-outlined text-[16px]">dashboard_customize</span>
+<span>Eisenhower Matrix</span>
+</button>
+</div>
+<button class="flex items-center gap-gutter-xs px-gutter-lg py-2.5 rounded-full bg-primary-container text-on-primary-container font-label-md text-label-md shadow-sm hover:brightness-105 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+<span>New Goal</span>
+</button>
+</div>
+</header>
+<!-- Category Filter Bar (macOS Pill Style) -->
+<div class="flex items-center gap-gutter-sm overflow-x-auto pb-gutter-lg select-none no-scrollbar">
+<button class="category-pill active flex items-center gap-gutter-sm px-gutter-md py-1.5 rounded-full bg-on-surface text-surface font-label-md text-label-md shadow-sm transition-all" data-category="all">
+<span>All Goals</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface/20 text-surface font-caption text-caption">5</span>
+</button>
+<button class="category-pill flex items-center gap-gutter-sm px-gutter-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-all" data-category="career">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span>Career &amp; Craft</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container-highest text-on-surface-variant font-caption text-caption">2</span>
+</button>
+<button class="category-pill flex items-center gap-gutter-sm px-gutter-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-all" data-category="health">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span>Health &amp; Athletics</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container-highest text-on-surface-variant font-caption text-caption">1</span>
+</button>
+<button class="category-pill flex items-center gap-gutter-sm px-gutter-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-all" data-category="creative">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span>Creative &amp; Mind</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container-highest text-on-surface-variant font-caption text-caption">2</span>
+</button>
+<div class="h-5 w-px bg-surface-container-highest mx-gutter-xs hidden sm:block"></div>
+<div class="hidden sm:flex items-center gap-gutter-xs text-on-surface-variant font-caption text-caption px-gutter-xs">
+<span class="material-symbols-outlined text-[15px] text-outline">sort</span>
+<span>Ranked by Velocity</span>
+</div>
+</div>
+<!-- 3-Column Goal Card Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter-xl pb-gutter-2xl">
+<!-- Card 1: Ship Portfolio Website v3 (Career) -->
+<div class="group flex flex-col justify-between rounded-xl bg-surface-container-lowest p-gutter-xl shadow-[0_1px_3px_rgba(0,0,0,0.03),0_6px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300">
+<div>
+<!-- Header info + Velocity Pill -->
+<div class="flex items-start justify-between gap-gutter-sm mb-gutter-base">
+<span class="px-gutter-sm py-1 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm tracking-wide">
+              Career &amp; Craft
+            </span>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed/50 text-on-secondary-fixed-variant font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span>Ahead of pace</span>
+</div>
+</div>
+<!-- Title & Editorial Why -->
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight mb-gutter-xs">
+            Ship Portfolio Website v3
+          </h2>
+<div class="p-gutter-base rounded-lg bg-surface-container-low/70 my-gutter-md">
+<div class="flex items-center gap-gutter-xs mb-1">
+<span class="material-symbols-outlined text-[14px] text-primary">lightbulb</span>
+<span class="font-caption text-caption uppercase tracking-wider text-on-surface-variant font-semibold">The Mandatory Why</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface italic">
+              “To establish independent creative authority and ship craft at the highest level.”
+            </p>
+</div>
+<!-- Progress Ring + Context -->
+<div class="flex items-center gap-gutter-lg my-gutter-lg">
+<div class="relative w-24 h-24 flex-shrink-0 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle class="text-surface-container-high fill-none" cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary fill-none transition-all duration-1000" cx="50" cy="50" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="87.9" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tighter leading-none">65<span class="text-xs font-normal">%</span></span>
+<span class="font-caption text-caption text-on-surface-variant mt-0.5">done</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-gutter-xs text-on-surface font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px] text-secondary">schedule</span>
+<span class="font-semibold">14 days left</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Estimated launch: May 12</span>
+<div class="w-full bg-surface-container rounded-full h-1 mt-1">
+<div class="bg-primary h-1 rounded-full" style="width: 65%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Meta Chips -->
+<div class="pt-gutter-base mt-gutter-base bg-surface-container-low/50 -mx-gutter-xl -mb-gutter-xl px-gutter-xl pb-gutter-base rounded-b-xl flex items-center justify-between">
+<div class="flex items-center gap-gutter-md text-on-surface-variant font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">account_tree</span>
+              3 Projects
+            </span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">check_box</span>
+              8 Tasks Active
+            </span>
+</div>
+<button class="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Card 2: Run a Sub-1:45 Half Marathon (Health) -->
+<div class="group flex flex-col justify-between rounded-xl bg-surface-container-lowest p-gutter-xl shadow-[0_1px_3px_rgba(0,0,0,0.03),0_6px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300">
+<div>
+<!-- Header info + Velocity Pill -->
+<div class="flex items-start justify-between gap-gutter-sm mb-gutter-base">
+<span class="px-gutter-sm py-1 rounded-full bg-secondary/10 text-secondary font-label-sm text-label-sm tracking-wide">
+              Health &amp; Athletics
+            </span>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[14px]">check</span>
+<span>On track</span>
+</div>
+</div>
+<!-- Title & Editorial Why -->
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight mb-gutter-xs">
+            Run a Sub-1:45 Half Marathon
+          </h2>
+<div class="p-gutter-base rounded-lg bg-surface-container-low/70 my-gutter-md">
+<div class="flex items-center gap-gutter-xs mb-1">
+<span class="material-symbols-outlined text-[14px] text-secondary">favorite</span>
+<span class="font-caption text-caption uppercase tracking-wider text-on-surface-variant font-semibold">The Mandatory Why</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface italic">
+              “Build unbreakable physical stamina and mental endurance.”
+            </p>
+</div>
+<!-- Progress Ring + Context -->
+<div class="flex items-center gap-gutter-lg my-gutter-lg">
+<div class="relative w-24 h-24 flex-shrink-0 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle class="text-surface-container-high fill-none" cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-secondary fill-none transition-all duration-1000" cx="50" cy="50" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="145.7" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tighter leading-none">42<span class="text-xs font-normal">%</span></span>
+<span class="font-caption text-caption text-on-surface-variant mt-0.5">logged</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-gutter-xs text-on-surface font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px] text-primary">timer</span>
+<span class="font-semibold">38 days left</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Pace target: 4:58 /km</span>
+<div class="w-full bg-surface-container rounded-full h-1 mt-1">
+<div class="bg-secondary h-1 rounded-full" style="width: 42%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Meta Chips -->
+<div class="pt-gutter-base mt-gutter-base bg-surface-container-low/50 -mx-gutter-xl -mb-gutter-xl px-gutter-xl pb-gutter-base rounded-b-xl flex items-center justify-between">
+<div class="flex items-center gap-gutter-md text-on-surface-variant font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">fitness_center</span>
+              2 Blocks
+            </span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">directions_run</span>
+              12 Workouts Left
+            </span>
+</div>
+<button class="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Card 3: Master Trinity Grade 3 Guitar (Creative) -->
+<div class="group flex flex-col justify-between rounded-xl bg-surface-container-lowest p-gutter-xl shadow-[0_1px_3px_rgba(0,0,0,0.03),0_6px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300">
+<div>
+<!-- Header info + Velocity Pill -->
+<div class="flex items-start justify-between gap-gutter-sm mb-gutter-base">
+<span class="px-gutter-sm py-1 rounded-full bg-tertiary/10 text-tertiary font-label-sm text-label-sm tracking-wide">
+              Creative &amp; Mind
+            </span>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+<span>Requires attention</span>
+</div>
+</div>
+<!-- Title & Editorial Why -->
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight mb-gutter-xs">
+            Master Trinity Grade 3 Guitar
+          </h2>
+<div class="p-gutter-base rounded-lg bg-surface-container-low/70 my-gutter-md">
+<div class="flex items-center gap-gutter-xs mb-1">
+<span class="material-symbols-outlined text-[14px] text-tertiary">music_note</span>
+<span class="font-caption text-caption uppercase tracking-wider text-on-surface-variant font-semibold">The Mandatory Why</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface italic">
+              “Cultivate tactile acoustic joy and mindful disconnection from screens.”
+            </p>
+</div>
+<!-- Progress Ring + Context -->
+<div class="flex items-center gap-gutter-lg my-gutter-lg">
+<div class="relative w-24 h-24 flex-shrink-0 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle class="text-surface-container-high fill-none" cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-tertiary fill-none transition-all duration-1000" cx="50" cy="50" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="180.8" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tighter leading-none">28<span class="text-xs font-normal">%</span></span>
+<span class="font-caption text-caption text-on-surface-variant mt-0.5">graded</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-gutter-xs text-on-surface font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px] text-outline">calendar_month</span>
+<span class="font-semibold">52 days left</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Next: Fernando Sor Op. 60</span>
+<div class="w-full bg-surface-container rounded-full h-1 mt-1">
+<div class="bg-tertiary h-1 rounded-full" style="width: 28%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Meta Chips -->
+<div class="pt-gutter-base mt-gutter-base bg-surface-container-low/50 -mx-gutter-xl -mb-gutter-xl px-gutter-xl pb-gutter-base rounded-b-xl flex items-center justify-between">
+<div class="flex items-center gap-gutter-md text-on-surface-variant font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">library_music</span>
+              3 Repertoire Pieces
+            </span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">timer</span>
+              15 Practice Sets
+            </span>
+</div>
+<button class="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-tertiary transition-colors">
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Visual Inspiration Section: Deep Craft Artifacts -->
+<div class="mb-gutter-2xl p-gutter-lg rounded-2xl bg-surface-container-low/60 flex flex-col md:flex-row items-center justify-between gap-gutter-xl">
+<div class="flex items-center gap-gutter-lg">
+<div class="w-20 h-20 rounded-xl overflow-hidden shadow-sm flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A minimalist Apple Cupertino style design workspace with an architectural drawing, titanium fountain pen, and warm natural morning sunlight casting soft geometric shadows on clean white oak wood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNA3dQ6NslBE9ZQoI5LRj9tvd7r27vlJwb6xGDaJBz-ko_XC1eIxJcPbtswgrguPFWKV9XhLHP2rQqTKuufPOoRhJkzvJpy-DbUY5vS6SVX-MusAnq2QI6X4I9pNvBl7syd6GoNUPsjDxSz4xdISJDtGCKotJNM1KuqCs2ja9HwyVA_t9Z8jDjIRvlKv6q0WChNHLp4EE3KidhxkKut1jMeILwnZWfK1uTG-dkyTS5V7nC521YNE_W"/>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="font-caption text-caption uppercase text-primary font-semibold tracking-wider">Design Philosophy</span>
+<span class="font-title text-title text-on-surface">The Architecture of Restraint</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-lg">
+            High velocity is not frantic activity. It is the uncompromising removal of secondary priorities to make room for absolute precision.
+          </p>
+</div>
+</div>
+<div class="flex items-center gap-gutter-md flex-shrink-0">
+<div class="flex flex-col text-right">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Elena Vance</span>
+<span class="font-caption text-caption text-on-surface-variant">Focus Vector: 94% alignment</span>
+</div>
+<img class="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="Close up modern portrait photo of a focused female creative director in soft daylight, subtle studio background, clean Apple aesthetic tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0U_g9ZQuK7nmsK1LVJoRmk6ed1k71KgTOq4s_9YwYih4ur_xifp_hV0LTxaet2BzRB5NwwLbcz9fyKsBxeO5S_ReiR2ucWetY74svptOYzBmXm2tr2QR9QyIzozAPJLFnM-cz9V_FXP6hcEeLHdVmL7mChNi5A9Qih1Jl878MMlLxyE6EC7QD0BfPC2g-ursx9sCQPTZ_9zl-GSRN55rFILFXM7H_3QirBlZQRtnElWVAOMjqbNKi"/>
+</div>
+</div>
+<!-- Secondary Section: Eisenhower Priority Matrix Preview -->
+<section class="flex flex-col gap-gutter-lg">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-gutter-sm">
+<div>
+<div class="flex items-center gap-gutter-xs mb-1">
+<span class="material-symbols-outlined text-[18px] text-tertiary">grid_goldenratio</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Eisenhower Priority Matrix</h2>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Balancing urgent tactical demands against non-negotiable strategic imperatives.
+          </p>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="px-gutter-sm py-1 rounded-full bg-surface-container font-caption text-caption text-on-surface-variant">
+            Live Horizon Distribution
+          </span>
+<button class="p-1 rounded-full hover:bg-surface-container text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 2x2 Matrix Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter-lg">
+<!-- Quadrant 1: Urgent & Important (Do First) -->
+<div class="rounded-xl bg-surface-container-lowest p-gutter-lg shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-gutter-md mb-gutter-md border-b-0">
+<div class="flex items-center gap-gutter-sm">
+<span class="w-2.5 h-2.5 rounded-full bg-error"></span>
+<span class="font-title text-title text-on-surface">Urgent &amp; Important</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-caption text-caption font-semibold">
+                Act Immediately
+              </span>
+</div>
+<!-- Mini cards inside Q1 -->
+<div class="space-y-gutter-sm">
+<div class="p-gutter-md rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors flex items-center justify-between">
+<div class="flex items-center gap-gutter-md min-w-0">
+<div class="w-2 h-8 rounded-full bg-primary flex-shrink-0"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Fix Hero Layout Shader Stutter</span>
+<span class="font-caption text-caption text-on-surface-variant">Portfolio Website v3 • 2 days left</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[18px] text-error">priority_high</span>
+</div>
+<div class="p-gutter-md rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors flex items-center justify-between">
+<div class="flex items-center gap-gutter-md min-w-0">
+<div class="w-2 h-8 rounded-full bg-secondary flex-shrink-0"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Cardio Lactate Threshold Test</span>
+<span class="font-caption text-caption text-on-surface-variant">Sub-1:45 Half Marathon • Tomorrow 07:00</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[18px] text-outline">notification_important</span>
+</div>
+</div>
+</div>
+<div class="mt-gutter-md pt-gutter-sm flex items-center justify-between font-caption text-caption text-on-surface-variant">
+<span>2 Critical Items</span>
+<span class="text-primary font-medium cursor-pointer hover:underline">Batch execute →</span>
+</div>
+</div>
+<!-- Quadrant 2: Not Urgent but Important (Schedule / Deep Work) -->
+<div class="rounded-xl bg-surface-container-lowest p-gutter-lg shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-gutter-md mb-gutter-md border-b-0">
+<div class="flex items-center gap-gutter-sm">
+<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>
+<span class="font-title text-title text-on-surface">Not Urgent, Important</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant font-caption text-caption font-semibold">
+                Strategic Horizon
+              </span>
+</div>
+<!-- Mini cards inside Q2 -->
+<div class="space-y-gutter-sm">
+<div class="p-gutter-md rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors flex items-center justify-between">
+<div class="flex items-center gap-gutter-md min-w-0">
+<div class="w-2 h-8 rounded-full bg-tertiary flex-shrink-0"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Guitar Arpeggio Velocity Drills</span>
+<span class="font-caption text-caption text-on-surface-variant">Master Trinity Grade 3 • 45m Block</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[18px] text-tertiary">calendar_clock</span>
+</div>
+<div class="p-gutter-md rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors flex items-center justify-between">
+<div class="flex items-center gap-gutter-md min-w-0">
+<div class="w-2 h-8 rounded-full bg-primary flex-shrink-0"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Write Manifesto on Organic Systems</span>
+<span class="font-caption text-caption text-on-surface-variant">Craft Authority • Sunday Deep Work</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[18px] text-outline">edit_note</span>
+</div>
+</div>
+</div>
+<div class="mt-gutter-md pt-gutter-sm flex items-center justify-between font-caption text-caption text-on-surface-variant">
+<span>Primary Focus Zone (70% Time)</span>
+<span class="text-primary font-medium cursor-pointer hover:underline">Inspect schedule →</span>
+</div>
+</div>
+<!-- Quadrant 3: Urgent & Not Important (Delegate / Automate) -->
+<div class="rounded-xl bg-surface-container-lowest p-gutter-lg shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-gutter-md mb-gutter-md border-b-0">
+<div class="flex items-center gap-gutter-sm">
+<span class="w-2.5 h-2.5 rounded-full bg-outline"></span>
+<span class="font-title text-title text-on-surface">Urgent, Not Important</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-caption text-caption font-semibold">
+                Delegate / Compress
+              </span>
+</div>
+<!-- Mini cards inside Q3 -->
+<div class="space-y-gutter-sm">
+<div class="p-gutter-md rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors flex items-center justify-between">
+<div class="flex items-center gap-gutter-md min-w-0">
+<div class="w-2 h-8 rounded-full bg-outline-variant flex-shrink-0"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Renew DNS Records for Subdomains</span>
+<span class="font-caption text-caption text-on-surface-variant">Infrastructure Ops • Auto-pay setup</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[18px] text-outline">bolt</span>
+</div>
+</div>
+</div>
+<div class="mt-gutter-md pt-gutter-sm flex items-center justify-between font-caption text-caption text-on-surface-variant">
+<span>Minimize Interruptions</span>
+<span class="text-primary font-medium cursor-pointer hover:underline">Automate rules →</span>
+</div>
+</div>
+<!-- Quadrant 4: Not Urgent & Not Important (Eliminate) -->
+<div class="rounded-xl bg-surface-container-lowest p-gutter-lg shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-gutter-md mb-gutter-md border-b-0">
+<div class="flex items-center gap-gutter-sm">
+<span class="w-2.5 h-2.5 rounded-full bg-surface-container-highest"></span>
+<span class="font-title text-title text-on-surface">Not Urgent or Important</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-caption text-caption font-semibold">
+                Purge / Filter
+              </span>
+</div>
+<!-- Mini cards inside Q4 -->
+<div class="space-y-gutter-sm">
+<div class="p-gutter-md rounded-lg bg-surface-container-low/50 hover:bg-surface-container transition-colors flex items-center justify-between opacity-70">
+<div class="flex items-center gap-gutter-md min-w-0">
+<div class="w-2 h-8 rounded-full bg-outline-variant flex-shrink-0"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface line-through truncate">Re-organizing Figma workspace stickers</span>
+<span class="font-caption text-caption text-on-surface-variant">Archived • 0 Value</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[18px] text-outline">delete_sweep</span>
+</div>
+</div>
+</div>
+<div class="mt-gutter-md pt-gutter-sm flex items-center justify-between font-caption text-caption text-on-surface-variant">
+<span>Zero strategic impact</span>
+<span class="text-error font-medium cursor-pointer hover:underline">Clear backlog</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Micro-interactions Script -->
+<script>
+    (function() {
+      // Toggle Between Grid & Matrix View Button States
+      const btnGrid = document.getElementById('btnGridView');
+      const btnMatrix = document.getElementById('btnMatrixView');
+
+      if (btnGrid && btnMatrix) {
+        btnGrid.addEventListener('click', () => {
+          btnGrid.className = 'flex items-center gap-gutter-xs px-gutter-md py-1.5 rounded-full bg-surface-container-lowest text-primary shadow-sm font-label-md text-label-md transition-all';
+          btnMatrix.className = 'flex items-center gap-gutter-xs px-gutter-md py-1.5 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-all';
+        });
+
+        btnMatrix.addEventListener('click', () => {
+          btnMatrix.className = 'flex items-center gap-gutter-xs px-gutter-md py-1.5 rounded-full bg-surface-container-lowest text-primary shadow-sm font-label-md text-label-md transition-all';
+          btnGrid.className = 'flex items-center gap-gutter-xs px-gutter-md py-1.5 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-all';
+        });
+      }
+
+      // Filter Pill Micro-interaction
+      const pills = document.querySelectorAll('.category-pill');
+      pills.forEach(pill => {
+        pill.addEventListener('click', () => {
+          pills.forEach(p => {
+            p.classList.remove('bg-on-surface', 'text-surface');
+            p.classList.add('bg-surface-container-low', 'text-on-surface-variant');
+            const countBadge = p.querySelector('span:last-child');
+            if (countBadge) {
+              countBadge.classList.remove('bg-surface/20', 'text-surface');
+              countBadge.classList.add('bg-surface-container-highest', 'text-on-surface-variant');
+            }
+          });
+
+          pill.classList.remove('bg-surface-container-low', 'text-on-surface-variant');
+          pill.classList.add('bg-on-surface', 'text-surface');
+          const activeBadge = pill.querySelector('span:last-child');
+          if (activeBadge) {
+            activeBadge.classList.remove('bg-surface-container-highest', 'text-on-surface-variant');
+            activeBadge.classList.add('bg-surface/20', 'text-surface');
+          }
+        });
+      });
+    })();
+  </script>
+</div></main></div></body></html>

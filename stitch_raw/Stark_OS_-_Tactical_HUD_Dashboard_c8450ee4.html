@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;family=Chivo:wght@300;400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>
+  @layer base {
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #050811;
+      color: #e1e1ee;
+    }
+    body {
+      overscroll-behavior: none;
+      background-image: radial-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px), radial-gradient(circle at 50% 0%, rgba(0, 136, 255, 0.08), transparent 60%);
+      background-size: 24px 24px, 100% 100%;
+    }
+    main > :first-child { margin-top: 0 !important; }
+    main > :last-child { margin-bottom: 0 !important; }
+  }
+  ::-webkit-scrollbar { display: none; }
+  .hud-bracket-tl {
+    position: relative;
+  }
+  .hud-bracket-tl::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    border-top: 2px solid #00f0ff;
+    border-left: 2px solid #00f0ff;
+    opacity: 0.8;
+  }
+  .hud-bracket-br {
+    position: relative;
+  }
+  .hud-bracket-br::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    border-bottom: 2px solid #00f0ff;
+    border-right: 2px solid #00f0ff;
+    opacity: 0.8;
+  }
+  .cyan-glow {
+    box-shadow: 0 0 16px -2px rgba(0, 240, 255, 0.25);
+  }
+  .cyan-text-glow {
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+  }
+</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      "colors": {
+        "on-tertiary-fixed": "#410001",
+        "primary-fixed-dim": "#00dbe9",
+        "on-error-container": "#ffdad6",
+        "surface-container": "#111728",
+        "surface": "#080d1a",
+        "surface-dim": "#050811",
+        "on-background": "#e1e1ee",
+        "primary": "#00f0ff",
+        "outline": "#3b494b",
+        "secondary-fixed-dim": "#ffba20",
+        "secondary-fixed": "#ffdea8",
+        "surface-bright": "#1d263b",
+        "surface-container-highest": "#1c2438",
+        "secondary-container": "rgba(255, 184, 0, 0.15)",
+        "surface-container-low": "#0b101f",
+        "on-primary-fixed-variant": "#004f54",
+        "primary-fixed": "#7df4ff",
+        "tertiary-fixed-dim": "#ffb4aa",
+        "background": "#050811",
+        "on-primary-fixed": "#002022",
+        "on-surface": "#e1e1ee",
+        "tertiary": "#ffb800",
+        "on-tertiary-container": "#ffdea8",
+        "secondary": "#00dbe9",
+        "error": "#ff5449",
+        "on-surface-variant": "#8fa2b4",
+        "on-secondary-fixed": "#271900",
+        "surface-container-high": "#161e32",
+        "on-error": "#690005",
+        "on-secondary-fixed-variant": "#5e4200",
+        "inverse-primary": "#006970",
+        "error-container": "rgba(255, 84, 73, 0.15)",
+        "inverse-on-surface": "#050811",
+        "tertiary-container": "rgba(255, 184, 0, 0.2)",
+        "primary-container": "rgba(0, 240, 255, 0.15)",
+        "surface-container-lowest": "#03050a",
+        "on-tertiary-fixed-variant": "#930005",
+        "on-primary": "#002022",
+        "on-secondary": "#002022",
+        "outline-variant": "rgba(0, 240, 255, 0.18)",
+        "tertiary-fixed": "#ffdad5",
+        "on-tertiary": "#412d00",
+        "on-primary-container": "#7df4ff",
+        "inverse-surface": "#e1e1ee",
+        "surface-variant": "#131a2c",
+        "on-secondary-container": "#ffdea8",
+        "surface-tint": "#00f0ff"
+      },
+      "borderRadius": {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "full": "9999px"
+      },
+      "spacing": {
+        "space-md": "1rem",
+        "gutter": "1.5rem",
+        "space-2xl": "3rem",
+        "space-sm": "0.75rem",
+        "grid-unit": "4px",
+        "space-2xs": "0.25rem",
+        "margin-screen": "2rem",
+        "space-lg": "1.5rem",
+        "space-xl": "2rem",
+        "space-xs": "0.5rem",
+        "sidebar-width": "260px"
+      },
+      "fontFamily": {
+        "label-lg": ["JetBrains Mono"],
+        "display-mobile": ["Space Grotesk"],
+        "body-sm": ["Chivo"],
+        "headline-md": ["Space Grotesk"],
+        "headline-lg": ["Space Grotesk"],
+        "label-md": ["JetBrains Mono"],
+        "body-lg": ["Chivo"],
+        "body-md": ["Chivo"],
+        "display": ["Space Grotesk"],
+        "label-sm": ["JetBrains Mono"],
+        "telemetry-num": ["JetBrains Mono"],
+        "headline-sm": ["Space Grotesk"]
+      },
+      "fontSize": {
+        "label-lg": ["14px", { "lineHeight": "18px", "letterSpacing": "0.08em", "fontWeight": "500" }],
+        "body-sm": ["12px", { "lineHeight": "18px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+        "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "0.04em", "fontWeight": "700" }],
+        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.08em", "fontWeight": "500" }],
+        "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+        "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.12em", "fontWeight": "600" }],
+        "telemetry-num": ["24px", { "lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+        "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "0.03em", "fontWeight": "600" }],
+        "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "0.03em", "fontWeight": "600" }]
+      }
+    }
+  }
+}</script></head><body class="bg-background font-body-md text-on-surface antialiased selection:bg-primary selection:text-surface-container-lowest"><aside class="fixed left-0 top-0 h-screen w-sidebar-width bg-surface border-r border-outline-variant z-50 flex flex-col justify-between select-none shadow-[2px_0_24px_rgba(0,0,0,0.6)]"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center justify-between border-b border-outline-variant bg-surface-container-low/60"><div class="flex items-center gap-space-xs"><img alt="Stark Arc Reactor Logo" class="h-9 w-9 object-contain drop-shadow-[0_0_8px_rgba(0,240,255,0.7)]" src="https://lh3.googleusercontent.com/aida/AEtjO1XYPpKzTPVEyTq_lstfVvA4rPnHe2Cz2qmU-pxXd0DrwPhqD4fXoidVtGEBuUITkE8d1BpslTR54jVYADdID_QUU3s-JX24h0DUP9HjJ1vo_ZPtecWUnvFZP9V_IBKJw2WMjfMCS91ffRMO5VKax6hd7u-Rt7XdFCIZAWRPQg9HjhgPUzAVbjowtFWF0aT_4aWwPPYxsMDsN5BunFEWt2_ZzvnRT9rCSG7BtUAa8vTPbzID-KuOFq4Fc9Y"/><div class="flex flex-col"><span class="font-headline-md text-[17px] font-bold tracking-wider text-primary cyan-text-glow">STARK OS</span><span class="font-label-sm text-[9px] text-on-surface-variant tracking-[0.18em] -mt-1">MARK LXXXV CORE</span></div></div><span class="font-label-sm text-[9px] px-1.5 py-0.5 rounded border border-primary/40 bg-primary/10 text-primary font-semibold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>ONLINE</span></div><div class="p-space-md"><button class="w-full flex items-center justify-between px-space-md py-2.5 bg-primary-container border border-primary/40 text-primary rounded-lg font-label-md text-label-md hover:bg-primary hover:text-surface-container-lowest transition-all group cyan-glow" type="button"><span class="flex items-center gap-space-xs tracking-wide"><span class="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform">bolt</span>Initiate Protocol</span><kbd class="text-[10px] bg-surface-container-lowest/80 text-primary px-1.5 py-0.5 rounded border border-primary/30 font-label-sm uppercase font-bold tracking-wider">⌘K</kbd></button></div><nav class="flex flex-col gap-1 px-space-xs"><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-2 rounded-lg transition-all bg-primary/15 text-primary border-l-2 border-primary font-semibold font-label-md text-label-md shadow-[inset_0_0_12px_rgba(0,240,255,0.15)]" data-path="telemetry" href="#"><span class="material-symbols-outlined text-[20px]">monitor_heart</span><span>Telemetry HUD</span></a><a class="flex items-center gap-space-sm px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all font-label-md text-label-md" data-path="protocols" href="#"><span class="material-symbols-outlined text-[20px]">terminal</span><span>Daily Protocols</span></a><a class="flex items-center gap-space-sm px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all font-label-md text-label-md" data-path="directives" href="#"><span class="material-symbols-outlined text-[20px]">radar</span><span>Strategic Directives</span></a><a class="flex items-center gap-space-sm px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all font-label-md text-label-md" data-path="armor" href="#"><span class="material-symbols-outlined text-[20px]">shield</span><span>Mark Armor Suites</span></a><a class="flex items-center gap-space-sm px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all font-label-md text-label-md" data-path="power" href="#"><span class="material-symbols-outlined text-[20px]">offline_bolt</span><span>Power Grid / Habits</span></a><a class="flex items-center gap-space-sm px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all font-label-md text-label-md" data-path="neural" href="#"><span class="material-symbols-outlined text-[20px]">neurology</span><span>Neural Diagnostics</span></a><a class="flex items-center gap-space-sm px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all font-label-md text-label-md" data-path="uplink" href="#"><span class="material-symbols-outlined text-[20px]">satellite_alt</span><span>Global Uplink</span></a><a class="flex items-center gap-space-sm px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all font-label-md text-label-md" data-path="settings" href="#"><span class="material-symbols-outlined text-[20px]">tune</span><span>System Matrix</span></a></nav></div><div class="p-space-md border-t border-outline-variant bg-surface-container-low/80 flex items-center justify-between"><div class="flex items-center gap-space-sm min-w-0"><div class="relative"><img alt="Tony Stark" class="w-10 h-10 rounded-full object-cover shrink-0 ring-1 ring-primary/60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCac3I5-XO0b0SRFe1-4EYlPOWO3DGkUE2_QoIRe4tjJB-8xiRPqpuJwVCiSsOJgCaG99M8u8UHeybhjBGzMgkMOr_Abz-Xz7hGJUjpL1GrXH0wyr2__Dk8gWKxV4ypcXvdr_eNnPrK3N7T71I8sP4FAskMGA81OjzwgPTmAGmgYmNXuVffHz08jGGu3h0UXjXfMy7R7ZV-rnwk-NQiiTCH-S44YMzBqZ8n0No_t5kYpZx02p0R_nBD"/><span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-surface animate-ping"></span><span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-surface"></span></div><div class="flex flex-col min-w-0"><span class="font-headline-sm text-[13px] text-on-surface font-semibold truncate leading-tight">Tony Stark</span><span class="font-label-sm text-[10px] text-primary truncate tracking-wider">ARC OUTPUT 99.8%</span></div></div><div class="flex items-center justify-center"><kbd class="font-label-sm text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/30">L85</kbd></div></div></aside><div class="pl-sidebar-width"><header class="fixed top-0 left-sidebar-width right-0 h-16 bg-surface/90 backdrop-blur-xl border-b border-outline-variant z-40 flex items-center justify-between px-space-xl"><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs font-label-md text-label-md text-on-surface-variant"><span class="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer text-primary"><span class="material-symbols-outlined text-[16px]">terminal</span>STARK INDUSTRIES</span><span class="text-outline-variant">/</span><span class="text-on-surface font-semibold text-primary/90 tracking-wide">TACTICAL COMMAND v94.4</span></div></div><div class="flex items-center gap-space-md"><div class="relative flex items-center"><button class="flex items-center gap-space-md px-space-md py-1.5 bg-surface-container border border-outline-variant rounded-lg text-on-surface-variant hover:border-primary hover:text-primary transition-all w-72 justify-between" type="button"><span class="flex items-center gap-space-xs text-body-sm font-label-sm"><span class="material-symbols-outlined text-[16px] text-primary">search</span>Query J.A.R.V.I.S. neural bus...</span><kbd class="text-[10px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-label-sm font-bold uppercase">/</kbd></button></div><div class="flex items-center gap-1"><button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors relative" type="button"><span class="material-symbols-outlined text-[20px]">notifications_active</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-tertiary"></span></button><button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">satellite</span></button></div><div class="h-6 w-[1px] bg-outline-variant"></div><div class="flex items-center gap-2"><img alt="Stark Arc Reactor Icon" class="w-7 h-7 object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XYPpKzTPVEyTq_lstfVvA4rPnHe2Cz2qmU-pxXd0DrwPhqD4fXoidVtGEBuUITkE8d1BpslTR54jVYADdID_QUU3s-JX24h0DUP9HjJ1vo_ZPtecWUnvFZP9V_IBKJw2WMjfMCS91ffRMO5VKax6hd7u-Rt7XdFCIZAWRPQg9HjhgPUzAVbjowtFWF0aT_4aWwPPYxsMDsN5BunFEWt2_ZzvnRT9rCSG7BtUAa8vTPbzID-KuOFq4Fc9Y"/><img alt="Tony Stark Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-primary/40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCac3I5-XO0b0SRFe1-4EYlPOWO3DGkUE2_QoIRe4tjJB-8xiRPqpuJwVCiSsOJgCaG99M8u8UHeybhjBGzMgkMOr_Abz-Xz7hGJUjpL1GrXH0wyr2__Dk8gWKxV4ypcXvdr_eNnPrK3N7T71I8sP4FAskMGA81OjzwgPTmAGmgYmNXuVffHz08jGGu3h0UXjXfMy7R7ZV-rnwk-NQiiTCH-S44YMzBqZ8n0No_t5kYpZx02p0R_nBD"/></div></div></header><main class="w-full pt-16 min-h-screen bg-background"><div class="max-w-[1240px] mx-auto p-space-xl"><div class="flex flex-col w-full space-y-space-xl pb-space-2xl">
+<!-- 1. Header Row -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md border-b border-outline-variant pb-space-lg">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-space-sm flex-wrap">
+<h1 class="font-headline-lg text-headline-lg tracking-wide text-on-surface cyan-text-glow">Welcome back, Mr. Stark</h1>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/15 text-primary border border-primary/40 font-label-sm text-[10px] uppercase tracking-widest font-semibold cyan-glow">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+          ● J.A.R.V.I.S. PROTOCOL ACTIVE
+        </span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
+<span class="text-primary font-semibold">STARK TOWER WORKSHOP</span>
+<span class="text-outline-variant">•</span>
+<span>Malibu Node Uplink</span>
+<span class="text-outline-variant">•</span>
+<span class="text-tertiary font-medium">Clean Energy Grid Q4</span>
+<span class="text-outline-variant">•</span>
+<span class="text-secondary text-[11px]">DEFCON 4 (Nominal)</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<button class="group flex items-center gap-space-xs px-space-md py-2 bg-surface-container border border-outline-variant rounded-lg hover:border-primary hover:text-primary transition-all font-label-md text-label-md text-on-surface" type="button">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-primary transition-colors">tune</span>
+<span>HUD Config</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-2 bg-primary text-surface-container-lowest font-bold rounded-lg font-label-md text-label-md shadow-[0_0_20px_rgba(0,240,255,0.4)] hover:brightness-110 transition-all" type="button">
+<span class="material-symbols-outlined text-[18px]">add_moderator</span>
+<span>Deploy Directive</span>
+<kbd class="ml-1 text-[10px] bg-surface-container-lowest/30 text-surface-container-lowest px-1.5 py-0.5 rounded font-label-sm font-bold">C</kbd>
+</button>
+</div>
+</div>
+<!-- 2. Top Metric Row (4 Columns HUD Telemetry) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+<!-- Stat 1 -->
+<div class="flex flex-col justify-between p-space-lg rounded-xl bg-surface-container border border-outline-variant hover:border-primary/60 transition-all relative overflow-hidden group hud-bracket-tl hud-bracket-br shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-sm text-label-sm tracking-wider uppercase text-primary/80">Critical Protocols</span>
+<span class="material-symbols-outlined text-[20px] text-primary group-hover:scale-110 transition-transform">checklist_rtl</span>
+</div>
+<div class="my-space-md flex items-baseline gap-space-xs">
+<span class="font-telemetry-num text-[32px] text-on-surface tracking-tight font-bold cyan-text-glow">5</span>
+<span class="font-label-sm text-[11px] text-primary uppercase">queued</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-error-container border border-error/30 text-error font-label-sm text-[10px]">
+          1 repulsor calibration
+        </span>
+<span class="text-on-surface-variant font-body-sm text-body-sm">• 2 high energy</span>
+</div>
+</div>
+<!-- Stat 2 -->
+<div class="flex flex-col justify-between p-space-lg rounded-xl bg-surface-container border border-outline-variant hover:border-tertiary/60 transition-all relative overflow-hidden group hud-bracket-tl hud-bracket-br shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-tertiary"></div>
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-sm text-label-sm tracking-wider uppercase text-tertiary/80">Arc Reactor Cycle</span>
+<span class="material-symbols-outlined text-[20px] text-tertiary group-hover:scale-110 transition-transform" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+<div class="my-space-md flex items-baseline gap-space-xs">
+<span class="font-telemetry-num text-[32px] text-tertiary tracking-tight font-bold" style="text-shadow: 0 0 10px rgba(255,184,0,0.5);">18</span>
+<span class="font-label-sm text-[11px] text-on-surface-variant uppercase">consecutive cycles</span>
+</div>
+<div class="flex items-center text-on-surface-variant font-body-sm text-body-sm">
+<span>Personal record: <strong class="text-tertiary font-label-sm font-semibold">47 cycles</strong></span>
+</div>
+</div>
+<!-- Stat 3 -->
+<div class="flex flex-col justify-between p-space-lg rounded-xl bg-surface-container border border-outline-variant hover:border-secondary/60 transition-all relative overflow-hidden group hud-bracket-tl hud-bracket-br shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary"></div>
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-sm text-label-sm tracking-wider uppercase text-secondary/80">Directives Nominal</span>
+<div class="relative w-6 h-6">
+<svg class="w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-bright" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="4"></path>
+<path class="text-secondary drop-shadow-[0_0_6px_rgba(0,219,233,0.8)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="80, 100" stroke-linecap="round" stroke-width="4"></path>
+</svg>
+</div>
+</div>
+<div class="my-space-md flex items-baseline gap-space-xs">
+<span class="font-telemetry-num text-[32px] text-on-surface tracking-tight font-bold">4</span>
+<span class="font-label-sm text-[11px] text-on-surface-variant uppercase">of 5 online</span>
+</div>
+<div class="flex items-center text-on-surface-variant font-body-sm text-body-sm">
+<span class="w-2 h-2 rounded-full bg-secondary mr-1 animate-pulse"></span>
+<span>1 requires attention</span>
+</div>
+</div>
+<!-- Stat 4 -->
+<div class="flex flex-col justify-between p-space-lg rounded-xl bg-surface-container border border-outline-variant hover:border-primary/60 transition-all relative overflow-hidden group hud-bracket-tl hud-bracket-br shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-sm text-label-sm tracking-wider uppercase text-primary/80">Global Efficiency</span>
+<span class="material-symbols-outlined text-[20px] text-primary">dynamic_form</span>
+</div>
+<div class="my-space-md flex items-baseline justify-between">
+<span class="font-telemetry-num text-[32px] text-primary tracking-tight font-bold cyan-text-glow">98.4%</span>
+<!-- Telemetry pulse sparkline -->
+<svg class="w-20 h-7 text-primary drop-shadow-[0_0_6px_rgba(0,240,255,0.7)]" fill="none" viewbox="0 0 80 28">
+<path d="M2 22 L 16 18 L 28 20 L 42 10 L 56 14 L 70 4 L 78 5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+<circle cx="78" cy="5" fill="currentColor" r="3"></circle>
+</svg>
+</div>
+<div class="flex items-center text-primary font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_up</span>
+<span>+6.2% vs last cycle</span>
+</div>
+</div>
+</div>
+<!-- 3. Two-Column Mid Section: Focus Directives & Life Balance Wheel -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-start">
+<!-- LEFT: Today's Tactical Directives (7 cols) -->
+<div class="lg:col-span-7 bg-surface-container rounded-xl border border-outline-variant p-space-lg flex flex-col gap-space-md shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+<!-- Section Header with Filter Pills -->
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">tune</span>
+<h2 class="font-headline-md text-[18px] text-on-surface font-bold tracking-wide">Today's Tactical Directives</h2>
+<span class="px-2 py-0.5 rounded bg-surface-container-high border border-primary/20 text-primary font-label-sm text-[10px]">5 ACTIVE</span>
+</div>
+<div class="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg border border-outline-variant/40" id="task-filter-group">
+<button class="px-2.5 py-1 rounded font-label-sm text-[11px] bg-primary text-surface-container-lowest font-bold shadow transition-all" type="button">ALL (5)</button>
+<button class="px-2.5 py-1 rounded font-label-sm text-[11px] text-on-surface-variant hover:text-primary transition-all" type="button">HIGH ENERGY (2)</button>
+<button class="px-2.5 py-1 rounded font-label-sm text-[11px] text-on-surface-variant hover:text-primary transition-all" type="button">DEFENSE (2)</button>
+</div>
+</div>
+<!-- Task Items Container -->
+<div class="flex flex-col gap-space-xs" id="task-list">
+<!-- Task 1 -->
+<div class="group relative flex items-start gap-space-md p-space-md rounded-lg bg-surface-container-low border border-outline-variant/60 hover:border-primary hover:bg-surface-container transition-all cursor-pointer">
+<div class="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-primary shadow-[0_0_8px_#00f0ff]"></div>
+<button class="mt-0.5 w-[18px] h-[18px] rounded flex items-center justify-center bg-surface-container-lowest border border-primary/60 group-hover:border-primary transition-colors" type="button">
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="w-2 h-2 rounded-full bg-error shrink-0 animate-pulse"></span>
+<p class="font-body-md text-body-md text-on-surface font-semibold truncate group-hover:text-primary transition-colors">
+                Calibrate Mark LXXXV nanotech repulsor dispersion matrix
+              </p>
+</div>
+<div class="mt-1 flex flex-wrap items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 border border-primary/30 text-primary">
+<span class="material-symbols-outlined text-[13px]">shield</span> Defense Suite
+              </span>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">
+<span class="material-symbols-outlined text-[12px]">timer</span> 45m
+              </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">@Workshop</span>
+<span class="px-1.5 py-0.5 rounded bg-error-container text-error border border-error/20 font-bold">HIGH ENERGY</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-on-surface-variant hover:text-primary transition-opacity" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+<!-- Task 2 -->
+<div class="group relative flex items-start gap-space-md p-space-md rounded-lg bg-surface-container-low border border-outline-variant/60 hover:border-primary hover:bg-surface-container transition-all cursor-pointer">
+<div class="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-secondary"></div>
+<button class="mt-0.5 w-[18px] h-[18px] rounded flex items-center justify-center bg-surface-container-lowest border border-outline-variant group-hover:border-secondary transition-colors" type="button">
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="w-2 h-2 rounded-full bg-secondary shrink-0"></span>
+<p class="font-body-md text-body-md text-on-surface font-medium truncate group-hover:text-primary transition-colors">
+                J.A.R.V.I.S. neural network latency test on orbital satellite relay
+              </p>
+</div>
+<div class="mt-1 flex flex-wrap items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary/10 border border-secondary/30 text-secondary">
+<span class="material-symbols-outlined text-[13px]">satellite_alt</span> Global Defense
+              </span>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">
+<span class="material-symbols-outlined text-[12px]">timer</span> 30m
+              </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">@Uplink</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-on-surface-variant hover:text-primary transition-opacity" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+<!-- Task 3 -->
+<div class="group relative flex items-start gap-space-md p-space-md rounded-lg bg-surface-container-low border border-outline-variant/60 hover:border-tertiary hover:bg-surface-container transition-all cursor-pointer">
+<div class="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-tertiary"></div>
+<button class="mt-0.5 w-[18px] h-[18px] rounded flex items-center justify-center bg-surface-container-lowest border border-outline-variant group-hover:border-tertiary transition-colors" type="button">
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="w-2 h-2 rounded-full bg-tertiary shrink-0"></span>
+<p class="font-body-md text-body-md text-on-surface font-medium truncate group-hover:text-tertiary transition-colors">
+                Stark Clean Energy Grid phase-4 distribution sync
+              </p>
+</div>
+<div class="mt-1 flex flex-wrap items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-tertiary/15 border border-tertiary/40 text-tertiary">
+<span class="material-symbols-outlined text-[13px]">bolt</span> Arc Energy
+              </span>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">
+<span class="material-symbols-outlined text-[12px]">timer</span> 50m
+              </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">@CleanGrid</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-on-surface-variant hover:text-primary transition-opacity" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+<!-- Task 4 -->
+<div class="group relative flex items-start gap-space-md p-space-md rounded-lg bg-surface-container-low border border-outline-variant/60 hover:border-primary hover:bg-surface-container transition-all cursor-pointer">
+<div class="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-primary/70"></div>
+<button class="mt-0.5 w-[18px] h-[18px] rounded flex items-center justify-center bg-surface-container-lowest border border-outline-variant group-hover:border-primary transition-colors" type="button">
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="w-2 h-2 rounded-full bg-primary/60 shrink-0"></span>
+<p class="font-body-md text-body-md text-on-surface font-medium truncate group-hover:text-primary transition-colors">
+                Vibranium alloy tensile stress testing in thermal chamber
+              </p>
+</div>
+<div class="mt-1 flex flex-wrap items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-on-surface">
+<span class="material-symbols-outlined text-[13px]">science</span> Materials R&amp;D
+              </span>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">
+<span class="material-symbols-outlined text-[12px]">timer</span> 25m
+              </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">@Lab</span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-on-surface-variant hover:text-primary transition-opacity" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+<!-- Task 5 (Completed) -->
+<div class="group relative flex items-start gap-space-md p-space-md rounded-lg bg-surface-container-low/40 border border-outline-variant/30 transition-all cursor-pointer opacity-70">
+<div class="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-outline"></div>
+<button class="mt-0.5 w-[18px] h-[18px] rounded flex items-center justify-center bg-primary text-surface-container-lowest" type="button">
+<span class="material-symbols-outlined text-[14px] font-bold">check</span>
+</button>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="w-2 h-2 rounded-full bg-outline shrink-0"></span>
+<p class="font-body-md text-body-md text-on-surface-variant line-through truncate">
+                Quarterly Stark Industries board review (delegated to Pepper)
+              </p>
+</div>
+<div class="mt-1 flex flex-wrap items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">
+                Corporate Governance
+              </span>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">
+<span class="material-symbols-outlined text-[12px]">done_all</span> Complete
+              </span>
+</div>
+</div>
+<span class="font-label-sm text-label-sm text-primary font-bold">Done</span>
+</div>
+</div>
+</div>
+<!-- RIGHT: Life & System Balance Radar HUD (5 cols) -->
+<div class="lg:col-span-5 bg-surface-container rounded-xl border border-outline-variant p-space-lg flex flex-col justify-between h-full shadow-[0_4px_24px_rgba(0,0,0,0.5)] hud-bracket-tl hud-bracket-br">
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant">
+<div class="flex flex-col">
+<h2 class="font-headline-md text-[18px] text-on-surface font-bold tracking-wide flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">radar</span>
+              Life &amp; System Balance Radar
+            </h2>
+<span class="font-label-sm text-[11px] text-primary/80 tracking-wider uppercase">J.A.R.V.I.S. Equilibrium: 84.2%</span>
+</div>
+<span class="material-symbols-outlined text-[20px] text-primary animate-spin" style="animation-duration: 8s;">sync</span>
+</div>
+<!-- Radar SVG Chart -->
+<div class="relative w-full flex items-center justify-center py-space-md">
+<svg class="w-72 h-72 overflow-visible" viewbox="-125 -125 250 250">
+<!-- Concentric Blueprint Rings -->
+<circle cx="0" cy="0" fill="none" r="105" stroke="#00f0ff" stroke-opacity="0.15" stroke-width="1"></circle>
+<polygon fill="none" points="0,-100 86.6,-50 86.6,50 0,100 -86.6,50 -86.6,-50" stroke="#00f0ff" stroke-opacity="0.2" stroke-width="1"></polygon>
+<polygon fill="none" points="0,-75 64.95,-37.5 64.95,37.5 0,75 -64.95,37.5 -64.95,-37.5" stroke="#00f0ff" stroke-dasharray="3 3" stroke-opacity="0.25" stroke-width="1"></polygon>
+<polygon fill="none" points="0,-50 43.3,-25 43.3,25 0,50 -43.3,25 -43.3,-25" stroke="#00f0ff" stroke-opacity="0.2" stroke-width="1"></polygon>
+<polygon fill="none" points="0,-25 21.65,-12.5 21.65,12.5 0,25 -21.65,12.5 -21.65,-12.5" stroke="#00f0ff" stroke-dasharray="2 2" stroke-opacity="0.15" stroke-width="1"></polygon>
+<!-- Axis Spoke Lines -->
+<line stroke="#00f0ff" stroke-opacity="0.25" stroke-width="1" x1="0" x2="0" y1="0" y2="-100"></line>
+<line stroke="#00f0ff" stroke-opacity="0.25" stroke-width="1" x1="0" x2="86.6" y1="0" y2="-50"></line>
+<line stroke="#00f0ff" stroke-opacity="0.25" stroke-width="1" x1="0" x2="86.6" y1="0" y2="50"></line>
+<line stroke="#00f0ff" stroke-opacity="0.25" stroke-width="1" x1="0" x2="0" y1="0" y2="100"></line>
+<line stroke="#00f0ff" stroke-opacity="0.25" stroke-width="1" x1="0" x2="-86.6" y1="0" y2="50"></line>
+<line stroke="#00f0ff" stroke-opacity="0.25" stroke-width="1" x1="0" x2="-86.6" y1="0" y2="-50"></line>
+<!-- Crosshairs & Orbit ticks -->
+<circle cx="0" cy="0" fill="#00f0ff" opacity="0.6" r="4"></circle>
+<!-- Actual Stark Telemetry Polygon Area:
+             Armor R&D: 95% (0, -95)
+             Arc Energy: 92% (79.7, -46)
+             Clean Tech: 85% (73.6, 42.5)
+             Global Defense: 88% (0, 88)
+             Avengers Support: 78% (-67.5, 39)
+             Personal Vitality: 65% (-56.3, -32.5)
+        -->
+<polygon fill="rgba(0, 240, 255, 0.2)" filter="drop-shadow(0 0 8px rgba(0,240,255,0.4))" points="0,-95 79.7,-46 73.6,42.5 0,88 -67.5,39 -56.3,-32.5" stroke="#00f0ff" stroke-linejoin="round" stroke-width="2"></polygon>
+<!-- Active Glowing Nodes -->
+<circle cx="0" cy="-95" fill="#ffffff" r="4" stroke="#00f0ff" stroke-width="2"></circle>
+<circle cx="79.7" cy="-46" fill="#ffffff" r="4" stroke="#00f0ff" stroke-width="2"></circle>
+<circle cx="73.6" cy="42.5" fill="#ffffff" r="4" stroke="#00f0ff" stroke-width="2"></circle>
+<circle cx="0" cy="88" fill="#ffffff" r="4" stroke="#00f0ff" stroke-width="2"></circle>
+<circle cx="-67.5" cy="39" fill="#ffffff" r="4" stroke="#00f0ff" stroke-width="2"></circle>
+<circle cx="-56.3" cy="-32.5" fill="#ffffff" r="4" stroke="#00f0ff" stroke-width="2"></circle>
+<!-- Axis Monospace Labels -->
+<text class="font-label-sm text-[9px] fill-primary font-bold tracking-wider" text-anchor="middle" x="0" y="-106">ARMOR R&amp;D (95%)</text>
+<text class="font-label-sm text-[9px] fill-primary font-bold tracking-wider" text-anchor="start" x="92" y="-48">ARC ENERGY (92%)</text>
+<text class="font-label-sm text-[9px] fill-on-surface-variant font-medium tracking-wider" text-anchor="start" x="92" y="52">CLEAN TECH (85%)</text>
+<text class="font-label-sm text-[9px] fill-primary font-bold tracking-wider" text-anchor="middle" x="0" y="116">GLOBAL DEFENSE (88%)</text>
+<text class="font-label-sm text-[9px] fill-on-surface-variant font-medium tracking-wider" text-anchor="end" x="-92" y="52">AVENGERS (78%)</text>
+<text class="font-label-sm text-[9px] fill-tertiary font-bold tracking-wider" text-anchor="end" x="-92" y="-48">VITALITY (65%)</text>
+</svg>
+</div>
+<!-- Domain Matrix Breakdown List -->
+<div class="grid grid-cols-3 gap-space-xs pt-space-md border-t border-outline-variant text-center">
+<div class="p-2 rounded bg-surface-container-low border border-outline-variant/40">
+<span class="block font-label-sm text-[9px] text-on-surface-variant uppercase tracking-wider">Peak Domain</span>
+<span class="block font-label-md text-label-md text-primary font-bold">Armor R&amp;D (95%)</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low border border-outline-variant/40">
+<span class="block font-label-sm text-[9px] text-on-surface-variant uppercase tracking-wider">Attention</span>
+<span class="block font-label-md text-label-md text-tertiary font-bold">Vitality (65%)</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low border border-outline-variant/40">
+<span class="block font-label-sm text-[9px] text-on-surface-variant uppercase tracking-wider">Delta Output</span>
+<span class="block font-label-md text-label-md text-primary font-bold">+8.4% vs Q3</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. Heatmap & Stark Hall of Armor Records -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-stretch">
+<!-- LEFT: Activity Telemetry Matrix (8 cols) -->
+<div class="lg:col-span-8 bg-surface-container rounded-xl border border-outline-variant p-space-lg flex flex-col justify-between shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+<div class="flex items-center justify-between pb-space-md border-b border-outline-variant">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">grid_4x4</span>
+<div>
+<h2 class="font-headline-md text-[18px] text-on-surface font-bold tracking-wide">Reactor Activity Matrix</h2>
+<span class="font-label-sm text-[11px] text-on-surface-variant">428 high-yield directives completed past 16 cycles</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs text-label-sm font-label-sm text-on-surface-variant">
+<span>Idle</span>
+<div class="flex gap-1">
+<div class="w-3 h-3 rounded-xs bg-surface-bright"></div>
+<div class="w-3 h-3 rounded-xs bg-primary/25"></div>
+<div class="w-3 h-3 rounded-xs bg-primary/50"></div>
+<div class="w-3 h-3 rounded-xs bg-primary/80"></div>
+<div class="w-3 h-3 rounded-xs bg-primary shadow-[0_0_6px_#00f0ff]"></div>
+</div>
+<span>Overdrive</span>
+</div>
+</div>
+<!-- Heatmap Container -->
+<div class="w-full overflow-x-auto py-space-xs">
+<div class="min-w-[560px] flex flex-col gap-space-xs select-none">
+<!-- Months Header -->
+<div class="flex justify-between pl-8 pr-2 font-label-sm text-[10px] text-primary/80 uppercase tracking-widest">
+<span>JUL • TACTICAL</span>
+<span>AUG • SYNTHESIS</span>
+<span>SEP • ORBITAL</span>
+<span>OCT • CURRENT</span>
+</div>
+<!-- Grid + Days Labels -->
+<div class="flex gap-space-sm">
+<div class="flex flex-col justify-between font-label-sm text-[10px] text-on-surface-variant py-0.5">
+<span>MON</span>
+<span>WED</span>
+<span>FRI</span>
+</div>
+<!-- Heatmap 16 Columns x 7 Rows -->
+<div class="flex-1 grid grid-flow-col grid-rows-7 gap-1">
+<!-- Week 1 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright" title="Jul 08: Standby"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30" title="Jul 09: 2 directives"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50" title="Jul 10: 4 directives"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80" title="Jul 11: 7 directives"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 2 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<!-- Week 3 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 4 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 5 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<!-- Week 6 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 7 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<!-- Week 8 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 9 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<!-- Week 10 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 11 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 12 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<!-- Week 13 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 14 -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 15 (Hover simulated item) -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="relative w-3.5 h-3.5 rounded-xs bg-primary ring-2 ring-primary ring-offset-1 ring-offset-background shadow-[0_0_8px_#00f0ff]">
+<!-- Floating Tooltip Simulation -->
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-0.5 bg-surface-container-highest text-primary border border-primary/50 rounded shadow-md whitespace-nowrap z-30 font-label-sm text-[9px] tracking-wider">
+                  OCT 18: 9 DIRECTIVES CALIBRATED
+                </div>
+</div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/30"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<!-- Week 16 (Current) -->
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/80"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary shadow-[0_0_4px_#00f0ff]"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-primary/50"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+<div class="w-3.5 h-3.5 rounded-xs bg-surface-bright"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-space-sm flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant border-t border-outline-variant/40">
+<span>SYSTEM THROUGHPUT: <strong class="text-primary font-bold">4.8 DIRECTIVES/SOL</strong></span>
+<span class="text-primary font-semibold tracking-wider">● 99.4% NEURAL SYNC RATING</span>
+</div>
+</div>
+<!-- RIGHT: Personal Records / Stark Hall of Armor (4 cols) -->
+<div class="lg:col-span-4 bg-surface-container rounded-xl border border-outline-variant p-space-lg flex flex-col justify-between shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+<div class="flex items-center justify-between pb-space-xs border-b border-outline-variant">
+<h2 class="font-headline-md text-[18px] text-on-surface font-bold tracking-wide flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-[20px]">military_tech</span>
+            Hall of Armor Records
+          </h2>
+<span class="font-label-sm text-[10px] text-tertiary font-bold tracking-widest">ARCHIVE</span>
+</div>
+<div class="flex flex-col gap-space-sm my-auto py-2">
+<!-- Best 1 -->
+<div class="flex items-center gap-space-md p-space-sm rounded-lg bg-surface-container-low border border-outline-variant/40 hover:border-tertiary/60 transition-colors">
+<div class="w-10 h-10 rounded-lg bg-tertiary/15 border border-tertiary/30 flex items-center justify-center text-tertiary shrink-0">
+<span class="material-symbols-outlined text-[22px]">workspace_premium</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-[10px] text-on-surface-variant uppercase tracking-wider">Longest Clean Grid Uptime</span>
+<span class="font-headline-sm text-headline-sm text-tertiary font-bold">47 Days Continuous</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant truncate">Stark Free Clean Grid (Malibu Node)</span>
+</div>
+</div>
+<!-- Best 2 -->
+<div class="flex items-center gap-space-md p-space-sm rounded-lg bg-surface-container-low border border-outline-variant/40 hover:border-primary/60 transition-colors">
+<div class="w-10 h-10 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[22px]">memory</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-[10px] text-on-surface-variant uppercase tracking-wider">Peak Compute Throughput</span>
+<span class="font-headline-sm text-headline-sm text-primary font-bold">14.8 PFLOPS</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant truncate">J.A.R.V.I.S. Core Neural Cluster Overdrive</span>
+</div>
+</div>
+<!-- Best 3 -->
+<div class="flex items-center gap-space-md p-space-sm rounded-lg bg-surface-container-low border border-outline-variant/40 hover:border-secondary/60 transition-colors">
+<div class="w-10 h-10 rounded-lg bg-secondary/15 border border-secondary/30 flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined text-[22px]">verified</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-[10px] text-on-surface-variant uppercase tracking-wider">Neural Sync Rating</span>
+<span class="font-headline-sm text-headline-sm text-secondary font-bold">99.4% Synchronized</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant truncate">Mark LXXXV HUD Cranial Interface</span>
+</div>
+</div>
+</div>
+<div class="pt-space-xs text-center border-t border-outline-variant/40">
+<button class="text-primary font-label-md text-label-md hover:underline inline-flex items-center gap-1 font-semibold tracking-wide" type="button">
+            View Hall of Armor Telemetry
+            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 5. Bottom Section: Active Strategic Directives -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between border-b border-outline-variant pb-2">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">rocket_launch</span>
+<h2 class="font-headline-md text-[18px] text-on-surface font-bold tracking-wide">Active Strategic Directives</h2>
+<span class="font-label-sm text-[11px] text-on-surface-variant">HORIZON COMMITMENTS &amp; DEFENSE SHIELDS</span>
+</div>
+<a class="font-label-md text-label-md text-primary hover:underline flex items-center gap-1 font-semibold" href="#">
+        All Directives (5)
+        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+<!-- 3 Prominent Goal Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<!-- Goal 1 -->
+<div class="flex flex-col justify-between p-space-lg rounded-xl bg-surface-container border border-outline-variant hover:border-primary/70 transition-all relative overflow-hidden group shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<span class="px-2 py-0.5 rounded bg-primary/10 border border-primary/30 text-primary font-label-sm text-[10px] uppercase tracking-wider w-fit mb-2">Defense</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">
+              Orbital Defense Shield v3
+            </h3>
+</div>
+<!-- Progress Ring 65% -->
+<div class="relative w-12 h-12 shrink-0">
+<svg class="w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-bright" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-primary drop-shadow-[0_0_6px_rgba(0,240,255,0.8)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="65, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<span class="absolute inset-0 flex items-center justify-center font-label-sm text-[11px] font-bold text-primary">65%</span>
+</div>
+</div>
+<p class="my-space-md font-body-sm text-body-sm text-on-surface-variant italic line-clamp-2">
+          "Why: Because peace in our time requires vigilance and clean boundless power."
+        </p>
+<div class="pt-space-sm border-t border-outline-variant/40 flex items-center justify-between font-label-sm text-[11px] text-on-surface-variant">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-primary">satellite</span> 3 sub-arrays • 8 relays left
+          </span>
+<span class="font-label-sm text-[11px] text-primary font-bold">14 days to deploy</span>
+</div>
+</div>
+<!-- Goal 2 -->
+<div class="flex flex-col justify-between p-space-lg rounded-xl bg-surface-container border border-outline-variant hover:border-secondary/70 transition-all relative overflow-hidden group shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<span class="px-2 py-0.5 rounded bg-secondary/10 border border-secondary/30 text-secondary font-label-sm text-[10px] uppercase tracking-wider w-fit mb-2">Arc Energy</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-secondary transition-colors">
+              Clean Energy Free Grid Global
+            </h3>
+</div>
+<!-- Progress Ring 42% -->
+<div class="relative w-12 h-12 shrink-0">
+<svg class="w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-bright" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-secondary drop-shadow-[0_0_6px_rgba(0,219,233,0.8)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="42, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<span class="absolute inset-0 flex items-center justify-center font-label-sm text-[11px] font-bold text-secondary">42%</span>
+</div>
+</div>
+<p class="my-space-md font-body-sm text-body-sm text-on-surface-variant italic line-clamp-2">
+          "Why: Decentralize unlimited clean power to eliminate the core driver of global resource conflict."
+        </p>
+<div class="pt-space-sm border-t border-outline-variant/40 flex items-center justify-between font-label-sm text-[11px] text-on-surface-variant">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-secondary">bolt</span> 2 generators • 12 nodes
+          </span>
+<span class="font-label-sm text-[11px] text-secondary font-bold">38 days left</span>
+</div>
+</div>
+<!-- Goal 3 -->
+<div class="flex flex-col justify-between p-space-lg rounded-xl bg-surface-container border border-outline-variant hover:border-tertiary/70 transition-all relative overflow-hidden group shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<span class="px-2 py-0.5 rounded bg-tertiary/10 border border-tertiary/30 text-tertiary font-label-sm text-[10px] uppercase tracking-wider w-fit mb-2">Bio-Tech</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-tertiary transition-colors">
+              Nanotech Medical Regeneration
+            </h3>
+</div>
+<!-- Progress Ring 28% -->
+<div class="relative w-12 h-12 shrink-0">
+<svg class="w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-bright" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-tertiary drop-shadow-[0_0_6px_rgba(255,184,0,0.8)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="28, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<span class="absolute inset-0 flex items-center justify-center font-label-sm text-[11px] font-bold text-tertiary">28%</span>
+</div>
+</div>
+<p class="my-space-md font-body-sm text-body-sm text-on-surface-variant italic line-clamp-2">
+          "Why: Cellular nanotech synthesis to render critical physical trauma instantaneously treatable."
+        </p>
+<div class="pt-space-sm border-t border-outline-variant/40 flex items-center justify-between font-label-sm text-[11px] text-on-surface-variant">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-tertiary">medication</span> 1 protocol • 15 trials
+          </span>
+<span class="font-label-sm text-[11px] text-tertiary font-bold">52 days left</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Simple micro-interaction for task filter pills
+  document.querySelectorAll('#task-filter-group button').forEach(button => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('#task-filter-group button').forEach(b => {
+        b.classList.remove('bg-primary', 'text-surface-container-lowest', 'font-bold', 'shadow');
+        b.classList.add('text-on-surface-variant');
+      });
+      button.classList.add('bg-primary', 'text-surface-container-lowest', 'font-bold', 'shadow');
+      button.classList.remove('text-on-surface-variant');
+    });
+  });
+
+  // Global hotkey 'C' for Initiate Directive
+  window.addEventListener('keydown', (e) => {
+    if ((e.key === 'c' || e.key === 'C') && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      e.preventDefault();
+      const addBtn = document.querySelector('button:has(kbd)');
+      if (addBtn) {
+        addBtn.classList.add('scale-95');
+        setTimeout(() => addBtn.classList.remove('scale-95'), 120);
+      }
+    }
+  });
+</script></div></main></div></body></html>

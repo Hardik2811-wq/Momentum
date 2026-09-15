@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"on-secondary":"#ffffff","tertiary":"#4b49c9","on-surface":"#1a1b1f","secondary":"#006e28","surface-container-lowest":"#ffffff","tertiary-fixed":"#e2dfff","on-surface-variant":"#414753","error-container":"#ffdad6","on-primary-fixed":"#001b3f","surface-container-low":"#f4f3f8","outline":"#717785","surface-tint":"#005cbb","on-tertiary-fixed-variant":"#3631b4","surface-bright":"#faf8fe","secondary-fixed":"#72fe88","on-primary-container":"#fcfbff","on-error-container":"#93000a","tertiary-container":"#6563e3","background":"#faf8fe","outline-variant":"#c1c6d6","on-secondary-container":"#00732a","surface-container-highest":"#e3e2e7","primary-fixed-dim":"#abc7ff","on-primary-fixed-variant":"#00458f","surface-container":"#eeedf3","on-tertiary-container":"#fefaff","on-tertiary":"#ffffff","inverse-primary":"#abc7ff","inverse-on-surface":"#f1f0f5","on-primary":"#ffffff","primary-container":"#0071e3","surface":"#faf8fe","primary":"#0059b5","on-secondary-fixed-variant":"#00531c","on-tertiary-fixed":"#0c006a","primary-fixed":"#d7e2ff","surface-container-high":"#e9e7ed","tertiary-fixed-dim":"#c2c1ff","secondary-fixed-dim":"#53e16f","inverse-surface":"#2f3034","on-secondary-fixed":"#002107","surface-variant":"#e3e2e7","on-error":"#ffffff","on-background":"#1a1b1f","error":"#ba1a1a","secondary-container":"#6ffb85","surface-dim":"#dad9df"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"gutter-2xl":"32px","sidebar-width":"260px","gutter-xs":"4px","gutter-md":"12px","gutter-base":"16px","gutter-lg":"20px","margin-tablet":"24px","margin-mobile":"16px","inspector-width":"300px","gutter-xl":"24px","margin-desktop":"32px","gutter-sm":"8px"},"fontFamily":{"headline-lg-mobile":["Inter"],"title":["Inter"],"headline-lg":["Inter"],"body-sm":["Inter"],"display":["Inter"],"caption":["Inter"],"headline-md":["Inter"],"label-md":["Inter"],"headline-sm":["Inter"],"body-md":["Inter"],"display-mobile":["Inter"],"body-lg":["Inter"],"label-sm":["Inter"]},"fontSize":{"headline-lg-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.014em","fontWeight":"600"}],"title":["17px",{"lineHeight":"22px","letterSpacing":"-0.004em","fontWeight":"600"}],"headline-lg":["32px",{"lineHeight":"38px","letterSpacing":"-0.016em","fontWeight":"600"}],"body-sm":["13px",{"lineHeight":"18px","letterSpacing":"0em","fontWeight":"400"}],"display":["56px",{"lineHeight":"64px","letterSpacing":"-0.022em","fontWeight":"600"}],"caption":["10px",{"lineHeight":"12px","letterSpacing":"0.02em","fontWeight":"500"}],"headline-md":["24px",{"lineHeight":"30px","letterSpacing":"-0.012em","fontWeight":"600"}],"label-md":["13px",{"lineHeight":"16px","letterSpacing":"0em","fontWeight":"500"}],"headline-sm":["20px",{"lineHeight":"26px","letterSpacing":"-0.008em","fontWeight":"600"}],"body-md":["15px",{"lineHeight":"21px","letterSpacing":"-0.002em","fontWeight":"400"}],"display-mobile":["38px",{"lineHeight":"46px","letterSpacing":"-0.019em","fontWeight":"600"}],"body-lg":["17px",{"lineHeight":"24px","letterSpacing":"-0.003em","fontWeight":"400"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.01em","fontWeight":"500"}]}}}}</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><aside class="fixed left-0 top-0 h-screen w-sidebar-width z-50 flex flex-col justify-between bg-surface-container-low/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] select-none"><div class="flex flex-col flex-1 min-h-0"><div class="pt-gutter-base px-gutter-base pb-gutter-md flex items-center gap-gutter-sm"><span class="w-3 h-3 rounded-full bg-error inline-block opacity-85 hover:opacity-100 transition-opacity cursor-pointer"></span><span class="w-3 h-3 rounded-full bg-secondary-fixed inline-block opacity-85 hover:opacity-100 transition-opacity cursor-pointer"></span><span class="w-3 h-3 rounded-full bg-secondary inline-block opacity-85 hover:opacity-100 transition-opacity cursor-pointer"></span></div><div class="px-gutter-base py-gutter-sm flex items-center justify-between"><div class="flex items-center gap-gutter-sm"><img alt="Momentum OS App Icon" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1WsfBb6ejjtr-5WptE0xDcQpWz94S_vr6yqEdLbBb4BEMWd_ZGWc-woaRXW4AFSS0XCu2NyfFCpJwOvSr4LWgIphSb2hPlulNGzfGOoJLS33JkMgVEnXkq1sYzv8l-8NMsEPrJ5IVWL0Ii4lfqSkqidnl0IfWigvmJ_A8uR1R6iiU6RQu8DwY1__rETrvZxnD_xCsxYE-hkc_ChXuxgzC65eO8bzTWiBckB7tIYTUAsKVIPVAGTiat2Mos"/><span class="font-title text-title text-on-surface tracking-tight">Momentum</span></div><span class="px-gutter-xs py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-caption text-caption uppercase tracking-wider">v3.0</span></div><div class="px-gutter-base py-gutter-md"><button class="w-full flex items-center justify-center gap-gutter-sm py-gutter-sm px-gutter-md rounded-full bg-primary-container text-on-primary-container font-label-md text-label-md shadow-sm active:scale-[0.98] transition-transform"><span class="material-symbols-outlined text-[18px]">add</span><span>Quick Add</span></button></div><nav class="flex-1 px-gutter-sm space-y-gutter-xs overflow-y-auto" data-active-classes="bg-surface-container-lowest text-primary shadow-[0_1px_3px_rgba(0,0,0,0.06)] font-label-md"><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="dashboard" href="dashboard.html"><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">space_dashboard</span><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">Dashboard</span></a><a aria-current="page" class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg transition-all bg-surface-container-lowest text-primary shadow-[0_1px_3px_rgba(0,0,0,0.06)] font-label-md" data-path="today" href="today.html"><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg transition-all bg-surface-container-lowest text-primary shadow-[0_1px_3px_rgba(0,0,0,0.06)] font-label-md">today</span><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg transition-all bg-surface-container-lowest text-primary shadow-[0_1px_3px_rgba(0,0,0,0.06)] font-label-md">Today</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="goals" href="goals.html"><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">flag_circle</span><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">Goals</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="projects" href="goals.html"><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">folder</span><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">Projects</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="habits" href="habits.html"><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">restart_alt</span><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">Habits</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="reflections" href="analytics.html"><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">auto_awesome</span><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">Reflections</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="analytics" href="analytics.html"><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">insights</span><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">Analytics</span></a><a class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">tune</span><span class="flex items-center gap-gutter-md px-gutter-md py-gutter-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">Settings</span></a></nav></div><div class="p-gutter-base bg-surface-container/50 backdrop-blur-sm m-gutter-sm rounded-xl flex items-center justify-between"><div class="flex items-center gap-gutter-sm min-w-0"><img alt="Elena Vance" class="w-8 h-8 rounded-full object-cover flex-shrink-0" src="https://lh3.googleusercontent.com/aida/AEtjO1Ue4xsbXvXO-3RVxtBZMNAj9_OpFoQo4JA9VLo09KuapLwZdBCfNV9Ab37_h7Xsgy2tAtEWlqq53w3NmJ_5v2Gx84HBSj0Q1zF5JV4sC2M6RV0xRkOCsoM2EUQqPxrVNHEKcBROB2pi8txnLGClDebY76Z3UGGRvzOCCX6vYA2fQlmi8YZadzSniOxWkd20_-I6W1Mrcabe4rgghVyzRh8c6xxzYUZcyrEc3hgiILO454cXfgh-aImaoA"/><div class="flex flex-col min-w-0"><span class="font-label-md text-label-md text-on-surface truncate">Elena Vance</span><span class="font-caption text-caption text-on-surface-variant truncate">Product Lead</span></div></div><button class="p-gutter-xs rounded-full hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[18px]">settings</span></button></div></aside><div class="pl-sidebar-width"><header class="fixed top-0 left-sidebar-width right-0 h-14 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-margin-desktop"><div class="flex items-center gap-gutter-sm text-on-surface-variant font-label-md text-label-md"><span class="font-body-md text-body-md text-on-surface-variant/80">Momentum</span><span class="text-outline-variant font-caption text-caption">/</span><span class="text-on-surface font-label-md text-label-md">Workspace</span></div><div class="flex-1 max-w-md mx-gutter-xl"><div class="relative flex items-center w-full"><span class="material-symbols-outlined absolute left-gutter-md text-[18px] text-outline">search</span><input class="w-full h-8 pl-9 pr-3 rounded-full bg-surface-container-low text-on-surface placeholder:text-outline font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_3.5px_rgba(0,113,227,0.2)] transition-all" placeholder="Search or jump to... ⌘K" type="text"/><span class="absolute right-gutter-sm px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-caption text-caption tracking-wider pointer-events-none">⌘K</span></div></div><div class="flex items-center gap-gutter-md"><div class="hidden sm:flex items-center gap-gutter-xs px-gutter-sm py-0.5 rounded-full bg-surface-container-low text-secondary font-caption text-caption"><span class="material-symbols-outlined text-[14px]">check_circle</span><span>All changes saved</span></div>
+    <!-- Mode Switcher -->
+    <div class="flex items-center bg-surface-container-low/80 dark:bg-white/[0.05] p-0.5 rounded-full border border-outline-variant/30 dark:border-white/[0.08] mr-2">
+      <a href="dashboard.html" title="Light Theme" class="px-2.5 py-1 rounded-full text-xs font-medium transition-colors bg-primary text-white shadow-sm">Light</a>
+      <a href="dashboard-dark.html" title="Pro Dark Theme" class="px-2.5 py-1 rounded-full text-xs font-medium transition-colors text-on-surface-variant hover:text-on-surface dark:text-[#A1A1A6]">Pro Dark</a>
+      <a href="tactical-hud.html" title="Stark OS Tactical HUD" class="px-2.5 py-1 rounded-full text-xs font-medium transition-colors text-cyan-600 dark:text-cyan-400 hover:text-cyan-500">HUD ⚡</a>
+    </div>
+    
+<button class="relative p-gutter-xs rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-error"></span></button><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1Ue4xsbXvXO-3RVxtBZMNAj9_OpFoQo4JA9VLo09KuapLwZdBCfNV9Ab37_h7Xsgy2tAtEWlqq53w3NmJ_5v2Gx84HBSj0Q1zF5JV4sC2M6RV0xRkOCsoM2EUQqPxrVNHEKcBROB2pi8txnLGClDebY76Z3UGGRvzOCCX6vYA2fQlmi8YZadzSniOxWkd20_-I6W1Mrcabe4rgghVyzRh8c6xxzYUZcyrEc3hgiILO454cXfgh-aImaoA"/></div></header><main class="w-full pt-14 px-margin-desktop py-gutter-xl min-h-screen bg-surface"><div class="flex flex-col w-full gap-gutter-lg pb-gutter-2xl">
+<!-- Top Segmented Horizon Switcher (macOS HIG Capsule) -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-gutter-md">
+<div class="flex items-center gap-gutter-xs p-1 rounded-full bg-surface-container shadow-inner max-w-fit">
+<button class="px-gutter-base py-1 rounded-full bg-surface-container-lowest text-primary font-label-md text-label-md shadow-sm transition-all flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+        Today
+      </button>
+<button class="px-gutter-base py-1 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">
+        This Week
+      </button>
+<button class="px-gutter-base py-1 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">
+        This Quarter
+      </button>
+<button class="px-gutter-base py-1 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">
+        This Year
+      </button>
+<button class="px-gutter-base py-1 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">
+        5-Year Vision
+      </button>
+</div>
+<!-- Live Status & Productivity Dial -->
+<div class="flex items-center gap-gutter-md">
+<div class="flex items-center gap-2 px-gutter-md py-1 rounded-full bg-surface-container-low text-on-surface-variant text-label-sm font-label-sm">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span>Optimal Cognitive Window</span>
+</div>
+<div class="hidden lg:flex items-center gap-1.5 text-on-surface-variant font-caption text-caption uppercase tracking-wider">
+<span>Tuesday, Oct 24</span>
+<span>•</span>
+<span class="text-primary font-label-sm">3h 45m deep remaining</span>
+</div>
+</div>
+</div>
+<!-- Context & Energy Filter Bar -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-gutter-base p-gutter-md rounded-2xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(0,0,0,0.03),0_6px_20px_rgba(0,0,0,0.02)]">
+<!-- Context Chips -->
+<div class="flex items-center gap-gutter-xs overflow-x-auto pb-1 lg:pb-0">
+<span class="text-on-surface-variant font-caption text-caption uppercase tracking-wider pr-1">Context:</span>
+<button class="px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface text-label-sm font-label-sm transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">home</span>
+        @Home
+      </button>
+<button class="px-3 py-1 rounded-full bg-primary-fixed text-on-primary-fixed-variant font-label-sm text-label-sm shadow-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">laptop_mac</span>
+        @Laptop
+        <span class="w-1.5 h-1.5 rounded-full bg-primary ml-0.5"></span>
+</button>
+<button class="px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface text-label-sm font-label-sm transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">call</span>
+        @Calls
+      </button>
+<button class="px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface text-label-sm font-label-sm transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">directions_run</span>
+        @Errands
+      </button>
+</div>
+<!-- Energy Selector & Cognitive Hint -->
+<div class="flex items-center gap-gutter-md flex-wrap">
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-caption text-caption">
+<span class="material-symbols-outlined text-[14px] text-tertiary">psychology</span>
+<span>Prioritizing high-cognitive tasks</span>
+</div>
+<div class="flex items-center gap-1 p-0.5 rounded-full bg-surface-container">
+<button class="px-2.5 py-1 rounded-full text-on-surface-variant text-label-sm font-label-sm hover:text-on-surface transition-colors">
+          Low
+        </button>
+<button class="px-2.5 py-1 rounded-full text-on-surface-variant text-label-sm font-label-sm hover:text-on-surface transition-colors">
+          Medium
+        </button>
+<button class="px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-label-sm font-label-sm shadow-sm flex items-center gap-1">
+<span>High</span>
+<span class="material-symbols-outlined text-[13px]">bolt</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main Content Layout (Left: Grouped Horizon Tasks 68%, Right: Day Time Ruler 32%) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter-xl items-start">
+<!-- LEFT PANEL: Task Timeline Stream (8 Cols ~ 68%) -->
+<div class="lg:col-span-8 flex flex-col gap-gutter-xl">
+<!-- Section 1: Morning Focus Block -->
+<div class="flex flex-col gap-gutter-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-gutter-sm">
+<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Morning Focus</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-caption text-caption">9:00 AM – 12:30 PM</span>
+</div>
+<span class="font-caption text-caption text-on-surface-variant uppercase tracking-wider">3.5 hrs allocation</span>
+</div>
+<!-- Grouped Tasks Card -->
+<div class="rounded-2xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] overflow-hidden">
+<!-- Task Item 1 -->
+<div class="group relative flex items-center justify-between p-gutter-base hover:bg-surface-container-low/40 transition-colors">
+<div class="flex items-start gap-gutter-md min-w-0 flex-1">
+<button class="mt-0.5 text-outline-variant hover:text-outline cursor-grab active:cursor-grabbing">
+<span class="material-symbols-outlined text-[18px]">drag_indicator</span>
+</button>
+<!-- Checkbox -->
+<button class="mt-0.5 w-5 h-5 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center text-transparent transition-all shadow-sm flex-shrink-0" onclick="this.classList.toggle('bg-primary'); this.classList.toggle('text-on-primary');">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</button>
+<div class="flex flex-col min-w-0 flex-1 pr-gutter-md">
+<div class="flex items-center gap-gutter-sm flex-wrap">
+<span class="font-body-md text-body-md font-medium text-on-surface">Synthesize VisionOS Design Token Mappings</span>
+<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant font-caption text-caption flex items-center gap-0.5">
+<span>→</span> Ship Portfolio
+                  </span>
+</div>
+<div class="flex items-center gap-gutter-md mt-1 text-on-surface-variant font-caption text-caption">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-outline">schedule</span>
+                    45m est.
+                  </span>
+<span class="flex items-center gap-1 text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+                    High Energy
+                  </span>
+<span class="hidden sm:inline-block text-outline-variant">•</span>
+<span class="hidden sm:inline-block">Figma System Spec</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="px-2 py-1 rounded bg-surface-container text-on-surface-variant font-caption text-caption">Key Result 1.2</span>
+<button class="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+</div>
+<div class="h-[1px] bg-surface-container-high ml-12 mr-gutter-base"></div>
+<!-- Task Item 2 -->
+<div class="group relative flex items-center justify-between p-gutter-base hover:bg-surface-container-low/40 transition-colors">
+<div class="flex items-start gap-gutter-md min-w-0 flex-1">
+<button class="mt-0.5 text-outline-variant hover:text-outline cursor-grab active:cursor-grabbing">
+<span class="material-symbols-outlined text-[18px]">drag_indicator</span>
+</button>
+<button class="mt-0.5 w-5 h-5 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center text-transparent transition-all shadow-sm flex-shrink-0" onclick="this.classList.toggle('bg-primary'); this.classList.toggle('text-on-primary');">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</button>
+<div class="flex flex-col min-w-0 flex-1 pr-gutter-md">
+<div class="flex items-center gap-gutter-sm flex-wrap">
+<span class="font-body-md text-body-md font-medium text-on-surface">Architect Fluid Canvas Micro-interactions</span>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant font-caption text-caption flex items-center gap-0.5">
+<span>→</span> macOS Native Revamp
+                  </span>
+</div>
+<div class="flex items-center gap-gutter-md mt-1 text-on-surface-variant font-caption text-caption">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-outline">schedule</span>
+                    1h 15m est.
+                  </span>
+<span class="flex items-center gap-1 text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+                    High Energy
+                  </span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<button class="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 2: Afternoon Deep Work Block -->
+<div class="flex flex-col gap-gutter-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-gutter-sm">
+<span class="w-2.5 h-2.5 rounded-full bg-tertiary"></span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Afternoon Deep Work</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-caption text-caption">1:30 PM – 5:00 PM</span>
+</div>
+<span class="font-caption text-caption text-on-surface-variant uppercase tracking-wider">3.5 hrs allocation</span>
+</div>
+<div class="rounded-2xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] overflow-hidden">
+<!-- Complex Task with Sub-items & Dependency -->
+<div class="p-gutter-base">
+<div class="flex items-start justify-between gap-gutter-md">
+<div class="flex items-start gap-gutter-md min-w-0 flex-1">
+<button class="mt-0.5 text-outline-variant hover:text-outline cursor-grab active:cursor-grabbing">
+<span class="material-symbols-outlined text-[18px]">drag_indicator</span>
+</button>
+<button class="mt-0.5 w-5 h-5 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center text-transparent transition-all shadow-sm flex-shrink-0" onclick="this.classList.toggle('bg-primary'); this.classList.toggle('text-on-primary');">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</button>
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center gap-gutter-sm flex-wrap">
+<span class="font-body-md text-body-md font-medium text-on-surface">Design System Micro-interactions Engine</span>
+<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-caption text-caption flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">lock</span>
+                      Blocked by API spec v2
+                    </span>
+</div>
+<div class="flex items-center gap-gutter-md mt-1 text-on-surface-variant font-caption text-caption">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-outline">schedule</span>
+                      2h 00m est.
+                    </span>
+<span class="text-tertiary font-medium">Critical Priority P1</span>
+</div>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-caption text-caption">2/3 Done</span>
+</div>
+<!-- Nested Sub-checklist -->
+<div class="ml-12 mt-gutter-md pl-gutter-base border-l-0 bg-surface-container-low/50 p-gutter-sm rounded-xl space-y-2">
+<label class="flex items-center gap-gutter-sm cursor-pointer select-none">
+<input checked="" class="w-4 h-4 rounded text-primary focus:ring-0 accent-primary" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface line-through opacity-70">Define spring physics coefficients (damping: 30)</span>
+</label>
+<label class="flex items-center gap-gutter-sm cursor-pointer select-none">
+<input checked="" class="w-4 h-4 rounded text-primary focus:ring-0 accent-primary" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface line-through opacity-70">Haptic feedback profiles for tactile confirmation</span>
+</label>
+<label class="flex items-center gap-gutter-sm cursor-pointer select-none">
+<input class="w-4 h-4 rounded text-primary focus:ring-0 accent-primary" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface">Finalize gesture momentum deceleration curves</span>
+</label>
+</div>
+</div>
+<div class="h-[1px] bg-surface-container-high ml-12 mr-gutter-base"></div>
+<!-- Task Item 4 -->
+<div class="group relative flex items-center justify-between p-gutter-base hover:bg-surface-container-low/40 transition-colors">
+<div class="flex items-start gap-gutter-md min-w-0 flex-1">
+<button class="mt-0.5 text-outline-variant hover:text-outline cursor-grab active:cursor-grabbing">
+<span class="material-symbols-outlined text-[18px]">drag_indicator</span>
+</button>
+<button class="mt-0.5 w-5 h-5 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center text-transparent transition-all shadow-sm flex-shrink-0" onclick="this.classList.toggle('bg-primary'); this.classList.toggle('text-on-primary');">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</button>
+<div class="flex flex-col min-w-0 flex-1 pr-gutter-md">
+<div class="flex items-center gap-gutter-sm flex-wrap">
+<span class="font-body-md text-body-md font-medium text-on-surface">Executive Architecture Debrief Preparation</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-caption text-caption">
+                    Q4 Milestones
+                  </span>
+</div>
+<div class="flex items-center gap-gutter-md mt-1 text-on-surface-variant font-caption text-caption">
+<span>45m est.</span>
+<span class="text-on-surface-variant">Medium Energy</span>
+</div>
+</div>
+</div>
+<button class="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Section 3: Evening Wind-Down Block -->
+<div class="flex flex-col gap-gutter-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-gutter-sm">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Evening Wind-Down</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-caption text-caption">5:30 PM – 7:00 PM</span>
+</div>
+<span class="font-caption text-caption text-on-surface-variant uppercase tracking-wider">Restoration &amp; Habits</span>
+</div>
+<div class="rounded-2xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] p-gutter-base space-y-gutter-sm">
+<div class="flex items-center justify-between p-gutter-sm rounded-xl hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-gutter-md">
+<span class="material-symbols-outlined text-secondary text-[22px]">directions_run</span>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-medium text-on-surface">Tempo run: 8km</span>
+<span class="text-on-surface-variant font-caption text-caption">Target pace 4:45/km • Aerobic Threshold</span>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container text-label-sm font-label-sm">Health Horizon</span>
+</div>
+<div class="flex items-center justify-between p-gutter-sm rounded-xl hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-gutter-md">
+<span class="material-symbols-outlined text-tertiary text-[22px]">music_note</span>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-medium text-on-surface">Guitar fingerstyle practice</span>
+<span class="text-on-surface-variant font-caption text-caption">Classical etude No. 4 • 25m tactile mastery</span>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant text-label-sm font-label-sm">Deliberate Play</span>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT PANEL: Apple Calendar Style Day Timeline (4 Cols ~ 32%) -->
+<div class="lg:col-span-4 flex flex-col gap-gutter-md">
+<!-- Timeline Header -->
+<div class="flex items-center justify-between px-gutter-sm">
+<div class="flex items-center gap-gutter-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+<h3 class="font-title text-title text-on-surface">Time Blocked Today</h3>
+</div>
+<span class="text-caption font-caption text-on-surface-variant uppercase tracking-wider">6h 15m Scheduled</span>
+</div>
+<!-- Calendar Canvas Container -->
+<div class="relative bg-surface-container-lowest rounded-2xl p-gutter-base shadow-[0_1px_3px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] min-h-[640px]">
+<!-- Timeline Background Hours Grid (9 AM - 7 PM) -->
+<div class="flex flex-col justify-between h-[560px] text-outline font-caption text-caption select-none">
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">09:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">10:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">11:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">12:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">13:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">14:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">15:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">16:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">17:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">18:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+<div class="flex items-center gap-gutter-sm">
+<span class="w-10 text-right">19:00</span>
+<div class="flex-1 h-[1px] bg-surface-container-high"></div>
+</div>
+</div>
+<!-- Overlaid Scheduled Blocks (Absolute positioning matching 9 AM - 7 PM 560px space) -->
+<div class="absolute top-gutter-base left-16 right-gutter-base h-[560px] pointer-events-none">
+<!-- Event 1: Focus Sprint (9:15 - 10:45) ~ 84px height, top 14px -->
+<div class="absolute top-4 left-0 right-0 h-20 rounded-xl bg-primary-fixed/80 backdrop-blur-md p-2.5 flex flex-col justify-between shadow-sm pointer-events-auto hover:bg-primary-fixed transition-colors cursor-pointer">
+<div class="flex items-start justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-on-primary-fixed leading-tight truncate">Focus Sprint: VisionOS Tokens</span>
+<span class="material-symbols-outlined text-primary text-[14px]">push_pin</span>
+</div>
+<div class="flex items-center justify-between text-on-primary-fixed-variant font-caption text-caption">
+<span>9:15 – 10:45 AM</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container-lowest/60">High Focus</span>
+</div>
+</div>
+<!-- Event 2: Team Architecture Sync (11:00 - 12:00) ~ 56px height, top 112px -->
+<div class="absolute top-28 left-0 right-0 h-14 rounded-xl bg-tertiary-fixed/75 backdrop-blur-md p-2 flex flex-col justify-between shadow-sm pointer-events-auto hover:bg-tertiary-fixed transition-colors cursor-pointer">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-on-tertiary-fixed truncate">Team Architecture Sync</span>
+<span class="material-symbols-outlined text-tertiary text-[14px]">videocam</span>
+</div>
+<span class="text-on-tertiary-fixed-variant font-caption text-caption">11:00 AM – 12:00 PM • Screen Room</span>
+</div>
+<!-- CURRENT TIME LINE INDICATOR: 1:45 PM (around top 265px) -->
+<div class="absolute top-64 -left-3 right-0 flex items-center z-20 pointer-events-none">
+<div class="w-2.5 h-2.5 rounded-full bg-error ring-4 ring-error/20 -ml-1"></div>
+<div class="flex-1 h-[2px] bg-error/90 shadow-sm"></div>
+<span class="px-1.5 py-0.5 rounded bg-error text-on-error font-caption text-caption font-semibold tracking-wider ml-1">1:45 PM</span>
+</div>
+<!-- Event 3: Design System Micro-interactions (1:30 - 3:45) ~ 126px height, top 252px -->
+<div class="absolute top-[252px] left-0 right-0 h-32 rounded-xl bg-primary-fixed/90 backdrop-blur-md p-2.5 flex flex-col justify-between shadow-sm pointer-events-auto hover:bg-primary-fixed transition-colors cursor-pointer">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-on-primary-fixed">Design System Micro-interactions</span>
+<span class="material-symbols-outlined text-primary text-[14px]">bolt</span>
+</div>
+<p class="font-caption text-caption text-on-primary-fixed-variant line-clamp-1 mt-0.5">Interaction curves, drag physics testbed</p>
+</div>
+<div class="flex items-center justify-between text-on-primary-fixed-variant font-caption text-caption">
+<span>1:30 – 3:45 PM</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-lowest/80 text-primary font-medium">Deep Session</span>
+</div>
+</div>
+<!-- Event 4: Evening Workout & Tempo Run (5:30 - 6:30) ~ 56px height, top 476px -->
+<div class="absolute top-[476px] left-0 right-0 h-14 rounded-xl bg-secondary-fixed/80 backdrop-blur-md p-2 flex flex-col justify-between shadow-sm pointer-events-auto hover:bg-secondary-fixed transition-colors cursor-pointer">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-on-secondary-fixed truncate">Evening Workout &amp; Tempo Run</span>
+<span class="material-symbols-outlined text-secondary text-[14px]">fitness_center</span>
+</div>
+<span class="text-on-secondary-fixed-variant font-caption text-caption">5:30 – 6:30 PM • 8km Trail</span>
+</div>
+</div>
+<!-- Quick Add Timeblock Trigger Button -->
+<button class="w-full mt-gutter-md flex items-center justify-center gap-gutter-sm py-2 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors active:scale-[0.99]">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+<span>Add Timeblock</span>
+</button>
+</div>
+<!-- Quick Reflection / Horizon Insight Card -->
+<div class="p-gutter-base rounded-2xl bg-surface-container-low/70 flex items-start gap-gutter-md">
+<span class="material-symbols-outlined text-primary text-[24px]">auto_awesome</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-medium">Horizon Alignment</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+            82% of today's calendar blocks feed directly into your <strong class="text-on-surface">Q4 Ship Portfolio</strong> quarterly milestone.
+          </p>
+</div>
+</div>
+</div>
+</div>
+</div></main></div>
+    <script>
+    // Momentum Interactive Behaviors
+    document.addEventListener('DOMContentLoaded', () => {
+      // Checkbox toggles
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const textEl = e.target.closest('div')?.querySelector('span, p');
+          if (textEl && !textEl.classList.contains('material-symbols-outlined')) {
+            if (e.target.checked) {
+              textEl.classList.add('line-through', 'opacity-50');
+            } else {
+              textEl.classList.remove('line-through', 'opacity-50');
+            }
+          }
+        });
+      });
+
+      // Quick Add Button handler
+      const quickAddBtn = document.querySelector('button:has(span:contains("Quick Add")), button span:contains("Quick Add")')?.closest('button') || document.querySelector('aside button');
+      if (quickAddBtn) {
+        quickAddBtn.addEventListener('click', () => {
+          const task = prompt("Add new task to Momentum:");
+          if (task && task.trim()) {
+            alert(`Task added: "${task.trim()}"`);
+          }
+        });
+      }
+
+      // Command+K shortcut
+      window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+          e.preventDefault();
+          const searchInput = document.querySelector('header input[type="text"]');
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+          }
+        }
+      });
+    });
+    </script>
+    
+</body></html>
