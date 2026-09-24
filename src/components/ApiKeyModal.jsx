@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { getGroqApiKey, setGroqApiKey } from '../lib/groqClient';
+import { getGroqApiKey, setGroqApiKey, testGroqConnection } from '../lib/groqClient';
 
 export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState('');
+  const [isTesting, setIsTesting] = useState(false);
+  const [allowForceSave, setAllowForceSave] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSave = (e) => {
-    e.preventDefault();
+  const handleSave = async (e, force = false) => {
+    if (e && e.preventDefault) e.preventDefault();
     const clean = apiKey.trim();
     if (!clean) {
       setError('Please paste your Groq API key.');
@@ -18,6 +20,19 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
     if (!clean.startsWith('gsk_')) {
       setError('Invalid format. Groq API keys start with "gsk_".');
       return;
+    }
+
+    if (!force) {
+      setIsTesting(true);
+      setError('');
+      const testRes = await testGroqConnection(clean);
+      setIsTesting(false);
+
+      if (!testRes.success) {
+        setError(`Verification failed: ${testRes.error}. Double check your key or console.groq.com status.`);
+        setAllowForceSave(true);
+        return;
+      }
     }
 
     setGroqApiKey(clean);
@@ -111,15 +126,31 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 rounded-xl text-[12px] font-medium text-slate-600 hover:bg-slate-100 transition"
+              disabled={isTesting}
+              className="px-3.5 py-1.5 rounded-xl text-[12px] font-medium text-slate-600 hover:bg-slate-100 transition disabled:opacity-50"
             >
               Cancel
             </button>
+            {allowForceSave && (
+              <button
+                type="button"
+                onClick={(e) => handleSave(e, true)}
+                className="px-3 py-1.5 rounded-xl text-[12px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer"
+              >
+                Save Anyway
+              </button>
+            )}
             <button
               type="submit"
-              className="px-4 py-1.5 rounded-xl text-[12px] font-semibold bg-[#0A84FF] text-white hover:bg-[#0071E3] transition shadow-xs"
+              disabled={isTesting || !apiKey.trim()}
+              className="px-4 py-1.5 rounded-xl text-[12px] font-semibold bg-[#0A84FF] text-white hover:bg-[#0071E3] transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
-              Save Key & Activate AI
+              {isTesting && (
+                <span className="material-symbols-outlined text-[14px] animate-spin">
+                  progress_activity
+                </span>
+              )}
+              <span>{isTesting ? 'Verifying Key…' : 'Save Key & Activate'}</span>
             </button>
           </div>
         </form>

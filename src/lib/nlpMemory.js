@@ -42,6 +42,7 @@ const DEFAULT_MEMORY = {
     totalQueries: 0,
     localHits: 0,
     apiHits: 0,
+    apiFailures: 0,
     learnedCount: 17,
     aiAccepted: 0,
     aiDismissed: 0
@@ -236,11 +237,55 @@ export function harvestApiResult(rawInput = '', apiOutput = {}, options = {}) {
   };
 }
 
-export function recordAiRequest() {
+function addRecentActivity(memory, activity) {
+  if (!Array.isArray(memory.recentActivity)) {
+    memory.recentActivity = [];
+  }
+  memory.recentActivity.unshift({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    time: Date.now(),
+    ...activity
+  });
+  if (memory.recentActivity.length > 20) {
+    memory.recentActivity = memory.recentActivity.slice(0, 20);
+  }
+}
+
+export function recordAiRequest(query = '') {
+  const memory = getNlpMemory();
+  memory.metrics.totalQueries = (memory.metrics.totalQueries || 0) + 1;
+  saveNlpMemory(memory);
+}
+
+export function recordAiSuccess(query = '', model = '') {
   const memory = getNlpMemory();
   memory.metrics.totalQueries = (memory.metrics.totalQueries || 0) + 1;
   memory.metrics.apiHits = (memory.metrics.apiHits || 0) + 1;
+  const shortModel = model ? model.split('/').pop() : 'groq';
+  addRecentActivity(memory, {
+    type: 'ai_success',
+    label: query ? `"${query.slice(0, 32)}${query.length > 32 ? '…' : ''}"` : 'Task auto-filled',
+    model: shortModel
+  });
   saveNlpMemory(memory);
+  if (typeof window !== 'undefined' && window.dispatchEvent) {
+    window.dispatchEvent(new CustomEvent('momentum:nlp-learned', { detail: { type: 'ai_success' } }));
+  }
+}
+
+export function recordAiFailure(query = '', errorMsg = '') {
+  const memory = getNlpMemory();
+  memory.metrics.totalQueries = (memory.metrics.totalQueries || 0) + 1;
+  memory.metrics.apiFailures = (memory.metrics.apiFailures || 0) + 1;
+  addRecentActivity(memory, {
+    type: 'ai_error',
+    label: query ? `"${query.slice(0, 32)}${query.length > 32 ? '…' : ''}"` : 'Inference request',
+    error: errorMsg || 'Groq API error'
+  });
+  saveNlpMemory(memory);
+  if (typeof window !== 'undefined' && window.dispatchEvent) {
+    window.dispatchEvent(new CustomEvent('momentum:nlp-learned', { detail: { type: 'ai_error' } }));
+  }
 }
 
 export function recordAiDismissal() {
@@ -249,30 +294,40 @@ export function recordAiDismissal() {
   saveNlpMemory(memory);
 }
 
-export function recordLocalHit() {
+export function recordLocalHit(label = 'local task pattern') {
   const memory = getNlpMemory();
   memory.metrics.totalQueries = (memory.metrics.totalQueries || 0) + 1;
   memory.metrics.localHits = (memory.metrics.localHits || 0) + 1;
+  addRecentActivity(memory, {
+    type: 'local',
+    label: typeof label === 'string' ? label : 'Local rule match'
+  });
   saveNlpMemory(memory);
+  if (typeof window !== 'undefined' && window.dispatchEvent) {
+    window.dispatchEvent(new CustomEvent('momentum:nlp-learned', { detail: { type: 'local' } }));
+  }
 }
 
 export function getMemoryStats() {
   const memory = getNlpMemory();
-  const total = memory.metrics.totalQueries || 0;
+  const total = (memory.metrics.localHits || 0) + (memory.metrics.apiHits || 0);
   const local = memory.metrics.localHits || 0;
   const ratio = total > 0 ? Math.round((local / total) * 100) : 100;
   return {
     totalLearned: Object.keys(memory.learnedVerbs).length,
     localHits: local,
     apiHits: memory.metrics.apiHits || 0,
+    apiFailures: memory.metrics.apiFailures || 0,
     offlineRatio: ratio
   };
 }
 
 export function getNlpInsights() {
   const memory = getNlpMemory();
-  const total = memory.metrics.totalQueries || 0;
   const local = memory.metrics.localHits || 0;
+  const apiHits = memory.metrics.apiHits || 0;
+  const apiFailures = memory.metrics.apiFailures || 0;
+  const total = local + apiHits;
   const ratio = total > 0 ? Math.round((local / total) * 100) : 100;
   const learnedPatterns = Object.entries(memory.learnedVerbs || {}).map(([name, data]) => ({
     name,
@@ -285,10 +340,13 @@ export function getNlpInsights() {
   return {
     totalLearned: Object.keys(memory.learnedVerbs || {}).length,
     localHits: local,
-    apiHits: memory.metrics.apiHits || 0,
+    apiHits: apiHits,
+    apiFailures: apiFailures,
     offlineRatio: ratio,
     learnedPatterns,
-    recentActivity: memory.recentActivity || []
+    recentActivity: memory.recentActivity || [],
+    aiAccepted: memory.metrics.aiAccepted || 0,
+    aiDismissed: memory.metrics.aiDismissed || 0
   };
 }
 

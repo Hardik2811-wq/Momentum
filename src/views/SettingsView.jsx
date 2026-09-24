@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import TimezoneSelect from '../components/TimezoneSelect';
-import { playChime, sendNotification } from '../store/useStore';
-import { getGroqApiKey, setGroqApiKey } from '../lib/groqClient';
+import { sendNotification } from '../store/useStore';
+import { getGroqApiKey, setGroqApiKey, testGroqConnection } from '../lib/groqClient';
 import { getNlpInsights, resetNlpMemory } from '../lib/nlpMemory';
 
 const Toggle = ({ checked, onChange }) => (
@@ -55,6 +55,8 @@ export default function SettingsView({
   const [groqKeyInput, setGroqKeyInput] = useState('');
   const [intelligence, setIntelligence] = useState(() => getNlpInsights());
   const [keySaved, setKeySaved] = useState(false);
+  const [testingKey, setTestingKey] = useState(false);
+  const [testResult, setTestResult] = useState(null);
   const fileInputRef = useRef(null);
 
   const inputCls = 'bg-[#F5F4FA] border-black/[0.07] text-[#1A1B1F]';
@@ -67,16 +69,35 @@ export default function SettingsView({
     return () => window.removeEventListener('momentum:nlp-learned', refreshIntelligence);
   }, []);
 
+  const handleTestGroq = async (customKey = null) => {
+    setTestingKey(true);
+    setTestResult(null);
+    try {
+      const res = await testGroqConnection(customKey);
+      if (res.success) {
+        setTestResult({ success: true, message: 'Valid! Connection to Groq succeeded.' });
+      } else {
+        setTestResult({ success: false, message: res.error || 'Connection failed' });
+      }
+    } catch (err) {
+      setTestResult({ success: false, message: err.message || 'Network error' });
+    } finally {
+      setTestingKey(false);
+    }
+  };
+
   const saveGroqKey = () => {
     if (!groqKeyInput.trim()) return;
     setGroqApiKey(groqKeyInput);
     setGroqKeyInput('');
     setKeySaved(true);
+    setTestResult(null);
   };
 
   const clearGroqKey = () => {
     setGroqApiKey('');
     setKeySaved(false);
+    setTestResult(null);
   };
 
   const clearLearning = () => {
@@ -181,21 +202,22 @@ export default function SettingsView({
         </Section>
 
         <Section
-          title="Local Intelligence"
+          title="Local Intelligence & Groq AI"
           badge={<span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-600/15">LOCAL-FIRST</span>}
         >
-          <p className="text-[12px] leading-5 text-[#5E5E6A]">Momentum checks local rules first. Groq runs only when you choose Ask AI. Accepted suggestions become local patterns.</p>
+          <p className="text-[12px] leading-5 text-[#5E5E6A]">Momentum checks local rules first. Groq runs when you click AI Fill. Accepted suggestions become local patterns automatically.</p>
 
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
             {[
-              ['Local resolved', `${intelligence.offlineRatio}%`],
-              ['Local tasks', intelligence.localHits],
-              ['Groq fallbacks', intelligence.apiHits],
-              ['Learned patterns', intelligence.totalLearned]
-            ].map(([label, value]) => (
+              { label: 'Local resolved', value: `${intelligence.offlineRatio}%`, color: 'text-[#1A1B1F]' },
+              { label: 'Local tasks', value: intelligence.localHits, color: 'text-emerald-700' },
+              { label: 'Groq parsed', value: intelligence.apiHits, color: 'text-blue-700' },
+              { label: 'Groq failed', value: intelligence.apiFailures || 0, color: (intelligence.apiFailures || 0) > 0 ? 'text-rose-600 font-bold' : 'text-[#8E8E93]' },
+              { label: 'Learned patterns', value: intelligence.totalLearned, color: 'text-purple-700' }
+            ].map(({ label, value, color }) => (
               <div key={label} className="rounded-xl border border-black/[0.06] bg-[#F8F8FB] p-3">
                 <p className="text-[10px] font-medium text-[#8E8E93]">{label}</p>
-                <p className="mt-1 text-[18px] font-semibold tracking-tight text-[#1A1B1F]">{value}</p>
+                <p className={`mt-1 text-[18px] font-semibold tracking-tight ${color}`}>{value}</p>
               </div>
             ))}
           </div>
@@ -213,15 +235,37 @@ export default function SettingsView({
               </div>
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">Recent decisions</p>
-              <div className="mt-2 space-y-1.5">
-                {intelligence.recentActivity.length ? intelligence.recentActivity.slice(0, 4).map((entry) => (
-                  <div key={entry.id} className="flex items-center gap-2 rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#52525B]">
-                    <span className={`h-1.5 w-1.5 rounded-full ${entry.type === 'local' ? 'bg-emerald-500' : entry.type === 'ai' ? 'bg-violet-500' : 'bg-slate-400'}`} />
-                    <span className="capitalize">{entry.type === 'ai' ? 'Groq asked' : entry.type}</span>
-                    <span className="truncate text-[#8E8E93]">{entry.label}</span>
-                  </div>
-                )) : <p className="rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#8E8E93]">No decisions yet.</p>}
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">Recent decisions & AI logs</p>
+              <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {intelligence.recentActivity.length ? intelligence.recentActivity.slice(0, 6).map((entry) => {
+                  const isLocal = entry.type === 'local';
+                  const isSuccess = entry.type === 'ai_success';
+                  const isError = entry.type === 'ai_error';
+
+                  return (
+                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#52525B]">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`h-2 w-2 rounded-full shrink-0 ${
+                          isSuccess ? 'bg-blue-500' : isError ? 'bg-rose-500' : 'bg-emerald-500'
+                        }`} />
+                        <span className="font-semibold shrink-0">
+                          {isSuccess ? 'Groq AI' : isError ? 'Groq failed' : 'Local rule'}
+                        </span>
+                        <span className="truncate text-[#8E8E93]">{entry.label}</span>
+                      </div>
+                      {isSuccess && entry.model && (
+                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/60 font-mono shrink-0">
+                          {entry.model}
+                        </span>
+                      )}
+                      {isError && (
+                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200/60 shrink-0 truncate max-w-[120px]" title={entry.error}>
+                          {entry.error}
+                        </span>
+                      )}
+                    </div>
+                  );
+                }) : <p className="rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#8E8E93]">No decisions yet.</p>}
               </div>
             </div>
           </div>
@@ -244,15 +288,39 @@ export default function SettingsView({
                 </a>
               </div>
               {(getGroqApiKey() || keySaved) && (
-                <button
-                  type="button"
-                  onClick={clearGroqKey}
-                  className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-50 transition"
-                >
-                  Remove key
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleTestGroq()}
+                    disabled={testingKey}
+                    className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#0A84FF] bg-blue-50 hover:bg-blue-100 border border-blue-200/60 transition disabled:opacity-50"
+                  >
+                    {testingKey ? 'Testing…' : 'Test Connection'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearGroqKey}
+                    className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-50 transition"
+                  >
+                    Remove key
+                  </button>
+                </div>
               )}
             </div>
+
+            {testResult && (
+              <div className={`mt-2.5 px-3 py-1.5 rounded-xl text-[11px] font-medium border flex items-center justify-between gap-2 animate-fadeIn ${
+                testResult.success
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
+              }`}>
+                <span>{testResult.success ? '✓' : '✕'} {testResult.message}</span>
+                <button type="button" onClick={() => setTestResult(null)} className="text-slate-400 hover:text-slate-600">
+                  <span className="material-symbols-outlined text-[13px]">close</span>
+                </button>
+              </div>
+            )}
+
             {!getGroqApiKey() && !keySaved && (
               <div className="mt-3 flex gap-2">
                 <input

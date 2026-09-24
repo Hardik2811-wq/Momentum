@@ -18,7 +18,8 @@ import { parseNaturalTask } from '../lib/nlpParser';
 import { getGroqApiKey, parseWithGroq } from '../lib/groqClient';
 import {
   harvestApiResult,
-  recordAiRequest,
+  recordAiSuccess,
+  recordAiFailure,
   recordLocalHit
 } from '../lib/nlpMemory';
 import { LIFE_AREAS, DEFAULT_LIFE_AREAS, getGoalAreas, saveGoalAreas } from '../lib/lifeAreas';
@@ -347,6 +348,7 @@ export default function QuickAddModal({
   const [showSubtasks, setShowSubtasks] = useState(false);
   const [newSubtaskInput, setNewSubtaskInput] = useState('');
   const [isAiParsing, setIsAiParsing] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState(null); // { type: 'success' | 'error', message: string }
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   // Active micro-popover menu
@@ -419,6 +421,7 @@ export default function QuickAddModal({
     setShowSubtasks(false);
     setNewSubtaskInput('');
     setActiveMenu(null);
+    setAiFeedback(null);
   }, [isOpen, initialDate, initialGoalId, initialHabitId, initialTime]);
 
   // Click outside to close popovers
@@ -527,16 +530,34 @@ export default function QuickAddModal({
       return;
     }
 
+    setAiFeedback(null);
     setIsAiParsing(true);
     try {
-      recordAiRequest(title.trim());
       const res = await parseWithGroq(title, goals);
       if (res.success && res.data) {
         applyExtractedDetails(res.data, true);
         harvestApiResult(title, res.data, { alreadyCounted: true });
+        recordAiSuccess(title.trim(), res.model);
+        const modelName = res.model ? res.model.split('/').pop() : 'Groq';
+        setAiFeedback({
+          type: 'success',
+          message: `Auto-filled via Groq (${modelName})`
+        });
+      } else {
+        const errorMsg = res.error || 'Groq request failed';
+        recordAiFailure(title.trim(), errorMsg);
+        setAiFeedback({
+          type: 'error',
+          message: errorMsg
+        });
       }
-    } catch {
-      // Quiet fallback
+    } catch (err) {
+      const errorMsg = err?.message || 'Network connection failed';
+      recordAiFailure(title.trim(), errorMsg);
+      setAiFeedback({
+        type: 'error',
+        message: errorMsg
+      });
     } finally {
       setIsAiParsing(false);
     }
@@ -592,6 +613,7 @@ export default function QuickAddModal({
     setTitle('');
     setSubtasks([]);
     setShowSubtasks(false);
+    setAiFeedback(null);
     onClose();
   };
 
@@ -677,16 +699,59 @@ export default function QuickAddModal({
                 type="button"
                 onClick={handleAiBreakdown}
                 disabled={isAiParsing || !title.trim()}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold text-[#0A84FF] bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60 shadow-xs active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold shadow-xs active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                  aiFeedback?.type === 'success'
+                    ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80'
+                    : aiFeedback?.type === 'error'
+                    ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80'
+                    : 'text-[#0A84FF] bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60'
+                }`}
                 title="Auto-fill details and break down subtasks"
               >
                 <span className={`material-symbols-outlined text-[15px] ${isAiParsing ? 'animate-spin' : ''}`}>
-                  {isAiParsing ? 'progress_activity' : 'auto_awesome'}
+                  {isAiParsing ? 'progress_activity' : aiFeedback?.type === 'success' ? 'check' : aiFeedback?.type === 'error' ? 'error' : 'auto_awesome'}
                 </span>
-                <span>{isAiParsing ? 'Thinking…' : 'AI Fill'}</span>
+                <span>{isAiParsing ? 'Thinking…' : aiFeedback?.type === 'success' ? 'AI Filled' : 'AI Fill'}</span>
               </button>
             </div>
           </div>
+
+          {/* AI Status Notification (Success / Failure feedback) */}
+          {aiFeedback && (
+            <div
+              className={`flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-[12px] font-medium border animate-fadeIn ${
+                aiFeedback.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="material-symbols-outlined text-[16px] shrink-0">
+                  {aiFeedback.type === 'success' ? 'check_circle' : 'error'}
+                </span>
+                <span className="truncate">{aiFeedback.message}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {aiFeedback.type === 'error' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKeyModal(true)}
+                    className="text-[11px] font-bold text-rose-700 underline hover:text-rose-900 cursor-pointer"
+                  >
+                    Update Key
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setAiFeedback(null)}
+                  className="text-slate-400 hover:text-slate-600 p-0.5"
+                  title="Dismiss"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Harmonious Detected Tags */}
           {parsed.hasDetected && (

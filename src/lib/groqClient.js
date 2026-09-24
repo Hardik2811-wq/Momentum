@@ -31,6 +31,38 @@ export function setGroqApiKey(key = '') {
   }
 }
 
+export async function testGroqConnection(apiKey = null) {
+  const key = (apiKey || getGroqApiKey() || '').trim();
+  if (!key) {
+    return { success: false, error: 'No API key provided' };
+  }
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-oss-20b',
+        messages: [{ role: 'user', content: 'ping' }],
+        max_tokens: 5
+      })
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errBody.error?.message || `HTTP error ${res.status}: ${res.statusText}`
+      };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message || 'Network connection failed' };
+  }
+}
+
+
 const SYSTEM_PROMPT = `You are a precision productivity task assistant for Momentum OS.
 Given a user's natural language task description, extract structured task metadata in JSON.
 Output JSON schema:
