@@ -145,7 +145,7 @@ const DEFAULT_TASKS = [
     dueDate: 'Today',
     startTime: '09:30',
     durationMinutes: 75,
-    context: '@Laptop',
+    areas: ['Career & Craft', 'Deep Focus'],
     energy: 'High',
     notes: 'Prioritize feature matrix for mobile offline capability and sync protocol.',
     subtasks: [
@@ -164,10 +164,13 @@ const DEFAULT_TASKS = [
     dueDate: 'Today',
     startTime: '11:15',
     durationMinutes: 45,
-    context: '@Calls',
+    areas: ['Career & Craft'],
     energy: 'Medium',
     notes: 'Discuss GraphQL vs REST gateway latency.',
-    subtasks: [],
+    subtasks: [
+      { id: 's21', title: 'Review latency metrics', completed: true },
+      { id: 's22', title: 'Confirm fallback strategy', completed: true }
+    ],
     createdAt: Date.now() - 172800000
   },
   {
@@ -180,11 +183,12 @@ const DEFAULT_TASKS = [
     dueDate: 'Today',
     startTime: '14:00',
     durationMinutes: 90,
-    context: '@Laptop',
+    areas: ['Career & Craft', 'Creative & Expression'],
     energy: 'High',
     notes: 'Harmonize secondary fixed and container tokens.',
     subtasks: [
-      { id: 's3', title: 'Color contrast check', completed: false }
+      { id: 's3', title: 'Color contrast check', completed: false },
+      { id: 's4', title: 'Fix hero heading layout', completed: false }
     ],
     createdAt: Date.now() - 50000
   },
@@ -198,10 +202,13 @@ const DEFAULT_TASKS = [
     dueDate: 'Today',
     startTime: '16:30',
     durationMinutes: 45,
-    context: '@Home',
+    areas: ['Health & Vitality', 'Habit Consistency'],
     energy: 'High',
     notes: 'Heart rate target ~145 bpm.',
-    subtasks: [],
+    subtasks: [
+      { id: 's5', title: '10 min warm up dynamic stretches', completed: false },
+      { id: 's6', title: '5km steady pace interval', completed: false }
+    ],
     createdAt: Date.now() - 40000
   },
   {
@@ -212,10 +219,15 @@ const DEFAULT_TASKS = [
     goalId: 'g3',
     completed: false,
     dueDate: 'Tomorrow',
-    context: '@Home',
+    startTime: '18:30',
+    durationMinutes: 30,
+    areas: ['Creative & Expression', 'Personal & Life'],
     energy: 'Low',
     notes: 'Tactile fingerstyle phrasing, 60 bpm.',
-    subtasks: [],
+    subtasks: [
+      { id: 's7', title: 'Tuning and posture check', completed: false },
+      { id: 's8', title: 'Measure 1-16 fingering drill', completed: false }
+    ],
     createdAt: Date.now() - 30000
   },
   {
@@ -226,7 +238,9 @@ const DEFAULT_TASKS = [
     goalId: 'g2',
     completed: false,
     dueDate: 'This Week',
-    context: '@Errands',
+    startTime: '17:00',
+    durationMinutes: 25,
+    areas: ['Personal & Life', 'Health & Vitality'],
     energy: 'Low',
     notes: 'Visit marathon store before Saturday long run.',
     subtasks: [],
@@ -418,13 +432,23 @@ export default function useStore() {
   const reactiveGoals = useMemo(() => {
     return goals.map(g => {
       const linked = tasks.filter(t => t.goalId === g.id);
-      if (linked.length === 0) {
-        return g;
-      }
       const activeCount = linked.filter(t => !t.completed).length;
+      const completedCount = linked.filter(t => t.completed).length;
+      const nextTask = linked.filter(t => !t.completed).slice().sort((a, b) => {
+        const dueA = a.dueDate === 'Today' ? 0 : a.dueDate === 'This Week' ? 1 : 2;
+        const dueB = b.dueDate === 'Today' ? 0 : b.dueDate === 'This Week' ? 1 : 2;
+        if (dueA !== dueB) return dueA - dueB;
+        const impactA = a.impact === 'high' || a.priority === 'high' ? 0 : a.impact === 'medium' || a.priority === 'normal' ? 1 : 2;
+        const impactB = b.impact === 'high' || b.priority === 'high' ? 0 : b.impact === 'medium' || b.priority === 'normal' ? 1 : 2;
+        return impactA - impactB;
+      })[0] || null;
       return {
         ...g,
-        tasksActive: activeCount
+        tasksActive: activeCount,
+        linkedTaskCount: linked.length,
+        completedTaskCount: completedCount,
+        workProgress: linked.length ? Math.round((completedCount / linked.length) * 100) : g.progress,
+        nextTask
       };
     });
   }, [goals, tasks]);
@@ -436,19 +460,26 @@ export default function useStore() {
   }, [setTasks, showToast]);
 
   const toggleTask = useCallback((id) => {
-    setTasks(prev => {
-      const target = prev.find(t => t.id === id);
-      const isNowCompleted = target ? !target.completed : false;
-      if (isNowCompleted && settings.soundEffects) {
-        playChime('complete');
-      }
-      return prev.map(t => t.id === id ? {
-        ...t,
-        completed: isNowCompleted,
-        completedAt: isNowCompleted ? Date.now() : null
-      } : t);
-    });
-  }, [setTasks, settings.soundEffects]);
+    const target = tasks.find(t => t.id === id);
+    const isNowCompleted = target ? !target.completed : false;
+    const linkedHabit = target?.linkedHabitId ? habits.find(h => h.id === target.linkedHabitId) : null;
+    const habitNeedsCheckIn = isNowCompleted && linkedHabit && !(linkedHabit.completedDays || []).includes(todayKey());
+
+    if (isNowCompleted && settings.soundEffects) playChime('complete');
+    setTasks(prev => prev.map(t => t.id === id ? {
+      ...t,
+      completed: isNowCompleted,
+      completedAt: isNowCompleted ? Date.now() : null
+    } : t));
+
+    if (habitNeedsCheckIn) {
+      const today = todayKey();
+      setHabits(prev => prev.map(h => h.id === target.linkedHabitId
+        ? { ...h, completedDays: [...(h.completedDays || []), today] }
+        : h));
+      showToast(`Task complete. ${linkedHabit.title} checked in.`);
+    }
+  }, [tasks, habits, setTasks, setHabits, settings.soundEffects, showToast]);
 
   const deleteTask = useCallback((id) => {
     const target = tasks.find(t => t.id === id);

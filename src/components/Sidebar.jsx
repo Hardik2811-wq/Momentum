@@ -10,7 +10,7 @@ import React from 'react';
 
 const NAV_ITEMS = [
   { id: 'dashboard',   label: 'Dashboard',   icon: 'space_dashboard' },
-  { id: 'today',       label: 'Today',       icon: 'today' },
+  { id: 'today',       label: 'Planner',     icon: 'calendar_view_week' },
   { id: 'goals',       label: 'Goals',       icon: 'flag_circle' },
   { id: 'habits',      label: 'Habits',      icon: 'loop' },
   { id: 'reflections', label: 'Reflections', icon: 'auto_stories' },

@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 
 const TITLE_MAP = {
   dashboard:   'Dashboard',
-  today:       'Today',
+  today:       'Planner',
   goals:       'Goals',
   habits:      'Habits',
   reflections: 'Reflections',

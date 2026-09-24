@@ -32,11 +32,17 @@ export default function App() {
     setQuickAddProps({});
   };
 
+  const startFocusForTask = (taskId) => {
+    store.focusTimer.setTimerTaskId(taskId);
+    if (!store.focusTimer.isRunning) store.focusTimer.startTimer();
+  };
+
   const renderView = () => {
     const common = {
       tasks: store.tasks,
       onToggleTask: store.toggleTask,
       onDeleteTask: store.deleteTask,
+      onToggleSubtask: store.toggleSubtask,
       onOpenQuickAdd: openQuickAdd,
       stats: store.stats,
     };
@@ -49,6 +55,9 @@ export default function App() {
             onUpdateTask={store.updateTask}
             setActiveTab={setActiveTab}
             settings={store.settings}
+            onUpdateSettings={store.updateSettings}
+            onStartFocus={startFocusForTask}
+            onCheckInHabit={store.checkInHabit}
             goals={store.goals}
             habits={store.habits}
           />
@@ -59,6 +68,9 @@ export default function App() {
             {...common}
             onUpdateTask={store.updateTask}
             goals={store.goals}
+            habits={store.habits}
+            onStartFocus={startFocusForTask}
+            onCheckInHabit={store.checkInHabit}
           />
         );
       case 'goals':
@@ -124,7 +136,11 @@ export default function App() {
             onUpdateTask={store.updateTask}
             setActiveTab={setActiveTab}
             settings={store.settings}
+            onUpdateSettings={store.updateSettings}
+            onStartFocus={startFocusForTask}
+            onCheckInHabit={store.checkInHabit}
             goals={store.goals}
+            habits={store.habits}
           />
         );
     }
@@ -176,14 +192,17 @@ export default function App() {
         onOpenQuickAdd={openQuickAdd}
       />
 
-      {/* Quick Add Modal with Goal Linkage */}
+      {/* Quick Add Modal with Goal and Habit Linkage */}
       <QuickAddModal
         isOpen={isQuickAddOpen}
         onClose={closeQuickAdd}
         onAddTask={store.addTask}
         goals={store.goals}
+        habits={store.habits}
         initialTime={quickAddProps.initialTime || ''}
-        initialDate={quickAddProps.initialDate || 'Today'}
+        initialDate={quickAddProps.initialDate ?? ''}
+        initialGoalId={quickAddProps.initialGoalId || ''}
+        initialHabitId={quickAddProps.initialHabitId || ''}
       />
 
       {/* System Toast & Undo Notifications */}

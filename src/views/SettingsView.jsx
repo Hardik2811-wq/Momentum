@@ -1,6 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import { playChime, sendNotification } from '../store/useStore';
+import { getGroqApiKey, setGroqApiKey } from '../lib/groqClient';
+import { getNlpInsights, resetNlpMemory } from '../lib/nlpMemory';
 
 const Toggle = ({ checked, onChange }) => (
   <button
@@ -49,10 +51,38 @@ export default function SettingsView({
 }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [groqKeyInput, setGroqKeyInput] = useState('');
+  const [intelligence, setIntelligence] = useState(() => getNlpInsights());
+  const [keySaved, setKeySaved] = useState(false);
   const fileInputRef = useRef(null);
 
   const inputCls = 'bg-[#F5F4FA] border-black/[0.07] text-[#1A1B1F]';
   const profile = settings?.profile || {};
+
+  const refreshIntelligence = () => setIntelligence(getNlpInsights());
+
+  useEffect(() => {
+    window.addEventListener('momentum:nlp-learned', refreshIntelligence);
+    return () => window.removeEventListener('momentum:nlp-learned', refreshIntelligence);
+  }, []);
+
+  const saveGroqKey = () => {
+    if (!groqKeyInput.trim()) return;
+    setGroqApiKey(groqKeyInput);
+    setGroqKeyInput('');
+    setKeySaved(true);
+  };
+
+  const clearGroqKey = () => {
+    setGroqApiKey('');
+    setKeySaved(false);
+  };
+
+  const clearLearning = () => {
+    if (!window.confirm('Remove local task patterns and learning history? This cannot be undone.')) return;
+    resetNlpMemory();
+    refreshIntelligence();
+  };
   
   const getInitials = (name) => {
     if (!name) return '??';
@@ -131,6 +161,74 @@ export default function SettingsView({
                 </div>
               ))}
             </div>
+          </div>
+        </Section>
+
+        <Section
+          title="Local Intelligence"
+          badge={<span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-600/15">LOCAL-FIRST</span>}
+        >
+          <p className="text-[12px] leading-5 text-[#5E5E6A]">Momentum checks local rules first. Groq runs only when you choose Ask AI. Accepted suggestions become local patterns.</p>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              ['Local resolved', `${intelligence.offlineRatio}%`],
+              ['Local tasks', intelligence.localHits],
+              ['Groq fallbacks', intelligence.apiHits],
+              ['Learned patterns', intelligence.totalLearned]
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-black/[0.06] bg-[#F8F8FB] p-3">
+                <p className="text-[10px] font-medium text-[#8E8E93]">{label}</p>
+                <p className="mt-1 text-[18px] font-semibold tracking-tight text-[#1A1B1F]">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">Most used local patterns</p>
+              <div className="mt-2 space-y-1.5">
+                {intelligence.learnedPatterns.slice(0, 4).map((pattern) => (
+                  <div key={pattern.name} className="flex items-center justify-between rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#52525B]">
+                    <span className="font-medium">{pattern.name}</span>
+                    <span>{(Array.isArray(pattern.areas) ? pattern.areas.join(', ') : pattern.context) || 'Career & Craft'} · {pattern.durationMinutes} min</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">Recent decisions</p>
+              <div className="mt-2 space-y-1.5">
+                {intelligence.recentActivity.length ? intelligence.recentActivity.slice(0, 4).map((entry) => (
+                  <div key={entry.id} className="flex items-center gap-2 rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#52525B]">
+                    <span className={`h-1.5 w-1.5 rounded-full ${entry.type === 'local' ? 'bg-emerald-500' : entry.type === 'ai' ? 'bg-violet-500' : 'bg-slate-400'}`} />
+                    <span className="capitalize">{entry.type === 'ai' ? 'Groq asked' : entry.type}</span>
+                    <span className="truncate text-[#8E8E93]">{entry.label}</span>
+                  </div>
+                )) : <p className="rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#8E8E93]">No decisions yet.</p>}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-black/[0.06] pt-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[12px] font-semibold text-[#1A1B1F]">Groq fallback</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-[#8E8E93]">{getGroqApiKey() || keySaved ? 'Key configured for this browser.' : 'No key saved in this browser.'} Browser key is for local development. Use a server-held key before production deployment.</p>
+              </div>
+              {(getGroqApiKey() || keySaved) && <button type="button" onClick={clearGroqKey} className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-50">Remove key</button>}
+            </div>
+            {!getGroqApiKey() && !keySaved && (
+              <div className="mt-3 flex gap-2">
+                <input type="password" value={groqKeyInput} onChange={(event) => setGroqKeyInput(event.target.value)} placeholder="Paste Groq API key" className={`min-w-0 flex-1 px-3 py-2 rounded-xl text-[12px] outline-none border ${inputCls}`} />
+                <button type="button" onClick={saveGroqKey} disabled={!groqKeyInput.trim()} className="rounded-xl bg-[#0A84FF] px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-50">Save key</button>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] pt-4">
+            <p className="text-[11px] text-[#8E8E93]">Accepted AI: {intelligence.aiAccepted} · Discarded AI: {intelligence.aiDismissed}</p>
+            <button type="button" onClick={clearLearning} className="rounded-lg px-2 py-1 text-[11px] font-semibold text-[#5E5E6A] hover:bg-black/[0.04]">Reset learning</button>
           </div>
         </Section>
 

@@ -3,8 +3,11 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined);
+  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return undefined;
@@ -16,22 +19,56 @@ export default function AuthGate({ children }) {
   if (!isSupabaseConfigured || session === undefined) return isSupabaseConfigured ? null : children;
   if (session) return children;
 
-  const signIn = async (event) => {
-    event.preventDefault();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin }
-    });
-    setMessage(error ? error.message : 'Check your email for a secure sign-in link.');
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    setMessage('');
+    setPassword('');
   };
 
+  const submit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setMessage('');
+    const redirectTo = window.location.origin;
+    let error;
+
+    if (mode === 'signup') {
+      ({ error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } }));
+      setMessage(error ? error.message : 'Account created. Check your email to confirm it.');
+    } else if (mode === 'login') {
+      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+      if (error) setMessage(error.message);
+    } else {
+      ({ error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo }));
+      setMessage(error ? error.message : 'Password reset link sent. Check your email.');
+    }
+    setBusy(false);
+  };
+
+  const title = mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Reset password' : 'Log in';
+  const action = mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Send reset link' : 'Log in';
+
   return (
-    <main className="min-h-screen bg-[#EFEFF5] flex items-center justify-center p-5">
-      <form onSubmit={signIn} className="w-full max-w-sm rounded-2xl bg-white p-7 shadow-xl border border-black/5 space-y-4">
-        <div><p className="text-xs font-bold uppercase tracking-widest text-[#0A84FF]">Momentum</p><h1 className="mt-2 text-2xl font-bold">Continue securely</h1><p className="mt-2 text-sm text-[#666]">Use email link. No password required.</p></div>
-        <input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="w-full rounded-xl border border-black/10 px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#0A84FF]/30" />
-        <button className="w-full rounded-xl bg-[#0A84FF] py-2.5 text-sm font-semibold text-white">Send sign-in link</button>
-        {message && <p className="text-sm text-[#666]">{message}</p>}
+    <main className="min-h-screen bg-[#f4f5f7] flex items-center justify-center p-5">
+      <form onSubmit={submit} className="w-full max-w-md rounded-2xl bg-white p-7 shadow-xl border border-black/5 space-y-5">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-[#0A84FF]">Momentum</p>
+          <h1 className="mt-2 text-3xl font-bold text-[#202a33]">{title}</h1>
+          {mode === 'reset' && <p className="mt-2 text-sm text-[#666]">Enter your email for a password-reset link.</p>}
+        </div>
+        <label className="block text-sm font-semibold text-[#202a33]">Email
+          <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="mt-2 w-full rounded-lg border border-black/20 px-3 py-3 outline-none focus:border-[#0A84FF] focus:ring-2 focus:ring-[#0A84FF]/20" />
+        </label>
+        {mode !== 'reset' && <label className="block text-sm font-semibold text-[#202a33]">Password
+          <input required minLength="6" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} className="mt-2 w-full rounded-lg border border-black/20 px-3 py-3 outline-none focus:border-[#0A84FF] focus:ring-2 focus:ring-[#0A84FF]/20" />
+        </label>}
+        {mode === 'login' && <button type="button" onClick={() => switchMode('reset')} className="-mt-2 block text-sm font-medium text-[#0879cf] hover:underline">Forgot your password?</button>}
+        <button disabled={busy} className="w-full rounded-lg bg-[#147db6] py-3 text-sm font-bold text-white hover:bg-[#0d6da4] disabled:opacity-60">{busy ? 'Please wait…' : action}</button>
+        {message && <p className="rounded-lg bg-[#eef7ff] p-3 text-sm text-[#24536e]">{message}</p>}
+        <p className="text-center text-sm text-[#555]">
+          {mode === 'signup' ? 'Already have an account? ' : mode === 'login' ? 'No account? ' : 'Remembered your password? '}
+          <button type="button" onClick={() => switchMode(mode === 'signup' ? 'login' : mode === 'login' ? 'signup' : 'login')} className="font-semibold text-[#0879cf] hover:underline">{mode === 'signup' ? 'Log in' : mode === 'login' ? 'Sign up' : 'Log in'}</button>
+        </p>
       </form>
     </main>
   );

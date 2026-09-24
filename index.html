@@ -139,9 +139,21 @@
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration skipped:', err));
-        });
+        const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+        if (isLocal) {
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (const reg of registrations) reg.unregister();
+          });
+          if ('caches' in window) {
+            caches.keys().then((keys) => {
+              for (const key of keys) caches.delete(key);
+            });
+          }
+        } else {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch((err) => console.log('SW registration skipped:', err));
+          });
+        }
       }
     </script>
   </body>

@@ -19,7 +19,7 @@ export default function GoalsView({ goals = [], addGoal, updateGoalProgress, del
   const [showNewGoal, setShowNewGoal] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState(null);
   const [newGoalForm, setNewGoalForm] = useState({
-    title: '', category: 'career', why: '', daysLeft: ''
+    title: '', category: 'career', why: '', daysLeft: '', targetDate: '', milestone: ''
   });
 
   const handleAddGoal = (e) => {
@@ -35,7 +35,7 @@ export default function GoalsView({ goals = [], addGoal, updateGoalProgress, del
       color: newGoalForm.category === 'career' ? 'primary' : newGoalForm.category === 'health' ? 'secondary' : 'tertiary'
     });
     setShowNewGoal(false);
-    setNewGoalForm({ title: '', category: 'career', why: '', daysLeft: '' });
+    setNewGoalForm({ title: '', category: 'career', why: '', daysLeft: '', targetDate: '', milestone: '' });
   };
 
   const filteredGoals = goals.filter(g => filter === 'all' || g.category === filter);
@@ -50,8 +50,10 @@ export default function GoalsView({ goals = [], addGoal, updateGoalProgress, del
   const circumference = 2 * Math.PI * 40;
 
   const renderGoalCard = (goal) => {
-    const offset = circumference * (1 - (goal.progress || 0) / 100);
+    const workProgress = goal.workProgress ?? goal.progress ?? 0;
+    const offset = circumference * (1 - workProgress / 100);
     const color = COLOR_CLASSES[goal.color] || COLOR_CLASSES.primary;
+    const nextTaskText = goal.nextTask?.title;
     
     let velIcon = 'trending_up';
     let velText = 'Ahead of pace';
@@ -104,8 +106,8 @@ export default function GoalsView({ goals = [], addGoal, updateGoalProgress, del
                 <circle className={`${color.icon} fill-none transition-all duration-1000`} cx="50" cy="50" r="40" stroke="currentColor" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" strokeWidth="8" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tighter leading-none">{goal.progress}<span className="text-xs font-normal">%</span></span>
-                <span className="font-caption text-caption text-on-surface-variant mt-0.5">done</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tighter leading-none">{workProgress}<span className="text-xs font-normal">%</span></span>
+                <span className="font-caption text-caption text-on-surface-variant mt-0.5">task work</span>
               </div>
             </button>
             <div className="flex flex-col gap-1 min-w-0">
@@ -115,26 +117,33 @@ export default function GoalsView({ goals = [], addGoal, updateGoalProgress, del
               </div>
               <span className="font-body-sm text-body-sm text-on-surface-variant">Estimated launch: {goal.targetDate || 'TBD'}</span>
               <div className="w-full bg-surface-container rounded-full h-1 mt-1">
-                <div className={`${color.progress} h-1 rounded-full`} style={{ width: `${goal.progress}%` }}></div>
+                <div className={`${color.progress} h-1 rounded-full`} style={{ width: `${workProgress}%` }}></div>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-lg border border-outline-variant/15 bg-surface-container-low/70 p-gutter-base">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-caption text-caption font-semibold uppercase tracking-wider text-on-surface-variant">Current milestone</span>
+              <span className="font-caption text-caption text-on-surface-variant">{goal.completedTaskCount || 0}/{goal.linkedTaskCount || 0} linked tasks done</span>
+            </div>
+            <p className="mt-1 font-label-md text-label-md text-on-surface">{goal.milestone || nextTaskText || 'Choose first milestone for this goal.'}</p>
+            {nextTaskText && <p className="mt-2 text-xs text-primary"><span className="font-semibold">Next:</span> {nextTaskText}</p>}
           </div>
         </div>
         <div className="pt-gutter-base mt-gutter-base bg-surface-container-low/50 -mx-gutter-xl -mb-gutter-xl px-gutter-xl pb-gutter-base rounded-b-xl flex items-center justify-between">
           <div className="flex items-center gap-gutter-md text-on-surface-variant font-label-sm text-label-sm">
             <span className="flex items-center gap-1">
               <span className="material-symbols-outlined text-[15px] text-outline">account_tree</span>
-              {goal.keyResults || 0} Key Results
+              Due: {goal.targetDate || `${goal.daysLeft || 0} days`}
             </span>
             <span className="w-1 h-1 rounded-full bg-outline-variant"></span>
             <span className="flex items-center gap-1">
               <span className="material-symbols-outlined text-[15px] text-outline">check_box</span>
-              {goal.tasksActive || 0} Tasks Active
+              {goal.tasksActive || 0} tasks active
             </span>
           </div>
-          <button onClick={() => setGoalToDelete(goal)} className={`p-1 rounded-full hover:bg-surface-container text-on-surface-variant ${color.hover} transition-colors`} title="Delete Goal" aria-label={`Delete ${goal.title}`}>
-            <span className="material-symbols-outlined text-[18px]">delete</span>
-          </button>
+          <div className="flex items-center gap-2"><button onClick={() => onOpenQuickAdd?.({ initialGoalId: goal.id })} className="rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-on-primary">Add next task</button><button onClick={() => setGoalToDelete(goal)} className={`p-1 rounded-full hover:bg-surface-container text-on-surface-variant ${color.hover} transition-colors`} title="Delete Goal" aria-label={`Delete ${goal.title}`}><span className="material-symbols-outlined text-[18px]">delete</span></button></div>
         </div>
       </div>
     );
@@ -326,6 +335,8 @@ export default function GoalsView({ goals = [], addGoal, updateGoalProgress, del
                 <option value="creative">Creative &amp; Mind</option>
               </select>
               <input type="number" placeholder="Days Left" required value={newGoalForm.daysLeft} onChange={e => setNewGoalForm({...newGoalForm, daysLeft: e.target.value})} className="px-4 py-2 rounded-lg bg-surface-container-low border-none outline-none focus:ring-2 focus:ring-primary" />
+              <input type="text" placeholder="Due date, e.g. Sep 30" value={newGoalForm.targetDate} onChange={e => setNewGoalForm({...newGoalForm, targetDate: e.target.value})} className="px-4 py-2 rounded-lg bg-surface-container-low border-none outline-none focus:ring-2 focus:ring-primary" />
+              <input type="text" placeholder="Current milestone, e.g. Finish landing page" value={newGoalForm.milestone} onChange={e => setNewGoalForm({...newGoalForm, milestone: e.target.value})} className="px-4 py-2 rounded-lg bg-surface-container-low border-none outline-none focus:ring-2 focus:ring-primary" />
               <textarea placeholder="The Mandatory Why" required value={newGoalForm.why} onChange={e => setNewGoalForm({...newGoalForm, why: e.target.value})} className="px-4 py-2 rounded-lg bg-surface-container-low border-none outline-none focus:ring-2 focus:ring-primary h-10"></textarea>
             </div>
             <div className="flex justify-end gap-gutter-sm">
