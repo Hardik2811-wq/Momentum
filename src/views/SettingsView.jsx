@@ -229,15 +229,47 @@ export default function SettingsView({
           <div className="mt-5 border-t border-black/[0.06] pt-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[12px] font-semibold text-[#1A1B1F]">Groq fallback</p>
-                <p className="mt-0.5 text-[11px] leading-4 text-[#8E8E93]">{getGroqApiKey() || keySaved ? 'Key configured for this browser.' : 'No key saved in this browser.'} Browser key is for local development. Use a server-held key before production deployment.</p>
+                <p className="text-[12px] font-semibold text-[#1A1B1F]">Groq Cloud Inference (BYOK)</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-[#8E8E93]">
+                  {getGroqApiKey() || keySaved ? 'Your personal Groq API key is active for this workspace.' : 'No key saved. AI task fill & intelligent parsing requires a free Groq API key.'}
+                </p>
+                <a
+                  href="https://console.groq.com/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 text-[11px] text-[#0A84FF] font-semibold hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Get your free API key at console.groq.com</span>
+                  <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                </a>
               </div>
-              {(getGroqApiKey() || keySaved) && <button type="button" onClick={clearGroqKey} className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-50">Remove key</button>}
+              {(getGroqApiKey() || keySaved) && (
+                <button
+                  type="button"
+                  onClick={clearGroqKey}
+                  className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-50 transition"
+                >
+                  Remove key
+                </button>
+              )}
             </div>
             {!getGroqApiKey() && !keySaved && (
               <div className="mt-3 flex gap-2">
-                <input type="password" value={groqKeyInput} onChange={(event) => setGroqKeyInput(event.target.value)} placeholder="Paste Groq API key" className={`min-w-0 flex-1 px-3 py-2 rounded-xl text-[12px] outline-none border ${inputCls}`} />
-                <button type="button" onClick={saveGroqKey} disabled={!groqKeyInput.trim()} className="rounded-xl bg-[#0A84FF] px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-50">Save key</button>
+                <input
+                  type="password"
+                  value={groqKeyInput}
+                  onChange={(event) => setGroqKeyInput(event.target.value)}
+                  placeholder="Paste Groq API key (gsk_...)"
+                  className={`min-w-0 flex-1 px-3 py-2 rounded-xl text-[12px] font-mono outline-none border ${inputCls}`}
+                />
+                <button
+                  type="button"
+                  onClick={saveGroqKey}
+                  disabled={!groqKeyInput.trim()}
+                  className="rounded-xl bg-[#0A84FF] px-4 py-2 text-[12px] font-semibold text-white disabled:opacity-50 hover:bg-[#0071E3] transition"
+                >
+                  Save Key
+                </button>
               </div>
             )}
           </div>

@@ -22,6 +22,7 @@ import {
   recordLocalHit
 } from '../lib/nlpMemory';
 import { LIFE_AREAS, DEFAULT_LIFE_AREAS, getGoalAreas, saveGoalAreas } from '../lib/lifeAreas';
+import ApiKeyModal from './ApiKeyModal';
 
 const EFFORT_OPTIONS = [15, 30, 45, 60, 90, 120, 180, 240, 360];
 
@@ -515,8 +516,18 @@ export default function QuickAddModal({
     }
   };
 
-  const handleAiBreakdown = async () => {
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+
+  const handleAiBreakdown = async (explicitKey = null) => {
     if (!title.trim() || isAiParsing) return;
+
+    // Check if user has key configured
+    const key = explicitKey || getGroqApiKey();
+    if (!key) {
+      setShowApiKeyModal(true);
+      return;
+    }
+
     setIsAiParsing(true);
     try {
       recordAiRequest(title.trim());
@@ -1517,6 +1528,16 @@ export default function QuickAddModal({
           </div>
         </form>
       </div>
+
+      {/* BYOK API Key Prompt Modal */}
+      <ApiKeyModal
+        isOpen={showApiKeyModal}
+        onClose={() => setShowApiKeyModal(false)}
+        onSuccess={(savedKey) => {
+          setShowApiKeyModal(false);
+          handleAiBreakdown(savedKey);
+        }}
+      />
     </div>
   );
 }

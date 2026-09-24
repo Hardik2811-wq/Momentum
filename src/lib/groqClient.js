@@ -13,7 +13,12 @@ export function getGroqApiKey() {
     const customKey = window.localStorage.getItem('momentum_groq_api_key');
     if (customKey && customKey.trim()) return customKey.trim();
   }
-  return (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GROQ_API_KEY) || '';
+  // In production BYOK mode, users provide their own key
+  return '';
+}
+
+export function hasUserApiKey() {
+  return Boolean(getGroqApiKey());
 }
 
 export function setGroqApiKey(key = '') {
