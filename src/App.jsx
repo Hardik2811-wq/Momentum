@@ -198,6 +198,7 @@ export default function App() {
         isOpen={isQuickAddOpen}
         onClose={closeQuickAdd}
         onAddTask={store.addTask}
+        onUpdateSettings={store.updateSettings}
         goals={store.goals}
         habits={store.habits}
         initialTime={quickAddProps.initialTime || ''}

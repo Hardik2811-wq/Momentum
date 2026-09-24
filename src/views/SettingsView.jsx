@@ -88,7 +88,9 @@ export default function SettingsView({
 
   const saveGroqKey = () => {
     if (!groqKeyInput.trim()) return;
-    setGroqApiKey(groqKeyInput);
+    const clean = groqKeyInput.trim();
+    setGroqApiKey(clean);
+    updateSettings?.({ groqApiKey: clean });
     setGroqKeyInput('');
     setKeySaved(true);
     setTestResult(null);
@@ -96,6 +98,7 @@ export default function SettingsView({
 
   const clearGroqKey = () => {
     setGroqApiKey('');
+    updateSettings?.({ groqApiKey: '' });
     setKeySaved(false);
     setTestResult(null);
   };

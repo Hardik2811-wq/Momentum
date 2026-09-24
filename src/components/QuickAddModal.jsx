@@ -320,6 +320,7 @@ export default function QuickAddModal({
   isOpen,
   onClose,
   onAddTask,
+  onUpdateSettings,
   goals = [],
   habits = [],
   initialTime = '',
@@ -1602,6 +1603,7 @@ export default function QuickAddModal({
         onClose={() => setShowApiKeyModal(false)}
         onSuccess={(savedKey) => {
           setShowApiKeyModal(false);
+          onUpdateSettings?.({ groqApiKey: savedKey });
           handleAiBreakdown(savedKey);
         }}
       />
