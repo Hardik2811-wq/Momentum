@@ -75,7 +75,8 @@ export default function SettingsView({
     try {
       const res = await testGroqConnection(customKey);
       if (res.success) {
-        setTestResult({ success: true, message: 'Valid! Connection to Groq succeeded.' });
+        const count = res.models?.length ? ` (${res.models.length} models ready)` : '';
+        setTestResult({ success: true, message: `Valid! Connection to Groq verified${count}.` });
       } else {
         setTestResult({ success: false, message: res.error || 'Connection failed' });
       }
@@ -327,7 +328,14 @@ export default function SettingsView({
             {!getGroqApiKey() && !keySaved && (
               <div className="mt-3 flex gap-2">
                 <input
-                  type="password"
+                  type="text"
+                  style={{ WebkitTextSecurity: 'disc' }}
+                  autoComplete="off"
+                  spellCheck="false"
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  name="momentum_groq_settings_key"
+                  id="momentum_groq_settings_key"
                   value={groqKeyInput}
                   onChange={(event) => setGroqKeyInput(event.target.value)}
                   placeholder="Paste Groq API key (gsk_...)"

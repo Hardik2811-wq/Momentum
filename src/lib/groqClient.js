@@ -8,10 +8,13 @@ const SUPPORTED_MODELS = [
   'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant',
   'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b'
+  'openai/gpt-oss-20b',
+  'meta-llama/llama-4-scout-17b-16e-instruct',
+  'qwen/qwen3.8-27b'
 ];
 
 let inMemoryKey = '';
+let cachedAvailableModels = null;
 
 export function getGroqApiKey() {
   if (inMemoryKey) return inMemoryKey;
@@ -34,6 +37,7 @@ export function hasUserApiKey() {
 export function setGroqApiKey(key = '') {
   const clean = (key || '').trim();
   inMemoryKey = clean;
+  cachedAvailableModels = null;
   if (typeof window !== 'undefined') {
     try {
       if (clean) {
@@ -52,17 +56,11 @@ export async function testGroqConnection(apiKey = null) {
     return { success: false, error: 'No API key provided' };
   }
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
+    const res = await fetch('https://api.groq.com/openai/v1/models', {
+      method: 'GET',
       headers: {
-        'Authorization': `Bearer ${key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [{ role: 'user', content: 'ping' }],
-        max_tokens: 5
-      })
+        'Authorization': `Bearer ${key}`
+      }
     });
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
@@ -71,7 +69,12 @@ export async function testGroqConnection(apiKey = null) {
         error: errBody.error?.message || `HTTP error ${res.status}: ${res.statusText}`
       };
     }
-    return { success: true };
+    const data = await res.json();
+    const available = Array.isArray(data?.data) ? data.data.map(m => m.id) : [];
+    if (available.length > 0) {
+      cachedAvailableModels = available;
+    }
+    return { success: true, models: available };
   } catch (err) {
     return { success: false, error: err.message || 'Network connection failed' };
   }
@@ -182,8 +185,35 @@ export async function parseWithGroq(input = '', goals = [], explicitApiKey = nul
     return JSON.parse(match[0]);
   };
 
+  let modelsToTry = SUPPORTED_MODELS;
+  if (!cachedAvailableModels) {
+    try {
+      const mRes = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': `Bearer ${apiKey}` }
+      });
+      if (mRes.ok) {
+        const mData = await mRes.json();
+        if (Array.isArray(mData?.data)) {
+          cachedAvailableModels = mData.data.map(m => m.id);
+        }
+      }
+    } catch {}
+  }
+
+  if (cachedAvailableModels && cachedAvailableModels.length > 0) {
+    const matched = SUPPORTED_MODELS.filter(m => cachedAvailableModels.includes(m));
+    if (matched.length > 0) {
+      modelsToTry = matched;
+    } else {
+      const chatModels = cachedAvailableModels.filter(m => !m.includes('whisper') && !m.includes('guard') && !m.includes('distil'));
+      if (chatModels.length > 0) {
+        modelsToTry = chatModels;
+      }
+    }
+  }
+
   let lastError = null;
-  for (const model of SUPPORTED_MODELS) {
+  for (const model of modelsToTry) {
     try {
       const parsed = await callModel(model);
       if (parsed && typeof parsed === 'object') {
