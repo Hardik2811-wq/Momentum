@@ -522,10 +522,11 @@ export default function QuickAddModal({
   };
 
   const handleAiBreakdown = async (explicitKey = null) => {
+    const passedKey = typeof explicitKey === 'string' ? explicitKey.trim() : null;
     if (!title.trim() || isAiParsing) return;
 
     // Check if user has key configured
-    const key = explicitKey || getGroqApiKey();
+    const key = passedKey || getGroqApiKey();
     if (!key) {
       setShowApiKeyModal(true);
       return;
@@ -699,7 +700,7 @@ export default function QuickAddModal({
               />
               <button
                 type="button"
-                onClick={handleAiBreakdown}
+                onClick={() => handleAiBreakdown()}
                 disabled={isAiParsing || !title.trim()}
                 className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold shadow-xs active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
                   aiFeedback?.type === 'success'

@@ -46,7 +46,8 @@ export function setGroqApiKey(key = '') {
 }
 
 export async function testGroqConnection(apiKey = null) {
-  const key = (apiKey || getGroqApiKey() || '').trim();
+  const passedKey = typeof apiKey === 'string' ? apiKey.trim() : '';
+  const key = (passedKey || getGroqApiKey() || '').trim();
   if (!key) {
     return { success: false, error: 'No API key provided' };
   }
@@ -94,11 +95,12 @@ Output schema:
 Respond ONLY with a valid JSON object. No conversational filler, no code fences.`;
 
 export async function parseWithGroq(input = '', goals = [], explicitApiKey = null) {
-  if (!input || !input.trim()) {
+  if (!input || typeof input !== 'string' || !input.trim()) {
     return { success: false, error: 'Empty input query' };
   }
 
-  const apiKey = (explicitApiKey || getGroqApiKey() || '').trim();
+  const passedKey = typeof explicitApiKey === 'string' ? explicitApiKey.trim() : '';
+  const apiKey = (passedKey || getGroqApiKey() || '').trim();
   if (!apiKey) {
     return { success: false, error: 'No Groq API key configured' };
   }
