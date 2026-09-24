@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import TimezoneSelect from './TimezoneSelect';
 
 export default function OnboardingModal({ isOpen, onSave, initialName = '', initialRole = '', initialTimezone = '' }) {
   const [name, setName] = useState(initialName);
@@ -59,13 +60,10 @@ export default function OnboardingModal({ isOpen, onSave, initialName = '', init
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-[#1A1B1F] mb-1">Timezone (Auto-detected)</label>
-            <input
-              type="text"
-              required
+            <label className="block text-[11px] font-semibold text-[#1A1B1F] mb-1">Timezone</label>
+            <TimezoneSelect
               value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-black/[0.1] bg-[#F5F4FA] focus:bg-white focus:border-[#0A84FF] outline-none transition"
+              onChange={setTimezone}
             />
           </div>
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import TimezoneSelect from './TimezoneSelect';
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined);
@@ -107,16 +108,13 @@ export default function AuthGate({ children }) {
               </label>
             </div>
 
-            <label className="block text-xs font-semibold text-[#202a33]">Timezone (Auto-detected)
-              <input
-                required
-                type="text"
+            <div>
+              <label className="block text-xs font-semibold text-[#202a33] mb-1">Timezone</label>
+              <TimezoneSelect
                 value={timezone}
-                onChange={(event) => setTimezone(event.target.value)}
-                placeholder="e.g. Asia/Kolkata"
-                className="mt-1 w-full rounded-lg border border-black/20 px-3 py-2 text-xs bg-[#F5F4FA] outline-none focus:border-[#0A84FF] focus:ring-2 focus:ring-[#0A84FF]/20"
+                onChange={setTimezone}
               />
-            </label>
+            </div>
           </>
         )}
 

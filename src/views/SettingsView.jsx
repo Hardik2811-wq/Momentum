@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import TimezoneSelect from '../components/TimezoneSelect';
 import { playChime, sendNotification } from '../store/useStore';
 import { getGroqApiKey, setGroqApiKey } from '../lib/groqClient';
 import { getNlpInsights, resetNlpMemory } from '../lib/nlpMemory';
@@ -142,23 +143,39 @@ export default function SettingsView({
               {getInitials(profile.name)}
             </div>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { key: 'name', label: 'Full Name', value: profile.name || '' },
-                { key: 'role', label: 'Role / Title', value: profile.role || '' },
-                { key: 'timezone', label: 'Timezone', value: profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || '' },
-              ].map(({ key, label, value }) => (
-                <div key={key}>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1 text-[#BBBBC0]">
-                    {label}
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue={value}
-                    onBlur={(e) => updateProfile({ [key]: e.target.value })}
-                    className={`w-full px-3 py-2 rounded-xl text-[12px] outline-none border transition-colors ${inputCls}`}
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1 text-[#BBBBC0]">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  defaultValue={profile.name || ''}
+                  onBlur={(e) => updateProfile({ name: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-xl text-[12px] outline-none border transition-colors ${inputCls}`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1 text-[#BBBBC0]">
+                  Role / Title
+                </label>
+                <input
+                  type="text"
+                  defaultValue={profile.role || ''}
+                  onBlur={(e) => updateProfile({ role: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-xl text-[12px] outline-none border transition-colors ${inputCls}`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1 text-[#BBBBC0]">
+                  Timezone
+                </label>
+                <TimezoneSelect
+                  value={profile.timezone}
+                  onChange={(val) => updateProfile({ timezone: val })}
+                />
+              </div>
             </div>
           </div>
         </Section>
