@@ -344,10 +344,9 @@ const DEFAULT_SETTINGS = {
   soundEffects: true,
   showFocusBar: true,
   profile: {
-    name: 'Elena Vance',
-    role: 'Product Lead',
-    timezone: 'Europe / Paris (UTC+2)',
-    workCycle: 'Q2 2026',
+    name: '',
+    role: '',
+    timezone: (typeof Intl !== 'undefined' && Intl.DateTimeFormat) ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
   },
 };
 
@@ -384,8 +383,35 @@ export default function useStore() {
         setGoals(saved.goals);
         setHabits(saved.habits);
         if (saved.reflections && typeof saved.reflections === 'object') setReflections(saved.reflections);
-        if (saved.settings && typeof saved.settings === 'object') setSettings(saved.settings);
+        if (saved.settings && typeof saved.settings === 'object') {
+          // If saved settings lacks profile name but session metadata has it, merge it
+          const meta = session.user.user_metadata || {};
+          const mergedSettings = { ...saved.settings };
+          if (!mergedSettings.profile?.name && (meta.full_name || meta.name)) {
+            mergedSettings.profile = {
+              ...mergedSettings.profile,
+              name: meta.full_name || meta.name || '',
+              role: meta.role || '',
+              timezone: meta.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+            };
+          }
+          setSettings(mergedSettings);
+        }
         if (Array.isArray(saved.focusSessions)) setFocusSessions(saved.focusSessions);
+      } else {
+        // First-time user: seed profile with metadata from sign-up
+        const meta = session.user.user_metadata || {};
+        if (meta.full_name || meta.name || meta.role) {
+          setSettings(prev => ({
+            ...prev,
+            profile: {
+              ...prev.profile,
+              name: meta.full_name || meta.name || prev.profile?.name || '',
+              role: meta.role || prev.profile?.role || '',
+              timezone: meta.timezone || prev.profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+            }
+          }));
+        }
       }
       setCloudUserId(session.user.id);
       setCloudReady(true);

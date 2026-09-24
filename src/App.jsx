@@ -15,6 +15,7 @@ import SettingsView from './views/SettingsView';
 import useStore from './store/useStore';
 import MobileTabBar from './components/MobileTabBar';
 import AuthGate from './components/AuthGate';
+import OnboardingModal from './components/OnboardingModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -203,6 +204,15 @@ export default function App() {
         initialDate={quickAddProps.initialDate ?? ''}
         initialGoalId={quickAddProps.initialGoalId || ''}
         initialHabitId={quickAddProps.initialHabitId || ''}
+      />
+
+      {/* Onboarding Modal for First User without Profile Name */}
+      <OnboardingModal
+        isOpen={Boolean(!store.settings?.profile?.name)}
+        onSave={(data) => store.updateProfile(data)}
+        initialName={store.settings?.profile?.name || ''}
+        initialRole={store.settings?.profile?.role || ''}
+        initialTimezone={store.settings?.profile?.timezone || ''}
       />
 
       {/* System Toast & Undo Notifications */}

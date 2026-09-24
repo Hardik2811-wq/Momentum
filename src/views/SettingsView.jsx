@@ -141,12 +141,11 @@ export default function SettingsView({
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md flex-shrink-0">
               {getInitials(profile.name)}
             </div>
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
                 { key: 'name', label: 'Full Name', value: profile.name || '' },
                 { key: 'role', label: 'Role / Title', value: profile.role || '' },
-                { key: 'timezone', label: 'Timezone', value: profile.timezone || '' },
-                { key: 'workCycle', label: 'Work Cycle', value: profile.workCycle || '' },
+                { key: 'timezone', label: 'Timezone', value: profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || '' },
               ].map(({ key, label, value }) => (
                 <div key={key}>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1 text-[#BBBBC0]">
