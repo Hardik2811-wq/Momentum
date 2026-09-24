@@ -347,6 +347,7 @@ export default function QuickAddModal({
   const [showSubtasks, setShowSubtasks] = useState(false);
   const [newSubtaskInput, setNewSubtaskInput] = useState('');
   const [isAiParsing, setIsAiParsing] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   // Active micro-popover menu
   const [activeMenu, setActiveMenu] = useState(null); // 'date' | 'time' | 'areas' | 'energy' | 'goal' | 'habit' | 'repeat'
@@ -515,8 +516,6 @@ export default function QuickAddModal({
       applyExtractedDetails(local.extracted, false);
     }
   };
-
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   const handleAiBreakdown = async (explicitKey = null) => {
     if (!title.trim() || isAiParsing) return;
