@@ -55,8 +55,8 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
     }
 
     setGroqApiKey(clean);
-    onSuccess?.(clean);
     onClose();
+    onSuccess?.(clean);
   };
 
   return (
@@ -97,6 +97,22 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
           </p>
         </div>
 
+        {getGroqApiKey() && (
+          <div className="p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between text-[11px] text-emerald-800">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="material-symbols-outlined text-[15px] text-emerald-600">check_circle</span>
+              <span>Key currently active in this browser</span>
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="font-bold underline text-emerald-700 hover:text-emerald-900 cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSave} autoComplete="off" className="space-y-3">
           <div>
             <label className="block text-[11px] font-semibold text-[#1A1B1F] mb-1">
@@ -104,14 +120,16 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
             </label>
             <div className="relative flex items-center">
               <input
-                type={showKey ? 'text' : 'password'}
+                type="text"
+                style={{ WebkitTextSecurity: showKey ? 'none' : 'disc' }}
                 required
                 autoFocus
                 autoComplete="off"
+                spellCheck="false"
                 data-1p-ignore="true"
                 data-lpignore="true"
-                name="momentum_groq_key"
-                id="momentum_groq_key"
+                name="momentum_groq_token"
+                id="momentum_groq_token"
                 value={apiKey}
                 onChange={(e) => {
                   setApiKey(e.target.value);
@@ -124,7 +142,7 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
-                className="absolute right-2.5 text-slate-400 hover:text-slate-700 text-[14px]"
+                className="absolute right-2.5 text-slate-400 hover:text-slate-700 text-[14px] cursor-pointer"
                 title={showKey ? 'Hide key' : 'Show key'}
               >
                 <span className="material-symbols-outlined text-[16px]">

@@ -422,6 +422,7 @@ export default function QuickAddModal({
     setNewSubtaskInput('');
     setActiveMenu(null);
     setAiFeedback(null);
+    setShowApiKeyModal(false);
   }, [isOpen, initialDate, initialGoalId, initialHabitId, initialTime]);
 
   // Click outside to close popovers
@@ -614,6 +615,7 @@ export default function QuickAddModal({
     setSubtasks([]);
     setShowSubtasks(false);
     setAiFeedback(null);
+    setShowApiKeyModal(false);
     onClose();
   };
 
