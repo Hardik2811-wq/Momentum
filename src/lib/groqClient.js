@@ -11,10 +11,18 @@ const SUPPORTED_MODELS = [
   'openai/gpt-oss-20b'
 ];
 
+let inMemoryKey = '';
+
 export function getGroqApiKey() {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    const customKey = window.localStorage.getItem('momentum_groq_api_key');
-    if (customKey && customKey.trim()) return customKey.trim();
+  if (inMemoryKey) return inMemoryKey;
+  if (typeof window !== 'undefined') {
+    try {
+      const customKey = window.localStorage?.getItem('momentum_groq_api_key');
+      if (customKey && customKey.trim()) {
+        inMemoryKey = customKey.trim();
+        return inMemoryKey;
+      }
+    } catch {}
   }
   return '';
 }
@@ -24,12 +32,16 @@ export function hasUserApiKey() {
 }
 
 export function setGroqApiKey(key = '') {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    if (key) {
-      window.localStorage.setItem('momentum_groq_api_key', key.trim());
-    } else {
-      window.localStorage.removeItem('momentum_groq_api_key');
-    }
+  const clean = (key || '').trim();
+  inMemoryKey = clean;
+  if (typeof window !== 'undefined') {
+    try {
+      if (clean) {
+        window.localStorage?.setItem('momentum_groq_api_key', clean);
+      } else {
+        window.localStorage?.removeItem('momentum_groq_api_key');
+      }
+    } catch {}
   }
 }
 
@@ -81,12 +93,12 @@ Output schema:
 }
 Respond ONLY with a valid JSON object. No conversational filler, no code fences.`;
 
-export async function parseWithGroq(input = '', goals = []) {
+export async function parseWithGroq(input = '', goals = [], explicitApiKey = null) {
   if (!input || !input.trim()) {
     return { success: false, error: 'Empty input query' };
   }
 
-  const apiKey = getGroqApiKey();
+  const apiKey = (explicitApiKey || getGroqApiKey() || '').trim();
   if (!apiKey) {
     return { success: false, error: 'No Groq API key configured' };
   }

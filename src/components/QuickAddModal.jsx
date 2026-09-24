@@ -533,7 +533,7 @@ export default function QuickAddModal({
     setAiFeedback(null);
     setIsAiParsing(true);
     try {
-      const res = await parseWithGroq(title, goals);
+      const res = await parseWithGroq(title, goals, key);
       if (res.success && res.data) {
         applyExtractedDetails(res.data, true);
         harvestApiResult(title, res.data, { alreadyCounted: true });

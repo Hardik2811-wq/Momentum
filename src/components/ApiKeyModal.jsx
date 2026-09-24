@@ -1,16 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getGroqApiKey, setGroqApiKey, testGroqConnection } from '../lib/groqClient';
 
 export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(() => getGroqApiKey() || '');
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState('');
   const [isTesting, setIsTesting] = useState(false);
-  const [allowForceSave, setAllowForceSave] = useState(false);
+  const [testStatus, setTestStatus] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setApiKey(getGroqApiKey() || '');
+      setError('');
+      setTestStatus(null);
+      setIsTesting(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSave = async (e, force = false) => {
+  const handleTest = async () => {
+    const clean = apiKey.trim();
+    if (!clean) {
+      setError('Please paste your Groq API key first.');
+      return;
+    }
+    setIsTesting(true);
+    setError('');
+    setTestStatus(null);
+    try {
+      const res = await testGroqConnection(clean);
+      if (res.success) {
+        setTestStatus({ success: true, message: 'Valid Groq API key! Connection succeeded.' });
+      } else {
+        setTestStatus({ success: false, message: res.error || 'Connection failed' });
+      }
+    } catch (err) {
+      setTestStatus({ success: false, message: err.message || 'Network error' });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSave = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     const clean = apiKey.trim();
     if (!clean) {
@@ -20,19 +52,6 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
     if (!clean.startsWith('gsk_')) {
       setError('Invalid format. Groq API keys start with "gsk_".');
       return;
-    }
-
-    if (!force) {
-      setIsTesting(true);
-      setError('');
-      const testRes = await testGroqConnection(clean);
-      setIsTesting(false);
-
-      if (!testRes.success) {
-        setError(`Verification failed: ${testRes.error}. Double check your key or console.groq.com status.`);
-        setAllowForceSave(true);
-        return;
-      }
     }
 
     setGroqApiKey(clean);
@@ -55,7 +74,7 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
               <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
             </div>
             <div>
-              <h2 className="text-[15px] font-bold text-[#1A1B1F] tracking-tight">Groq API Key Required</h2>
+              <h2 className="text-[15px] font-bold text-[#1A1B1F] tracking-tight">Groq API Key</h2>
               <p className="text-[11px] text-[#64748B]">Bring Your Own Key (BYOK) for Instant AI Breakdown</p>
             </div>
           </div>
@@ -71,14 +90,14 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
         <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl space-y-1">
           <div className="flex items-center gap-1.5 text-amber-800 text-[11px] font-bold">
             <span className="material-symbols-outlined text-[14px]">shield</span>
-            <span>Private & Free Forever</span>
+            <span>Private & Stored in Local Browser</span>
           </div>
           <p className="text-[11px] text-amber-900/80 leading-relaxed">
-            Groq provides generous free tier credits with ultra-fast inference (~500 tokens/sec). Your key is stored securely in your local browser storage and never shared.
+            Groq provides generous free tier credits with ultra-fast inference (~500 tokens/sec). Your key never leaves your device.
           </p>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-3">
+        <form onSubmit={handleSave} autoComplete="off" className="space-y-3">
           <div>
             <label className="block text-[11px] font-semibold text-[#1A1B1F] mb-1">
               Groq API Key
@@ -88,10 +107,16 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
                 type={showKey ? 'text' : 'password'}
                 required
                 autoFocus
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                name="momentum_groq_key"
+                id="momentum_groq_key"
                 value={apiKey}
                 onChange={(e) => {
                   setApiKey(e.target.value);
                   setError('');
+                  setTestStatus(null);
                 }}
                 placeholder="gsk_..."
                 className="w-full px-3 py-2 pr-10 text-[12px] font-mono rounded-xl border border-black/[0.1] bg-[#F5F4FA] focus:bg-white focus:border-[#0A84FF] outline-none transition"
@@ -108,6 +133,11 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
               </button>
             </div>
             {error && <p className="text-[11px] text-red-500 mt-1">{error}</p>}
+            {testStatus && (
+              <p className={`text-[11px] mt-1 font-medium ${testStatus.success ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {testStatus.success ? '✓' : '✕'} {testStatus.message}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between text-[11px]">
@@ -120,37 +150,31 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
               <span>Get free key at console.groq.com</span>
               <span className="material-symbols-outlined text-[12px]">open_in_new</span>
             </a>
+
+            <button
+              type="button"
+              onClick={handleTest}
+              disabled={isTesting || !apiKey.trim()}
+              className="text-slate-500 hover:text-slate-800 font-semibold underline disabled:opacity-40 cursor-pointer"
+            >
+              {isTesting ? 'Testing…' : 'Test Key'}
+            </button>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/[0.05]">
             <button
               type="button"
               onClick={onClose}
-              disabled={isTesting}
-              className="px-3.5 py-1.5 rounded-xl text-[12px] font-medium text-slate-600 hover:bg-slate-100 transition disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-xl text-[12px] font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             >
               Cancel
             </button>
-            {allowForceSave && (
-              <button
-                type="button"
-                onClick={(e) => handleSave(e, true)}
-                className="px-3 py-1.5 rounded-xl text-[12px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer"
-              >
-                Save Anyway
-              </button>
-            )}
             <button
               type="submit"
-              disabled={isTesting || !apiKey.trim()}
-              className="px-4 py-1.5 rounded-xl text-[12px] font-semibold bg-[#0A84FF] text-white hover:bg-[#0071E3] transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              disabled={!apiKey.trim()}
+              className="px-4 py-1.5 rounded-xl text-[12px] font-semibold bg-[#0A84FF] text-white hover:bg-[#0071E3] transition shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              {isTesting && (
-                <span className="material-symbols-outlined text-[14px] animate-spin">
-                  progress_activity
-                </span>
-              )}
-              <span>{isTesting ? 'Verifying Key…' : 'Save Key & Activate'}</span>
+              Save Key & Activate
             </button>
           </div>
         </form>
