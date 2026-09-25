@@ -170,7 +170,9 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
                 </span>
               )}
             </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">{habit.description}</p>
+            {habit.description && (
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">{habit.description}</p>
+            )}
           </div>
         </div>
         <div className="flex md:flex-col items-end justify-between md:justify-center gap-1 flex-shrink-0">

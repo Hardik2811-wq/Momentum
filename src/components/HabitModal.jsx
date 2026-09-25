@@ -156,7 +156,7 @@ export default function HabitModal({
   const [targetFrequency, setTargetFrequency] = useState('Every Day');
   const [customDays, setCustomDays] = useState(['Mon', 'Wed', 'Fri']);
   const [linkedGoal, setLinkedGoal] = useState('');
-  const [description, setDescription] = useState('');
+  const [isGoalMenuOpen, setIsGoalMenuOpen] = useState(false);
   const [graceDays, setGraceDays] = useState(1);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -184,7 +184,6 @@ export default function HabitModal({
       setTargetFrequency(habit.targetFrequency || 'Every Day');
       setCustomDays(habit.customDays || ['Mon', 'Wed', 'Fri']);
       setLinkedGoal(habit.linkedGoal || '');
-      setDescription(habit.description || '');
       setGraceDays(habit.graceDays ?? 1);
     } else {
       // Smart defaults (UX Psychology: Smart Defaults & Goal Gradient)
@@ -196,11 +195,11 @@ export default function HabitModal({
       setCadence('Anytime');
       setTargetFrequency('Every Day');
       setCustomDays(['Mon', 'Wed', 'Fri']);
-      setLinkedGoal(goals.length > 0 ? goals[0].title : '');
-      setDescription('');
+      setLinkedGoal(''); // Default to None
       setGraceDays(1);
     }
     setConfirmDelete(false);
+    setIsGoalMenuOpen(false);
   }, [habit, goals, isOpen]);
 
   if (!isOpen) return null;
@@ -221,7 +220,7 @@ export default function HabitModal({
       targetFrequency,
       customDays: targetFrequency === 'Custom' ? customDays : null,
       linkedGoal: linkedGoal.trim(),
-      description: description.trim(),
+      description: habit?.description || '',
       graceDays: Number(graceDays) || 0
     });
     onClose();
@@ -322,12 +321,6 @@ export default function HabitModal({
                     {graceDays} Shield Days
                   </span>
                 </div>
-
-                {description.trim() && (
-                  <p className="mt-2 text-xs text-on-surface-variant italic truncate max-w-md">
-                    "{description.trim()}"
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -550,47 +543,138 @@ export default function HabitModal({
             </div>
           </div>
 
-          {/* 6. Context & Anchor (Subtle Grouped Container) */}
-          <div className="rounded-2xl bg-surface-container-low/50 border border-black/[0.06] p-4 sm:p-5 space-y-4">
-            <div className="flex items-center justify-between">
+          {/* 6. Horizon Goal & Grace Shield (Mature Selection) */}
+          <div className="rounded-2xl bg-surface-container-low/50 border border-black/[0.06] p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-3.5">
               <h5 className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
-                Contextual Anchors &amp; Grace Shield
+                Horizon Anchor &amp; Shield
               </h5>
-              <span className="text-[11px] text-outline">Protects streak momentum</span>
+              <span className="text-[11px] text-outline">Optional progression link</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Linked Goal Dropdown */}
-              <div className="space-y-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+              {/* Mature Linked Goal Selector */}
+              <div className="space-y-1.5 relative">
                 <label className="block text-xs font-semibold text-on-surface">
                   Linked Horizon Goal
                 </label>
-                <select
-                  value={linkedGoal}
-                  onChange={(e) => setLinkedGoal(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+                <button
+                  type="button"
+                  onClick={() => setIsGoalMenuOpen(!isGoalMenuOpen)}
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white border border-black/[0.08] hover:border-black/20 text-xs font-semibold text-on-surface shadow-xs transition-all text-left"
                 >
-                  <option value="">None (Independent Habit)</option>
-                  {goals.map((g) => (
-                    <option key={g.id} value={g.title}>
-                      🎯 {g.title}
-                    </option>
-                  ))}
-                </select>
+                  <div className="flex items-center gap-2 truncate pr-1">
+                    {linkedGoal ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: activeSignpost.accentHex }} />
+                        <span className="truncate text-on-surface">{linkedGoal}</span>
+                      </>
+                    ) : (
+                      <span className="text-outline font-normal">None (Independent Habit)</span>
+                    )}
+                  </div>
+                  <span className="material-symbols-outlined text-[18px] text-outline shrink-0 ml-1">
+                    unfold_more
+                  </span>
+                </button>
+
+                {/* Mature Popover Menu */}
+                {isGoalMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setIsGoalMenuOpen(false)}
+                    />
+                    <div className="absolute bottom-full mb-1 sm:bottom-auto sm:top-full sm:mt-1.5 left-0 right-0 z-40 bg-white rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.14)] border border-black/[0.08] py-1.5 max-h-56 overflow-y-auto animate-fadeIn">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLinkedGoal('');
+                          setIsGoalMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors ${
+                          !linkedGoal
+                            ? 'bg-neutral-50 text-neutral-900 font-bold'
+                            : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+                          <span>None (Independent Habit)</span>
+                        </div>
+                        {!linkedGoal && (
+                          <span className="material-symbols-outlined text-[16px] text-primary">check</span>
+                        )}
+                      </button>
+
+                      {goals.length > 0 && (
+                        <div className="border-t border-neutral-100 my-1 pt-1">
+                          <div className="px-3 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                            Active Horizons
+                          </div>
+                          {goals.map((g) => {
+                            const isSelected = linkedGoal === g.title;
+                            return (
+                              <button
+                                key={g.id}
+                                type="button"
+                                onClick={() => {
+                                  setLinkedGoal(g.title);
+                                  setIsGoalMenuOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors ${
+                                  isSelected
+                                    ? 'bg-neutral-50 text-neutral-900 font-bold'
+                                    : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 truncate pr-2">
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                      isSelected ? 'bg-primary' : 'bg-neutral-300'
+                                    }`}
+                                  />
+                                  <span className="truncate">{g.title}</span>
+                                  {g.category && (
+                                    <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 shrink-0">
+                                      {g.category}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {typeof g.progress === 'number' && (
+                                    <span className="text-[11px] font-medium text-neutral-400">
+                                      {g.progress}%
+                                    </span>
+                                  )}
+                                  {isSelected && (
+                                    <span className="material-symbols-outlined text-[16px] text-primary">
+                                      check
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Grace Shield Counter */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-on-surface">
                   Grace Shield Pool (Days)
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pt-0.5">
                   {[0, 1, 2, 3].map((val) => (
                     <button
                       key={val}
                       type="button"
                       onClick={() => setGraceDays(val)}
-                      className={`flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
                         graceDays === val
                           ? 'bg-secondary text-white shadow-xs font-bold'
                           : 'bg-white border border-black/[0.08] text-on-surface-variant hover:bg-surface-container-low'
@@ -601,20 +685,6 @@ export default function HabitModal({
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* Ritual Note / Anchor Cue */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-on-surface">
-                Implementation Intent / Anchor Cue
-              </label>
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. When my first morning espresso brews, I will sit at my desk and write."
-                className="w-full px-3.5 py-2 rounded-xl bg-white border border-black/[0.08] text-xs font-medium text-on-surface placeholder:text-outline/70 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
             </div>
           </div>
 
