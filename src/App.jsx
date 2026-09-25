@@ -90,6 +90,9 @@ export default function App() {
             tasks={store.tasks}
             habits={store.habits}
             addTask={store.addTask}
+            onToggleTask={store.toggleTask}
+            onStartFocus={startFocusForTask}
+            focusSessions={store.focusSessions}
           />
         );
       case 'habits':

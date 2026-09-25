@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import GoalDetailDrawer from '../components/GoalDetailDrawer';
 
 const CATEGORY_MAP = {
   career:   { label: 'Career & Craft', color: 'primary', icon: 'terminal' },
@@ -61,7 +62,10 @@ export default function GoalsView({
   settings = {},
   tasks = [],
   habits = [],
-  addTask
+  addTask,
+  onToggleTask,
+  onStartFocus,
+  focusSessions = []
 }) {
   const [filter, setFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -69,6 +73,11 @@ export default function GoalsView({
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'matrix'
   const [showNewGoal, setShowNewGoal] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState(null);
+  const [detailGoalId, setDetailGoalId] = useState(null);
+
+  const activeGoalForDetail = useMemo(() => {
+    return goals.find(g => g.id === detailGoalId) || null;
+  }, [goals, detailGoalId]);
 
   // New Goal State
   const [newGoalForm, setNewGoalForm] = useState({
@@ -218,6 +227,8 @@ export default function GoalsView({
     const color = CATEGORY_COLORS[catConfig.color] || CATEGORY_COLORS.primary;
 
     const workProgress = goal.workProgress ?? goal.progress ?? 0;
+    const circumference = 2 * Math.PI * 40;
+    const offset = circumference * (1 - Math.min(100, Math.max(0, workProgress)) / 100);
 
     // Velocity Badge Config
     let velIcon = 'check_circle';
@@ -244,7 +255,8 @@ export default function GoalsView({
       <div
         key={goal.id}
         data-block-id={`goal-card-${goal.id}`}
-        className="group relative flex flex-col justify-between rounded-2xl bg-white border border-black/[0.06] p-5 shadow-2xs hover:shadow-md hover:border-black/[0.1] transition-all duration-300"
+        onClick={() => setDetailGoalId(goal.id)}
+        className="group relative flex flex-col justify-between rounded-2xl bg-white border border-black/[0.06] p-5 shadow-2xs hover:shadow-md hover:border-black/[0.12] transition-all duration-200 cursor-pointer"
       >
         <div>
           {/* Top Row: Categories & Velocity */}
@@ -271,37 +283,67 @@ export default function GoalsView({
             </div>
           </div>
 
-          {/* Goal Title */}
-          <h2 className="text-[17px] font-bold text-[#1A1B1F] tracking-tight leading-snug">
-            {goal.title}
-          </h2>
+          {/* Goal Main Content: Circular Progress Gauge + Title/Why/Horizon */}
+          <div className="flex items-start gap-4 mt-2">
+            {/* Circular Radial Completion % Gauge */}
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                updateGoalProgress?.(goal.id, 10);
+              }}
+              className="relative w-20 h-20 shrink-0 group/circle cursor-pointer active:scale-95 transition-transform"
+              title="Click to boost progress +10%"
+            >
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  className="text-black/[0.06] fill-none stroke-current"
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  strokeWidth="8"
+                />
+                <circle
+                  className={`${color.text} fill-none transition-all duration-700`}
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  stroke="currentColor"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={offset}
+                  strokeLinecap="round"
+                  strokeWidth="8"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
+                <span className="text-[17px] font-black text-[#1A1B1F] tracking-tight leading-none">
+                  {workProgress}<span className="text-[11px] font-bold text-[#8E8E93]">%</span>
+                </span>
+                <span className="text-[10px] font-bold text-[#8E8E93] tracking-wider uppercase mt-0.5">
+                  done
+                </span>
+              </div>
+            </div>
 
-          {/* Optional Why Anchor */}
-          {goal.why && (
-            <p className="mt-1.5 text-[12px] text-[#64748B] italic leading-relaxed">
-              "{goal.why}"
-            </p>
-          )}
+            {/* Title, Why, Horizon */}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-[16px] font-bold text-[#1A1B1F] tracking-tight leading-snug group-hover:text-[#0A84FF] transition-colors">
+                {goal.title}
+              </h2>
 
-          {/* Unified Progress & Target Horizon Bar */}
-          <div className="mt-4 pt-3 border-t border-black/[0.04]">
-            <div className="flex items-center justify-between text-[11px] font-semibold mb-1.5">
-              <span className="text-[#1A1B1F] font-bold">{workProgress}% Complete</span>
-              <span className="text-[#64748B] flex items-center gap-1">
+              {goal.why && (
+                <p className="mt-1 text-[12px] text-[#64748B] italic leading-relaxed line-clamp-2">
+                  "{goal.why}"
+                </p>
+              )}
+
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#64748B]">
                 <span className="material-symbols-outlined text-[14px]">
                   {isFlexible ? 'all_inclusive' : 'calendar_today'}
                 </span>
                 <span>
                   {isFlexible ? 'Continuous Horizon' : `${goal.daysLeft ?? 0}d left · ${goal.targetDate}`}
                 </span>
-              </span>
-            </div>
-
-            <div className="h-2 w-full bg-[#F0EFF5] rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-700 ${color.bar}`}
-                style={{ width: `${workProgress}%` }}
-              />
+              </div>
             </div>
           </div>
 
@@ -328,7 +370,7 @@ export default function GoalsView({
               </div>
             ) : (
               <p className="mt-1 text-[11px] text-[#8E8E93]">
-                {goal.milestone || 'No pending tasks. Click below to add next deliverable.'}
+                {goal.milestone || 'No pending tasks. Click to inspect or add deliverables.'}
               </p>
             )}
 
@@ -352,7 +394,10 @@ export default function GoalsView({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => onOpenQuickAdd?.({ initialGoalId: goal.id })}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenQuickAdd?.({ initialGoalId: goal.id });
+              }}
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#0A84FF] hover:bg-[#0071E3] text-white text-[11px] font-semibold transition active:scale-95 shadow-3xs"
             >
               <span className="material-symbols-outlined text-[14px]">add</span>
@@ -361,17 +406,24 @@ export default function GoalsView({
 
             <button
               type="button"
-              onClick={() => updateGoalProgress?.(goal.id, 10)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDetailGoalId(goal.id);
+              }}
               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#F0EFF5] hover:bg-[#E5E5EB] text-[#1A1B1F] text-[11px] font-semibold transition active:scale-95"
-              title="Boost progress +10%"
+              title="Open Goal Details & Execution Workspace"
             >
-              <span>+10%</span>
+              <span className="material-symbols-outlined text-[14px] text-[#64748B]">edit_note</span>
+              <span>Details</span>
             </button>
           </div>
 
           <button
             type="button"
-            onClick={() => setGoalToDelete(goal)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setGoalToDelete(goal);
+            }}
             className="p-1.5 rounded-lg text-[#8E8E93] hover:text-red-500 hover:bg-red-50 transition"
             title={`Delete ${goal.title}`}
           >
@@ -401,7 +453,8 @@ export default function GoalsView({
             goalsList.map(g => (
               <div
                 key={g.id}
-                className="p-2.5 rounded-xl bg-[#F8F8FC] border border-black/[0.04] flex items-center justify-between hover:bg-white transition"
+                onClick={() => setDetailGoalId(g.id)}
+                className="p-2.5 rounded-xl bg-[#F8F8FC] border border-black/[0.04] flex items-center justify-between hover:bg-white transition cursor-pointer"
               >
                 <div className="min-w-0">
                   <h4 className="text-[12px] font-semibold text-[#1A1B1F] truncate">{g.title}</h4>
@@ -411,8 +464,11 @@ export default function GoalsView({
                 </div>
                 <button
                   type="button"
-                  onClick={() => onOpenQuickAdd?.({ initialGoalId: g.id })}
-                  className="px-2 py-1 rounded-lg bg-white text-[10px] font-bold text-[#0A84FF] shadow-3xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenQuickAdd?.({ initialGoalId: g.id });
+                  }}
+                  className="px-2 py-1 rounded-lg bg-white text-[10px] font-bold text-[#0A84FF] shadow-3xs hover:bg-blue-50 active:scale-95 transition"
                 >
                   + Task
                 </button>
@@ -928,10 +984,29 @@ export default function GoalsView({
         onConfirm={() => {
           if (goalToDelete) {
             deleteGoal(goalToDelete.id);
+            if (detailGoalId === goalToDelete.id) setDetailGoalId(null);
             setGoalToDelete(null);
           }
         }}
         onCancel={() => setGoalToDelete(null)}
+      />
+
+      {/* Goal Detail & Execution Drawer */}
+      <GoalDetailDrawer
+        isOpen={!!activeGoalForDetail}
+        onClose={() => setDetailGoalId(null)}
+        goal={activeGoalForDetail}
+        onUpdateGoal={updateGoal}
+        onDeleteGoal={(id) => {
+          deleteGoal?.(id);
+          setDetailGoalId(null);
+        }}
+        tasks={tasks}
+        habits={habits}
+        addTask={addTask}
+        onToggleTask={onToggleTask}
+        onStartFocus={onStartFocus}
+        focusSessions={focusSessions}
       />
     </main>
   );
