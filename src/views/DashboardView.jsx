@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { todayKey } from '../store/useStore';
 import TaskCard from '../components/TaskCard';
 import TaskDetailModal from '../components/TaskDetailModal';
-import { deadlineStatus, effortLabel, IMPACT_LABELS, planDateLabel, taskImpact, taskPlanDate, todayPlanDate, tomorrowPlanDate } from '../lib/taskMetadata';
+import { deadlineStatus, effortLabel, IMPACT_LABELS, planDateLabel, taskImpact, taskPlanDate, todayPlanDate, tomorrowPlanDate, isTaskScheduledForDate } from '../lib/taskMetadata';
 
 const IMPACT_ORDER = { high: 1, medium: 2, low: 3 };
 
@@ -31,7 +31,7 @@ export default function DashboardView({
   const quickWinMinutes = settings.quickWinMinutes || 30;
 
   const todayTasks = useMemo(() => tasks
-    .filter(task => taskPlanDate(task) === todayPlanDate())
+    .filter(task => isTaskScheduledForDate(task, todayPlanDate()))
     .slice()
     .sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;

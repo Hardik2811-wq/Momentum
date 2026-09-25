@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import TaskDetailModal from '../components/TaskDetailModal';
+import DeleteRecurringModal from '../components/DeleteRecurringModal';
 import {
   taskPlanDate,
   todayPlanDate,
@@ -8,7 +9,8 @@ import {
   formatDurationLabel,
   calculateDuration,
   calculateEndTime,
-  legacyDueDateForPlan
+  legacyDueDateForPlan,
+  isTaskScheduledForDate
 } from '../lib/taskMetadata';
 import { LIFE_AREAS } from '../lib/lifeAreas';
 
@@ -58,49 +60,7 @@ const TOTAL_HOURS = END_HOUR - START_HOUR; // 12 hours
 const HOUR_HEIGHT = 70; // 70px per hour: optimal breathing room & typography
 const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT; // 840px
 
-function isTaskScheduledForDate(task, dateStr) {
-  const pDate = taskPlanDate(task);
-  if (pDate === dateStr) return true;
 
-  // Handle recurring tasks
-  if (task.recurrence && task.recurrence !== 'none') {
-    // If task has a base plannedDate, don't show before base date
-    if (pDate && dateStr < pDate) return false;
-
-    const targetDate = new Date(`${dateStr}T12:00:00`);
-    const dayOfWeek = targetDate.getDay(); // 0: Sun, 1: Mon, ...
-
-    if (task.recurrence === 'daily') {
-      return true;
-    }
-    if (task.recurrence === 'weekly') {
-      if (pDate) {
-        const baseDay = new Date(`${pDate}T12:00:00`).getDay();
-        return dayOfWeek === baseDay;
-      }
-      return dayOfWeek === 1; // default Monday if no original date
-    }
-    if (task.recurrence === 'custom') {
-      const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
-      return days.includes(dayOfWeek);
-    }
-    if (task.recurrence === 'monthly') {
-      if (pDate) {
-        const baseDayNum = new Date(`${pDate}T12:00:00`).getDate();
-        return targetDate.getDate() === baseDayNum;
-      }
-      return targetDate.getDate() === 1;
-    }
-    if (task.recurrence === 'yearly') {
-      if (pDate) {
-        return pDate.slice(5) === dateStr.slice(5);
-      }
-      return false;
-    }
-  }
-
-  return false;
-}
 
 export default function TodayView({
   tasks = [],
@@ -123,6 +83,7 @@ export default function TodayView({
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragOverSlot, setDragOverSlot] = useState(null); // { date, hour }
   const [editingTask, setEditingTask] = useState(null);
+  const [recurringDeleteTarget, setRecurringDeleteTarget] = useState(null); // { task, date }
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   const slotMenuRef = useRef(null);
@@ -697,7 +658,7 @@ export default function TodayView({
                 {columnDates.map(colDate => {
                   const isToday = colDate === todayPlanDate();
                   const headerInfo = formatDateHeader(colDate);
-                  const colTasks = tasks.filter(t => !t.completed && taskPlanDate(t) === colDate && t.startTime);
+                  const colTasks = tasks.filter(t => !t.completed && isTaskScheduledForDate(t, colDate) && t.startTime);
                   const colMins = colTasks.reduce((acc, t) => acc + (Number(t.durationMinutes) || 45), 0);
 
                   return (
@@ -1044,14 +1005,20 @@ export default function TodayView({
                                       )}
                                       <button
                                         type="button"
-                                        title="Unslot back to tray"
+                                        title={task.recurrence && task.recurrence !== 'none' ? 'Delete recurring event' : 'Unslot back to tray'}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleUnslotTask(task.id);
+                                          if (task.recurrence && task.recurrence !== 'none') {
+                                            setRecurringDeleteTarget({ task, date: colDate });
+                                          } else {
+                                            handleUnslotTask(task.id);
+                                          }
                                         }}
                                         className="p-0.5 rounded bg-white text-slate-500 hover:text-red-500 shadow-xs hover:scale-105 transition"
                                       >
-                                        <span className="material-symbols-outlined text-[13px]">close</span>
+                                        <span className="material-symbols-outlined text-[13px]">
+                                          {task.recurrence && task.recurrence !== 'none' ? 'delete' : 'close'}
+                                        </span>
                                       </button>
                                     </div>
                                   </div>
@@ -1131,14 +1098,20 @@ export default function TodayView({
                                         )}
                                         <button
                                           type="button"
-                                          title="Unslot back to tray"
+                                          title={task.recurrence && task.recurrence !== 'none' ? 'Delete recurring event' : 'Unslot back to tray'}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleUnslotTask(task.id);
+                                            if (task.recurrence && task.recurrence !== 'none') {
+                                              setRecurringDeleteTarget({ task, date: colDate });
+                                            } else {
+                                              handleUnslotTask(task.id);
+                                            }
                                           }}
                                           className="p-1 rounded-md bg-white text-slate-500 hover:text-red-500 shadow-xs hover:scale-105 transition"
                                         >
-                                          <span className="material-symbols-outlined text-[14px]">close</span>
+                                          <span className="material-symbols-outlined text-[14px]">
+                                            {task.recurrence && task.recurrence !== 'none' ? 'delete' : 'close'}
+                                          </span>
                                         </button>
                                       </div>
                                     </div>
@@ -1241,6 +1214,20 @@ export default function TodayView({
           goals={goals}
           habits={habits}
           onStartFocus={onStartFocus}
+        />
+      )}
+
+      {/* Delete Recurring Event Modal */}
+      {recurringDeleteTarget && (
+        <DeleteRecurringModal
+          isOpen={Boolean(recurringDeleteTarget)}
+          task={recurringDeleteTarget.task}
+          targetDate={recurringDeleteTarget.date}
+          onClose={() => setRecurringDeleteTarget(null)}
+          onConfirm={({ mode, targetDate }) => {
+            onDeleteTask?.(recurringDeleteTarget.task.id, { mode, targetDate });
+            setRecurringDeleteTarget(null);
+          }}
         />
       )}
     </main>

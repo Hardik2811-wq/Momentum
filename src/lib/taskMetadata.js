@@ -22,6 +22,63 @@ export function taskPlanDate(task = {}) {
   return '';
 }
 
+export function isTaskScheduledForDate(task = {}, dateStr = '') {
+  if (!dateStr || !task) return false;
+
+  // 1. Check if this specific date is excluded (e.g. "This event" deleted)
+  if (Array.isArray(task.excludedDates) && task.excludedDates.includes(dateStr)) {
+    return false;
+  }
+
+  // 2. Check if recurrence was capped (e.g. "This and following events" deleted)
+  if (task.recurrenceUntil && dateStr >= task.recurrenceUntil) {
+    return false;
+  }
+
+  const pDate = taskPlanDate(task);
+  if (pDate === dateStr) return true;
+
+  // 3. Handle recurring tasks
+  if (task.recurrence && task.recurrence !== 'none') {
+    // If task has a base plannedDate, don't show before base date
+    if (pDate && dateStr < pDate) return false;
+
+    const targetDate = new Date(`${dateStr}T12:00:00`);
+    if (Number.isNaN(targetDate.getTime())) return false;
+    const dayOfWeek = targetDate.getDay(); // 0: Sun, 1: Mon, ...
+
+    if (task.recurrence === 'daily') {
+      return true;
+    }
+    if (task.recurrence === 'weekly') {
+      if (pDate) {
+        const baseDay = new Date(`${pDate}T12:00:00`).getDay();
+        return dayOfWeek === baseDay;
+      }
+      return dayOfWeek === 1; // default Monday if no original date
+    }
+    if (task.recurrence === 'custom') {
+      const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
+      return days.includes(dayOfWeek);
+    }
+    if (task.recurrence === 'monthly') {
+      if (pDate) {
+        const baseDayNum = new Date(`${pDate}T12:00:00`).getDate();
+        return targetDate.getDate() === baseDayNum;
+      }
+      return targetDate.getDate() === 1;
+    }
+    if (task.recurrence === 'yearly') {
+      if (pDate) {
+        return pDate.slice(5) === dateStr.slice(5);
+      }
+      return false;
+    }
+  }
+
+  return false;
+}
+
 export function planDateLabel(date = '') {
   if (!date) return 'Not scheduled';
   if (date === todayPlanDate()) return 'Today';

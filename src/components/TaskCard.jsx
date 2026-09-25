@@ -1,5 +1,6 @@
-import React from 'react';
-import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanLabel } from '../lib/taskMetadata';
+import React, { useState } from 'react';
+import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanLabel, taskPlanDate, todayPlanDate } from '../lib/taskMetadata';
+import DeleteRecurringModal from './DeleteRecurringModal';
 
 const PRIORITY_BADGES = {
   high: 'bg-red-50 text-red-700 border-red-200',
@@ -17,6 +18,7 @@ export default function TaskCard({
   goals = [],
   habits = []
 }) {
+  const [showDeleteRecurring, setShowDeleteRecurring] = useState(false);
   const linkedGoal = goals.find(g => g.id === task.goalId || g.id === task.linkedGoalId);
   const linkedHabit = habits.find(h => h.id === task.linkedHabitId || h.id === task.habitId);
   const impact = taskImpact(task);
@@ -115,12 +117,18 @@ export default function TaskCard({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onDeleteTask(task.id);
+                if (task.recurrence && task.recurrence !== 'none') {
+                  setShowDeleteRecurring(true);
+                } else if (window.confirm('Delete this task?')) {
+                  onDeleteTask(task.id);
+                }
               }}
               className="p-1 rounded-full text-outline hover:text-error hover:bg-error-container/30 transition-colors opacity-0 group-hover:opacity-100"
-              title="Delete task"
+              title={task.recurrence && task.recurrence !== 'none' ? 'Delete recurring event' : 'Delete task'}
             >
-              <span className="material-symbols-outlined text-[15px]">close</span>
+              <span className="material-symbols-outlined text-[15px]">
+                {task.recurrence && task.recurrence !== 'none' ? 'delete' : 'close'}
+              </span>
             </button>
           )}
         </div>
@@ -217,6 +225,19 @@ export default function TaskCard({
             ))}
           </div>
         </div>
+      )}
+
+      {showDeleteRecurring && (
+        <DeleteRecurringModal
+          isOpen={showDeleteRecurring}
+          task={task}
+          targetDate={taskPlanDate(task) || todayPlanDate()}
+          onClose={() => setShowDeleteRecurring(false)}
+          onConfirm={({ mode, targetDate }) => {
+            onDeleteTask?.(task.id, { mode, targetDate });
+            setShowDeleteRecurring(false);
+          }}
+        />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js';
 import { getGroqApiKey, setGroqApiKey } from '../lib/groqClient.js';
+import { planDateLabel, taskPlanDate, todayPlanDate } from '../lib/taskMetadata.js';
 
 /* ── localStorage wrapper ── */
 function useLocalStorage(key, defaultValue) {
@@ -532,9 +533,56 @@ export default function useStore() {
     }
   }, [tasks, habits, setTasks, setHabits, settings.soundEffects, showToast]);
 
-  const deleteTask = useCallback((id) => {
+  const deleteTask = useCallback((id, options = {}) => {
     const target = tasks.find(t => t.id === id);
     if (!target) return;
+
+    const mode = options?.mode || 'all'; // 'this' | 'following' | 'all'
+    const targetDate = options?.targetDate || taskPlanDate(target) || todayPlanDate();
+
+    if (mode === 'this') {
+      const existing = Array.isArray(target.excludedDates) ? target.excludedDates : [];
+      if (!existing.includes(targetDate)) {
+        const updatedExcluded = [...existing, targetDate];
+        setTasks(prev => prev.map(t => t.id === id ? { ...t, excludedDates: updatedExcluded } : t));
+        showToast(`Deleted occurrence on ${planDateLabel(targetDate)}`, {
+          actionLabel: 'Undo',
+          onAction: () => {
+            setTasks(prev => prev.map(t => t.id === id ? { ...t, excludedDates: existing } : t));
+            showToast('Occurrence restored');
+          }
+        });
+      }
+      return;
+    }
+
+    if (mode === 'following') {
+      const baseDate = taskPlanDate(target);
+      if (!baseDate || targetDate <= baseDate) {
+        setTasks(prev => prev.filter(t => t.id !== id));
+        showToast(`Deleted "${target.title}" and all events`, {
+          actionLabel: 'Undo',
+          onAction: () => {
+            setTasks(prev => [target, ...prev]);
+            showToast('Task restored');
+          }
+        });
+        return;
+      }
+
+      const prevUntil = target.recurrenceUntil || null;
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, recurrenceUntil: targetDate } : t));
+      showToast(`Deleted from ${planDateLabel(targetDate)} onward`, {
+        actionLabel: 'Undo',
+        onAction: () => {
+          setTasks(prev => prev.map(t => t.id === id ? { ...t, recurrenceUntil: prevUntil } : t));
+          showToast('Recurring series restored');
+        }
+      });
+      return;
+    }
+
+    // Default: 'all'
     setTasks(prev => prev.filter(t => t.id !== id));
     showToast(`Deleted "${target.title}"`, {
       actionLabel: 'Undo',

@@ -15,6 +15,7 @@ import {
 } from '../lib/taskMetadata';
 import { LIFE_AREAS, getGoalAreas, saveGoalAreas } from '../lib/lifeAreas';
 import { CupertinoTimeInput, MiniCalendarPicker } from './QuickAddModal';
+import DeleteRecurringModal from './DeleteRecurringModal';
 
 const IMPACT_CONFIG = {
   high: { label: 'High', dot: 'bg-red-500', active: 'bg-red-50 text-red-700 border-red-200 ring-1 ring-red-200' },
@@ -61,6 +62,7 @@ export default function TaskDetailModal({
   const [activeDatePicker, setActiveDatePicker] = useState(false);
   const [showDeadline, setShowDeadline] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null); // 'goal' | 'habit' | null
+  const [showDeleteRecurring, setShowDeleteRecurring] = useState(false);
 
   const goalMenuRef = useRef(null);
   const habitMenuRef = useRef(null);
@@ -185,6 +187,15 @@ export default function TaskDetailModal({
     onClose();
   };
 
+  const triggerDelete = () => {
+    if (task.recurrence && task.recurrence !== 'none') {
+      setShowDeleteRecurring(true);
+    } else if (window.confirm('Delete this task?')) {
+      onDeleteTask?.(task.id);
+      onClose();
+    }
+  };
+
   const completedSubtasks = formData.subtasks.filter(s => s.completed).length;
   const totalSubtasks = formData.subtasks.length;
   const subtaskPct = totalSubtasks ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
@@ -249,12 +260,7 @@ export default function TaskDetailModal({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm('Delete this task?')) {
-                  onDeleteTask?.(task.id);
-                  onClose();
-                }
-              }}
+              onClick={triggerDelete}
               title="Delete task"
               className="p-1.5 rounded-xl text-[#8E8E93] hover:text-red-500 hover:bg-red-50 transition"
             >
@@ -1199,12 +1205,7 @@ export default function TaskDetailModal({
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-[#F9F9FB] border-t border-black/[0.06]">
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm('Delete this task?')) {
-                onDeleteTask?.(task.id);
-                onClose();
-              }
-            }}
+            onClick={triggerDelete}
             className="flex items-center gap-1 text-red-500 hover:text-red-600 text-[12px] font-semibold px-2 py-1 rounded-lg hover:bg-red-50 transition"
           >
             <span className="material-symbols-outlined text-[15px]">delete</span>
@@ -1230,6 +1231,20 @@ export default function TaskDetailModal({
         </div>
 
       </div>
+
+      {showDeleteRecurring && (
+        <DeleteRecurringModal
+          isOpen={showDeleteRecurring}
+          task={task}
+          targetDate={formData.plannedDate || taskPlanDate(task) || todayPlanDate()}
+          onClose={() => setShowDeleteRecurring(false)}
+          onConfirm={({ mode, targetDate }) => {
+            onDeleteTask?.(task.id, { mode, targetDate });
+            setShowDeleteRecurring(false);
+            onClose();
+          }}
+        />
+      )}
     </div>
   );
 }
