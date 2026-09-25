@@ -540,7 +540,7 @@ export default function TodayView({
               LEFT COLUMN: UNIFIED TASK TRAY (3.5 cols)
              ══════════════════════════════════════════════════════ */}
           <div className="lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3">
-            <div className="flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs min-h-[580px]">
+            <div data-block-id="today-task-tray" className="flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs min-h-[580px]">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -779,7 +779,7 @@ export default function TodayView({
           {/* ══════════════════════════════════════════════════════
               RIGHT COLUMN: FULL-WIDTH CALENDAR CANVAS (8.5 cols)
              ══════════════════════════════════════════════════════ */}
-          <div className="lg:col-span-8 xl:col-span-8.5 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden">
+          <div data-block-id="today-calendar-card" className="lg:col-span-8 xl:col-span-8.5 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px] text-[#0A84FF]">calendar_view_week</span>

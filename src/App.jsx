@@ -16,11 +16,14 @@ import useStore from './store/useStore';
 import MobileTabBar from './components/MobileTabBar';
 import AuthGate from './components/AuthGate';
 import OnboardingModal from './components/OnboardingModal';
+import UniversalBlockEditor from './components/UniversalBlockEditor';
+import UniversalLayoutApplier from './components/UniversalLayoutApplier';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickAddProps, setQuickAddProps] = useState({});
+  const [isUniversalEditorMode, setIsUniversalEditorMode] = useState(false);
   const store = useStore();
 
   const openQuickAdd = (props = {}) => {
@@ -162,6 +165,8 @@ export default function App() {
           tasks={store.tasks}
           goals={store.goals}
           setActiveTab={setActiveTab}
+          isUniversalEditorMode={isUniversalEditorMode}
+          onToggleUniversalEditor={() => setIsUniversalEditorMode(v => !v)}
         />
         <div className="flex-1 w-full">
           {renderView()}
@@ -220,6 +225,20 @@ export default function App() {
       <ToastContainer
         toasts={store.toasts}
         dismissToast={store.dismissToast}
+      />
+
+      {/* Universal Dynamic Layout Rules Applier (Active always, persists custom block sizes forever) */}
+      <UniversalLayoutApplier
+        customUiLayout={store.settings?.customUiLayout}
+      />
+
+      {/* Universal Vector-Style Shape Manipulator & Block Editor */}
+      <UniversalBlockEditor
+        isEditorMode={isUniversalEditorMode}
+        onToggleEditorMode={() => setIsUniversalEditorMode(v => !v)}
+        customUiLayout={store.settings?.customUiLayout}
+        onUpdateLayout={store.updateCustomUiLayout}
+        onResetLayout={store.resetCustomUiLayout}
       />
     </div>
     </AuthGate>

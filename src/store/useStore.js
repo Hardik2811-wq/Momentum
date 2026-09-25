@@ -351,6 +351,7 @@ const DEFAULT_SETTINGS = {
     role: '',
     timezone: (typeof Intl !== 'undefined' && Intl.DateTimeFormat) ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
   },
+  customUiLayout: {},
 };
 
 /* ── Main store hook ── */
@@ -688,6 +689,32 @@ export default function useStore() {
     setSettings(prev => ({ ...prev, profile: { ...prev.profile, ...patch } }));
   }, [setSettings]);
 
+  const updateCustomUiLayout = useCallback((blockId, layoutStyles) => {
+    if (!blockId) return;
+    setSettings(prev => ({
+      ...prev,
+      customUiLayout: {
+        ...(prev?.customUiLayout || {}),
+        [blockId]: {
+          ...(prev?.customUiLayout?.[blockId] || {}),
+          ...layoutStyles
+        }
+      }
+    }));
+  }, [setSettings]);
+
+  const resetCustomUiLayout = useCallback((blockId) => {
+    setSettings(prev => {
+      if (!blockId) {
+        return { ...prev, customUiLayout: {} };
+      }
+      const next = { ...(prev?.customUiLayout || {}) };
+      delete next[blockId];
+      return { ...prev, customUiLayout: next };
+    });
+    showToast(blockId ? 'Block size reset to default' : 'All custom layouts reset to default');
+  }, [setSettings, showToast]);
+
   /* Reflections Actions */
   const updateReflection = useCallback((patch) => {
     setReflections(prev => ({ ...prev, ...patch }));
@@ -951,6 +978,7 @@ export default function useStore() {
     habits, checkInHabit, addHabit, deleteHabit, useGraceDay,
     reflections, updateReflection, saveWeeklyReview,
     settings, updateSettings, updateProfile,
+    updateCustomUiLayout, resetCustomUiLayout,
     resetAllData, clearAllData, loadDemoData, stats,
     toasts, showToast, dismissToast,
     exportFullBackup, importFullBackup,

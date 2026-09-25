@@ -76,7 +76,7 @@ export default function GoalsView({ goals = [], addGoal, updateGoalProgress, del
     }[goal.category] || 'Goal';
 
     return (
-      <div key={goal.id} className="group flex flex-col justify-between rounded-xl bg-surface-container-lowest p-gutter-xl shadow-[0_1px_3px_rgba(0,0,0,0.03),0_6px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300">
+      <div key={goal.id} data-block-id={`goal-card-${goal.id}`} className="group flex flex-col justify-between rounded-xl bg-surface-container-lowest p-gutter-xl shadow-[0_1px_3px_rgba(0,0,0,0.03),0_6px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300">
         <div>
           <div className="flex items-start justify-between gap-gutter-sm mb-gutter-base">
             <span className={`px-gutter-sm py-1 rounded-full ${color.badge} font-label-sm text-label-sm tracking-wide`}>
@@ -203,7 +203,7 @@ export default function GoalsView({ goals = [], addGoal, updateGoalProgress, del
         </div>
 
         {/* Header Block */}
-        <header className="relative flex flex-col md:flex-row md:items-end justify-between gap-gutter-base pb-gutter-xl">
+        <header data-block-id="goals-header" className="relative flex flex-col md:flex-row md:items-end justify-between gap-gutter-base pb-gutter-xl">
           <div className="flex flex-col gap-gutter-xs">
             <div className="flex items-center gap-gutter-sm">
               <span className="font-caption text-caption uppercase tracking-wider text-primary font-semibold">Long-Term Trajectory</span>
@@ -245,7 +245,7 @@ export default function GoalsView({ goals = [], addGoal, updateGoalProgress, del
         </header>
 
         {/* Category Filter Bar */}
-        <div className="flex items-center gap-1 sm:gap-gutter-sm pb-4 md:pb-gutter-lg select-none w-full md:w-auto md:overflow-x-auto no-scrollbar">
+        <div data-block-id="goals-filter-bar" className="flex items-center gap-1 sm:gap-gutter-sm pb-4 md:pb-gutter-lg select-none w-full md:w-auto md:overflow-x-auto no-scrollbar">
           <button 
             onClick={() => setFilter('all')} 
             className={`flex-1 md:flex-initial category-pill flex items-center justify-center md:justify-start gap-1 sm:gap-gutter-sm px-2 sm:px-gutter-md py-1.5 rounded-full font-label-md text-[11px] sm:text-label-md shadow-sm transition-all whitespace-nowrap ${

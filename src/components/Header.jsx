@@ -10,7 +10,14 @@ const TITLE_MAP = {
   settings:    'Settings',
 };
 
-export default function Header({ activeTab, tasks = [], goals = [], setActiveTab }) {
+export default function Header({
+  activeTab,
+  tasks = [],
+  goals = [],
+  setActiveTab,
+  isUniversalEditorMode = false,
+  onToggleUniversalEditor
+}) {
   const searchRef = useRef(null);
   const notifRef = useRef(null);
   
@@ -126,6 +133,27 @@ export default function Header({ activeTab, tasks = [], goals = [], setActiveTab
 
       {/* ── Right controls ── */}
       <div className="flex items-center gap-2">
+
+        {/* Universal UI Editor Mode Toggle */}
+        <button
+          onClick={onToggleUniversalEditor}
+          title="Universal UI Editor Mode — Hold Ctrl/⌘ and click any block to resize"
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border ${
+            isUniversalEditorMode
+              ? 'bg-[#0A84FF] text-white border-[#0A84FF] shadow-[0_2px_8px_rgba(10,132,255,0.35)]'
+              : 'bg-black/[0.03] text-[#555] border-black/[0.06] hover:text-[#1A1B1F] hover:bg-black/[0.06]'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[15px]">
+            {isUniversalEditorMode ? 'design_services' : 'edit'}
+          </span>
+          <span className="hidden sm:inline">
+            {isUniversalEditorMode ? 'Editing UI' : 'UI Editor'}
+          </span>
+          {isUniversalEditorMode && (
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          )}
+        </button>
 
         {/* Sync badge */}
         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium text-emerald-600 bg-emerald-50">
