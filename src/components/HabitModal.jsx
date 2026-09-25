@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 
-const DURATION_PRESETS = ['Open / Flex', '15 mins', '30 mins', '45 mins', '60 mins', '90 mins'];
+const DURATION_PRESETS = ['Open / Flex', '15 mins', '30 mins', '45 mins', '60 mins'];
 
 const CADENCE_OPTIONS = [
-  { id: 'Anytime', label: 'Flexible / Anytime', icon: 'schedule', period: 'All Day' },
-  { id: 'Morning Ritual', label: 'Morning Ritual', icon: 'wb_sunny', period: 'AM' },
-  { id: 'Afternoon Flow', label: 'Afternoon Flow', icon: 'bolt', period: 'PM' },
-  { id: 'Evening Wind-down', label: 'Evening Wind-down', icon: 'nights_stay', period: 'Night' }
+  { id: 'Anytime', label: 'Flexible', icon: 'schedule', period: 'All Day' },
+  { id: 'Morning Ritual', label: 'Morning', icon: 'wb_sunny', period: 'AM' },
+  { id: 'Afternoon Flow', label: 'Afternoon', icon: 'bolt', period: 'PM' },
+  { id: 'Evening Wind-down', label: 'Evening', icon: 'nights_stay', period: 'Night' }
 ];
 
 const FREQUENCY_OPTIONS = [
-  { id: 'Every Day', label: 'Every Day', desc: '7 days / week' },
+  { id: 'Every Day', label: 'Every Day', desc: '7d / week' },
   { id: 'Weekdays', label: 'Weekdays', desc: 'Mon – Fri' },
   { id: '3 Days / Wk', label: '3 Days / Wk', desc: 'Active cadence' },
-  { id: 'Custom', label: 'Custom', desc: 'Choose specific days' }
+  { id: 'Custom', label: 'Custom', desc: 'Specific days' }
 ];
 
 const WEEK_DAYS = [
@@ -163,7 +163,7 @@ export default function HabitModal({
   const toggleCustomDay = (dayId) => {
     setCustomDays(prev => {
       if (prev.includes(dayId)) {
-        if (prev.length <= 1) return prev; // Keep at least one active day
+        if (prev.length <= 1) return prev;
         return prev.filter(d => d !== dayId);
       }
       return [...prev, dayId];
@@ -186,7 +186,6 @@ export default function HabitModal({
       setLinkedGoal(habit.linkedGoal || '');
       setGraceDays(habit.graceDays ?? 1);
     } else {
-      // Smart defaults (UX Psychology: Smart Defaults & Goal Gradient)
       setTitle('');
       setDuration('30 mins');
       setIsCustomDuration(false);
@@ -195,7 +194,7 @@ export default function HabitModal({
       setCadence('Anytime');
       setTargetFrequency('Every Day');
       setCustomDays(['Mon', 'Wed', 'Fri']);
-      setLinkedGoal(''); // Default to None
+      setLinkedGoal('');
       setGraceDays(1);
     }
     setConfirmDelete(false);
@@ -228,137 +227,110 @@ export default function HabitModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/45 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/45 backdrop-blur-md overflow-hidden animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-[0_32px_80px_-16px_rgba(0,0,0,0.22),0_0_1px_1px_rgba(0,0,0,0.06)] border border-black/[0.08] overflow-hidden my-auto max-h-[92vh] flex flex-col">
+      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-[0_24px_70px_-12px_rgba(0,0,0,0.22),0_0_1px_1px_rgba(0,0,0,0.06)] border border-black/[0.08] overflow-hidden my-auto max-h-[96vh] flex flex-col">
         {/* Subtle Ambient Color Line */}
         <div
-          className="h-1 w-full transition-colors duration-300"
+          className="h-1 w-full transition-colors duration-300 shrink-0"
           style={{ backgroundColor: activeSignpost.accentHex }}
         />
 
-        {/* Modal Header */}
-        <header className="px-6 sm:px-8 pt-6 pb-4 flex items-center justify-between border-b border-black/[0.05] bg-surface-container-lowest shrink-0">
+        {/* Modal Header (Compact) */}
+        <header className="px-5 sm:px-6 pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.05] bg-surface-container-lowest shrink-0">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container-low font-label-sm text-label-sm text-on-surface-variant font-medium">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeSignpost.accentHex }} />
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeSignpost.accentHex }} />
+              <span className="font-label-sm text-[11px] text-neutral-400 font-semibold uppercase tracking-wider">
                 {isEditing ? 'Sequence Calibration' : 'New Habit Architecture'}
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-on-surface mt-1">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-on-surface mt-0.5">
               {isEditing ? 'Edit Habit Sequence' : 'Create Recurring Habit'}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-outline hover:text-on-surface hover:bg-surface-container-low transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-outline hover:text-on-surface hover:bg-neutral-100 transition-colors"
             aria-label="Close modal"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </header>
 
-        {/* Modal Scrollable Body */}
-        <form onSubmit={handleSubmit} className="px-6 sm:px-8 py-5 space-y-6 overflow-y-auto flex-1">
-          {/* 1. Live Interactive Preview Card (Senior UX Principle: Consequential Transparency) */}
-          <div className="relative rounded-2xl bg-gradient-to-br from-surface-container-lowest to-surface-container-low/60 p-4 sm:p-5 border border-black/[0.07] shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-outline">Live Card Preview</span>
-              <span className="text-[11px] font-semibold text-secondary flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                Real-time Feedback
-              </span>
-            </div>
-
-            <div className="flex items-start gap-4">
+        {/* Modal Body (Streamlined to fit without scrolling) */}
+        <form onSubmit={handleSubmit} className="px-5 sm:px-6 py-3 space-y-3 overflow-visible flex-1 flex flex-col justify-between">
+          {/* 1. Live Interactive Preview Card (Slim & Compact) */}
+          <div className="rounded-xl bg-neutral-50/80 p-2.5 border border-black/[0.06] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div
-                className={`w-12 h-12 rounded-2xl ${activeSignpost.iconBg} flex items-center justify-center shrink-0 shadow-xs transition-all`}
+                className={`w-9 h-9 rounded-xl ${activeSignpost.iconBg} flex items-center justify-center shrink-0 shadow-xs transition-all`}
               >
                 <span
-                  className="material-symbols-outlined text-[24px]"
+                  className="material-symbols-outlined text-[20px]"
                   style={{ fontVariationSettings: '"FILL" 1' }}
                 >
                   {icon}
                 </span>
               </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="text-base sm:text-lg font-bold text-on-surface truncate">
-                    {title.trim() || 'Untitled Habit Sequence'}
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h4 className="text-sm font-bold text-on-surface truncate max-w-[200px] sm:max-w-xs">
+                    {title.trim() || 'Untitled Habit'}
                   </h4>
-                  <span className="px-2 py-0.5 rounded-full bg-surface-container font-caption text-caption text-on-surface-variant font-medium">
+                  <span className="px-1.5 py-0.5 rounded-md bg-white border border-black/[0.06] text-[10px] font-semibold text-neutral-600 shrink-0">
                     {duration}
                   </span>
                   {linkedGoal && (
-                    <span className="text-xs font-semibold flex items-center gap-0.5" style={{ color: activeSignpost.accentHex }}>
-                      <span>→ {linkedGoal}</span>
-                      <span className="material-symbols-outlined text-[13px]">arrow_outward</span>
+                    <span className="text-[11px] font-semibold truncate hidden sm:inline" style={{ color: activeSignpost.accentHex }}>
+                      → {linkedGoal}
                     </span>
                   )}
                 </div>
-
-                <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-on-surface-variant">
-                  <span className="inline-flex items-center gap-1 font-medium">
-                    <span className="material-symbols-outlined text-[14px] text-outline">schedule</span>
-                    {cadence}
-                  </span>
+                <div className="flex items-center gap-2 text-[11px] text-neutral-500 mt-0.5">
+                  <span>{cadence}</span>
                   <span>•</span>
-                  <span className="inline-flex items-center gap-1 font-medium">
-                    <span className="material-symbols-outlined text-[14px] text-outline">repeat</span>
-                    {targetFrequency === 'Custom' ? `Custom (${customDays.join(', ')})` : targetFrequency}
-                  </span>
+                  <span>{targetFrequency === 'Custom' ? `${customDays.length}d (${customDays.join(',')})` : targetFrequency}</span>
                   <span>•</span>
-                  <span className="inline-flex items-center gap-1 text-secondary font-medium">
-                    <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: '"FILL" 1' }}>verified_user</span>
-                    {graceDays} Shield Days
-                  </span>
+                  <span className="text-secondary font-medium">{graceDays} Shield Days</span>
                 </div>
               </div>
             </div>
+
+            <span className="text-[10px] font-semibold text-secondary flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+              Live Preview
+            </span>
           </div>
 
-          {/* 2. Habit Title Input (Ultra-Clean, High Craft Minimalist) */}
+          {/* 2. Habit Title Input (Clean Minimalist) */}
+          <div className="space-y-1">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+              Habit Title
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Morning Deep Work, Zone 2 Cardio, Evening Reading"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50/70 hover:bg-neutral-50 focus:bg-white border border-neutral-200/90 text-sm font-semibold text-neutral-900 placeholder:text-neutral-400/60 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus:outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/[0.04] transition-all"
+              autoFocus
+            />
+          </div>
+
+          {/* 3. Visual Signpost Grid (Auto Color-Themed, Compact Touch Tiles) */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
-                Habit Title
-              </label>
-              <span className="text-[11px] text-neutral-400">Name your recurring practice</span>
-            </div>
-            <div className="relative">
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Morning Deep Work, Zone 2 Cardio, Evening Reading"
-                className="w-full px-4 py-3 rounded-2xl bg-neutral-50/70 hover:bg-neutral-50 focus:bg-white border border-neutral-200/90 text-base font-semibold text-neutral-900 placeholder:text-neutral-400/60 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus:outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/[0.04] transition-all"
-                autoFocus
-              />
-            </div>
-          </div>
-
-          {/* 3. Curated Visual Signpost Grid (Auto Color-Themed) */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
-                Visual Signpost &amp; Theme
-              </label>
-              <span className="text-[11px] font-medium text-neutral-400">
-                Auto-calibrates color accent
-              </span>
-            </div>
-
-            {/* Curated Icon Grid (Auto-Assigned Colors, zero manual palette clutter) */}
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+              Visual Signpost &amp; Theme
+            </label>
+            <div className="grid grid-cols-6 gap-1.5">
               {ICONS_CATALOG.map((item) => {
                 const isSelected = icon === item.icon;
                 return (
@@ -369,25 +341,24 @@ export default function HabitModal({
                       setIcon(item.icon);
                       setColorToken(item.colorToken);
                     }}
-                    className={`group/icon relative flex flex-col items-center justify-center py-2.5 px-2 rounded-2xl border text-center transition-all ${
+                    className={`group/icon relative flex flex-col items-center justify-center py-1.5 px-1 rounded-xl border text-center transition-all ${
                       isSelected
-                        ? `${item.activeClass} shadow-xs scale-[1.03] font-bold`
+                        ? `${item.activeClass} shadow-xs scale-102 font-bold`
                         : 'bg-neutral-50/70 border-neutral-200/60 hover:bg-neutral-100/70 hover:border-neutral-300 text-neutral-600 hover:text-neutral-900'
                     }`}
-                    title={`${item.label}`}
+                    title={item.label}
                   >
-                    {/* Subtle color pip on top right indicating signature shade */}
                     <span
-                      className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full transition-opacity opacity-50 group-hover/icon:opacity-100"
+                      className="absolute top-1 right-1 w-1 h-1 rounded-full transition-opacity opacity-50 group-hover/icon:opacity-100"
                       style={{ backgroundColor: item.accentHex }}
                     />
                     <span
-                      className="material-symbols-outlined text-[22px] mb-1 transition-transform group-hover/icon:scale-110"
+                      className="material-symbols-outlined text-[19px] mb-0.5 transition-transform group-hover/icon:scale-110"
                       style={isSelected ? { fontVariationSettings: '"FILL" 1' } : {}}
                     >
                       {item.icon}
                     </span>
-                    <span className="text-[11px] leading-tight tracking-tight">
+                    <span className="text-[10px] leading-tight tracking-tight truncate w-full text-center">
                       {item.label}
                     </span>
                   </button>
@@ -396,12 +367,12 @@ export default function HabitModal({
             </div>
           </div>
 
-          {/* 4. Cadence & Rhythm (Grid of 2x2 with generous breathing room, NO truncation) */}
-          <div className="space-y-2">
+          {/* 4. Daily Anchor Window (4 Columns in a single sleek row) */}
+          <div className="space-y-1">
             <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
               Daily Anchor Window
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {CADENCE_OPTIONS.map((item) => {
                 const isSelected = cadence === item.id;
                 return (
@@ -409,21 +380,21 @@ export default function HabitModal({
                     key={item.id}
                     type="button"
                     onClick={() => setCadence(item.id)}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl border text-left transition-all ${
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-left transition-all ${
                       isSelected
                         ? 'bg-surface-container-lowest border-primary ring-2 ring-primary/20 shadow-xs'
-                        : 'bg-surface-container-low/60 border-black/[0.06] hover:bg-surface-container-low text-on-surface-variant'
+                        : 'bg-neutral-50/70 border-black/[0.06] hover:bg-neutral-100/70 text-on-surface-variant'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className={`material-symbols-outlined text-[20px] ${isSelected ? 'text-primary' : 'text-outline'}`}>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`material-symbols-outlined text-[16px] ${isSelected ? 'text-primary' : 'text-outline'}`}>
                         {item.icon}
                       </span>
-                      <span className={`text-sm font-semibold truncate ${isSelected ? 'text-on-surface' : 'text-on-surface-variant'}`}>
+                      <span className={`text-xs font-semibold truncate ${isSelected ? 'text-on-surface' : 'text-on-surface-variant'}`}>
                         {item.label}
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-surface-container text-outline uppercase tracking-wider shrink-0 ml-2">
+                    <span className="text-[9px] font-bold px-1 rounded bg-neutral-200/70 text-neutral-600 uppercase tracking-wider shrink-0">
                       {item.period}
                     </span>
                   </button>
@@ -432,21 +403,21 @@ export default function HabitModal({
             </div>
           </div>
 
-          {/* 5. Target Frequency & Duration Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Frequency Segmented Group */}
-            <div className="space-y-2">
+          {/* 5. Target Frequency & Block Duration (Side-by-Side Row) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+            {/* Target Frequency */}
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
                   Target Frequency
                 </label>
                 {targetFrequency === 'Custom' && (
-                  <span className="text-[11px] font-semibold text-primary">
-                    {customDays.length} day{customDays.length !== 1 ? 's' : ''}/wk
+                  <span className="text-[10px] font-semibold text-primary">
+                    {customDays.length}d/wk
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 {FREQUENCY_OPTIONS.map((freq) => {
                   const isSelected = targetFrequency === freq.id;
                   return (
@@ -454,16 +425,16 @@ export default function HabitModal({
                       key={freq.id}
                       type="button"
                       onClick={() => setTargetFrequency(freq.id)}
-                      className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all ${
+                      className={`flex flex-col items-start px-2 py-1.5 rounded-xl border text-left transition-all ${
                         isSelected
                           ? 'bg-surface-container-lowest border-primary ring-2 ring-primary/20 shadow-xs'
-                          : 'bg-surface-container-low/60 border-black/[0.06] hover:bg-surface-container-low'
+                          : 'bg-neutral-50/70 border-black/[0.06] hover:bg-neutral-100/70'
                       }`}
                     >
-                      <span className={`text-xs font-bold ${isSelected ? 'text-on-surface' : 'text-on-surface-variant'}`}>
+                      <span className={`text-[11px] font-bold ${isSelected ? 'text-on-surface' : 'text-on-surface-variant'}`}>
                         {freq.label}
                       </span>
-                      <span className="text-[10px] text-outline mt-0.5">{freq.desc}</span>
+                      <span className="text-[9px] text-outline mt-0.2">{freq.desc}</span>
                     </button>
                   );
                 })}
@@ -471,7 +442,7 @@ export default function HabitModal({
 
               {/* Day-of-Week Picker when Custom is selected */}
               {targetFrequency === 'Custom' && (
-                <div className="pt-1.5 animate-fadeIn">
+                <div className="pt-1 animate-fadeIn">
                   <div className="flex items-center gap-1">
                     {WEEK_DAYS.map((d) => {
                       const isDaySelected = customDays.includes(d.id);
@@ -480,10 +451,10 @@ export default function HabitModal({
                           key={d.id}
                           type="button"
                           onClick={() => toggleCustomDay(d.id)}
-                          className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                          className={`flex-1 py-1 rounded-lg text-[11px] font-bold transition-all ${
                             isDaySelected
-                              ? 'bg-neutral-900 text-white shadow-xs scale-102'
-                              : 'bg-surface-container-low/80 hover:bg-surface-container text-on-surface-variant border border-black/[0.04]'
+                              ? 'bg-neutral-900 text-white shadow-xs'
+                              : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600'
                           }`}
                           title={d.label}
                         >
@@ -496,8 +467,8 @@ export default function HabitModal({
               )}
             </div>
 
-            {/* Duration Presets */}
-            <div className="space-y-2">
+            {/* Block Duration */}
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
                   Block Duration
@@ -505,7 +476,7 @@ export default function HabitModal({
                 <button
                   type="button"
                   onClick={() => setIsCustomDuration(!isCustomDuration)}
-                  className="text-xs font-semibold text-primary hover:underline"
+                  className="text-[11px] font-semibold text-primary hover:underline"
                 >
                   {isCustomDuration ? 'Presets' : 'Custom'}
                 </button>
@@ -517,10 +488,10 @@ export default function HabitModal({
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   placeholder="e.g. 25 mins"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low border border-black/[0.08] text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full px-3 py-1.5 rounded-xl bg-neutral-50/70 border border-black/[0.08] text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               ) : (
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                <div className="flex flex-wrap gap-1">
                   {DURATION_PRESETS.map((p) => {
                     const isSelected = duration === p;
                     return (
@@ -528,10 +499,10 @@ export default function HabitModal({
                         key={p}
                         type="button"
                         onClick={() => setDuration(p)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
                           isSelected
                             ? 'bg-primary text-white shadow-xs font-bold'
-                            : 'bg-surface-container-low hover:bg-surface-container text-on-surface-variant'
+                            : 'bg-neutral-50/70 border border-black/[0.05] hover:bg-neutral-100 text-neutral-600'
                         }`}
                       >
                         {p}
@@ -543,25 +514,18 @@ export default function HabitModal({
             </div>
           </div>
 
-          {/* 6. Horizon Goal & Grace Shield (Mature Selection) */}
-          <div className="rounded-2xl bg-surface-container-low/50 border border-black/[0.06] p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-3.5">
-              <h5 className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
-                Horizon Anchor &amp; Shield
-              </h5>
-              <span className="text-[11px] text-outline">Optional progression link</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+          {/* 6. Horizon Goal & Grace Shield (Mature Clean Card, No Career/Health tags) */}
+          <div className="rounded-xl bg-neutral-50/80 border border-black/[0.06] p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
               {/* Mature Linked Goal Selector */}
-              <div className="space-y-1.5 relative">
-                <label className="block text-xs font-semibold text-on-surface">
+              <div className="space-y-1 relative">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
                   Linked Horizon Goal
                 </label>
                 <button
                   type="button"
                   onClick={() => setIsGoalMenuOpen(!isGoalMenuOpen)}
-                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white border border-black/[0.08] hover:border-black/20 text-xs font-semibold text-on-surface shadow-xs transition-all text-left"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-black/[0.08] hover:border-black/20 text-xs font-semibold text-on-surface shadow-xs transition-all text-left"
                 >
                   <div className="flex items-center gap-2 truncate pr-1">
                     {linkedGoal ? (
@@ -570,22 +534,22 @@ export default function HabitModal({
                         <span className="truncate text-on-surface">{linkedGoal}</span>
                       </>
                     ) : (
-                      <span className="text-outline font-normal">None (Independent Habit)</span>
+                      <span className="text-neutral-400 font-normal">None (Independent Habit)</span>
                     )}
                   </div>
-                  <span className="material-symbols-outlined text-[18px] text-outline shrink-0 ml-1">
+                  <span className="material-symbols-outlined text-[16px] text-neutral-400 shrink-0 ml-1">
                     unfold_more
                   </span>
                 </button>
 
-                {/* Mature Popover Menu */}
+                {/* Mature Popover Menu (Opens upward so it never clips off bottom) */}
                 {isGoalMenuOpen && (
                   <>
                     <div
                       className="fixed inset-0 z-30"
                       onClick={() => setIsGoalMenuOpen(false)}
                     />
-                    <div className="absolute bottom-full mb-1 sm:bottom-auto sm:top-full sm:mt-1.5 left-0 right-0 z-40 bg-white rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.14)] border border-black/[0.08] py-1.5 max-h-56 overflow-y-auto animate-fadeIn">
+                    <div className="absolute bottom-full mb-1.5 left-0 right-0 z-40 bg-white rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.16)] border border-black/[0.08] py-1 max-h-44 overflow-y-auto animate-fadeIn">
                       <button
                         type="button"
                         onClick={() => {
@@ -609,7 +573,7 @@ export default function HabitModal({
 
                       {goals.length > 0 && (
                         <div className="border-t border-neutral-100 my-1 pt-1">
-                          <div className="px-3 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                          <div className="px-3 py-0.5 text-[9px] font-bold text-neutral-400 uppercase tracking-wider">
                             Active Horizons
                           </div>
                           {goals.map((g) => {
@@ -635,11 +599,6 @@ export default function HabitModal({
                                     }`}
                                   />
                                   <span className="truncate">{g.title}</span>
-                                  {g.category && (
-                                    <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 shrink-0">
-                                      {g.category}
-                                    </span>
-                                  )}
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {typeof g.progress === 'number' && (
@@ -664,20 +623,20 @@ export default function HabitModal({
               </div>
 
               {/* Grace Shield Counter */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-on-surface">
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
                   Grace Shield Pool (Days)
                 </label>
-                <div className="flex items-center gap-2 pt-0.5">
+                <div className="flex items-center gap-1.5">
                   {[0, 1, 2, 3].map((val) => (
                     <button
                       key={val}
                       type="button"
                       onClick={() => setGraceDays(val)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                         graceDays === val
                           ? 'bg-secondary text-white shadow-xs font-bold'
-                          : 'bg-white border border-black/[0.08] text-on-surface-variant hover:bg-surface-container-low'
+                          : 'bg-white border border-black/[0.08] text-neutral-700 hover:bg-neutral-100'
                       }`}
                     >
                       {val === 0 ? 'Off' : `${val} d`}
@@ -688,8 +647,8 @@ export default function HabitModal({
             </div>
           </div>
 
-          {/* Modal Footer Bar */}
-          <footer className="pt-3 border-t border-black/[0.06] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+          {/* Modal Footer Bar (Slim) */}
+          <footer className="pt-2 border-t border-black/[0.06] flex items-center justify-between gap-3 shrink-0">
             {isEditing && onDelete ? (
               <div>
                 {confirmDelete ? (
@@ -701,14 +660,14 @@ export default function HabitModal({
                         onDelete(habit.id);
                         onClose();
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-error text-white text-xs font-semibold hover:opacity-90 transition-opacity"
+                      className="px-2.5 py-1 rounded-lg bg-error text-white text-xs font-semibold hover:opacity-90"
                     >
-                      Yes, delete
+                      Delete
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmDelete(false)}
-                      className="px-2.5 py-1.5 text-xs text-outline hover:text-on-surface"
+                      className="text-xs text-neutral-400 hover:text-neutral-700"
                     >
                       Cancel
                     </button>
@@ -717,10 +676,10 @@ export default function HabitModal({
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-error hover:bg-red-50 text-xs font-semibold transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-error hover:bg-red-50 text-xs font-semibold transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[16px]">delete</span>
-                    <span>Delete Sequence</span>
+                    <span className="material-symbols-outlined text-[15px]">delete</span>
+                    <span>Delete</span>
                   </button>
                 )}
               </div>
@@ -728,19 +687,19 @@ export default function HabitModal({
               <div />
             )}
 
-            <div className="flex items-center justify-end gap-2.5">
+            <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-full text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low transition-colors"
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-neutral-600 hover:bg-neutral-100 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className={`flex items-center gap-1.5 px-6 py-2.5 rounded-full ${activeSignpost.btnClass} font-semibold text-xs tracking-wide shadow-sm hover:opacity-95 active:scale-95 transition-all`}
+                className={`flex items-center gap-1.5 px-5 py-2 rounded-full ${activeSignpost.btnClass} font-semibold text-xs tracking-wide shadow-sm hover:opacity-95 active:scale-95 transition-all`}
               >
-                <span className="material-symbols-outlined text-[16px]">
+                <span className="material-symbols-outlined text-[15px]">
                   {isEditing ? 'check' : 'add'}
                 </span>
                 <span>{isEditing ? 'Save Changes' : 'Establish Habit'}</span>
