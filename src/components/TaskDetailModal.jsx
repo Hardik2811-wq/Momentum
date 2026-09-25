@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   legacyDueDateForPlan,
   priorityFromImpact,
@@ -197,7 +197,7 @@ export default function TaskDetailModal({
     ? 'Tomorrow'
     : formData.plannedDate ? planDateLabel(formData.plannedDate) : 'Unscheduled';
 
-  const repeatPillLabel = useMemo(() => {
+  const getRepeatPillLabel = () => {
     const rType = formData.recurrence || 'none';
     const rDays = formData.repeatDays || [];
     if (rType === 'none') return 'Repeat: Never';
@@ -214,7 +214,8 @@ export default function TaskDetailModal({
       return `Repeat: ${rDays.map(d => WEEKDAY_NAMES[d]).join(', ')}`;
     }
     return 'Repeat: Never';
-  }, [formData.recurrence, formData.repeatDays]);
+  };
+  const repeatPillLabel = getRepeatPillLabel();
 
   const matchedGoal = goals.find(g => g.id === formData.goalId);
   const matchedHabit = habits.find(h => h.id === formData.habitId);
