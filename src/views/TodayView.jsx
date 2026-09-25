@@ -86,6 +86,101 @@ export default function TodayView({
   const [recurringDeleteTarget, setRecurringDeleteTarget] = useState(null); // { task, date }
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
+  /* ── Canvas Editor Mode & Vector Shape Transform States ── */
+  const [isEditorMode, setIsEditorMode] = useState(false);
+  const [selectedTransformTaskId, setSelectedTransformTaskId] = useState(null);
+  const [transformState, setTransformState] = useState(null);
+  const transformRef = useRef(null);
+
+  useEffect(() => {
+    transformRef.current = transformState;
+  }, [transformState]);
+
+  // Window drag & resize listeners for real-time shape manipulation
+  useEffect(() => {
+    if (!transformState) return undefined;
+
+    const handleMouseMove = (e) => {
+      const current = transformRef.current;
+      if (!current) return;
+
+      const deltaY = e.clientY - current.startY;
+      // 70px per hour (60 min) -> 1px = 60 / 70 mins
+      const minutesDeltaRaw = (deltaY / HOUR_HEIGHT) * 60;
+      // Snap to 15-minute intervals for clean calendar alignment
+      const minutesDelta = Math.round(minutesDeltaRaw / 15) * 15;
+
+      if (current.mode === 'resize-bottom') {
+        const nextDur = Math.max(15, current.origDuration + minutesDelta);
+        const maxAvailableDur = (END_HOUR * 60) - current.origStartMin;
+        const clampedDur = Math.min(maxAvailableDur, nextDur);
+        setTransformState(prev => prev ? { ...prev, currentDuration: clampedDur } : null);
+      } else if (current.mode === 'resize-top') {
+        const minPossibleStart = START_HOUR * 60;
+        const maxPossibleStart = (current.origStartMin + current.origDuration) - 15;
+        const candidateStart = current.origStartMin + minutesDelta;
+        const clampedStart = Math.max(minPossibleStart, Math.min(maxPossibleStart, candidateStart));
+        const deltaActual = current.origStartMin - clampedStart;
+        const clampedDur = current.origDuration + deltaActual;
+        setTransformState(prev => prev ? { ...prev, currentStartMin: clampedStart, currentDuration: clampedDur } : null);
+      } else if (current.mode === 'move') {
+        const minPossibleStart = START_HOUR * 60;
+        const maxPossibleStart = (END_HOUR * 60) - current.origDuration;
+        const candidateStart = current.origStartMin + minutesDelta;
+        const clampedStart = Math.max(minPossibleStart, Math.min(maxPossibleStart, candidateStart));
+        setTransformState(prev => prev ? { ...prev, currentStartMin: clampedStart } : null);
+      }
+    };
+
+    const handleMouseUp = () => {
+      const current = transformRef.current;
+      if (current) {
+        const finalStartMin = current.currentStartMin;
+        const finalDur = current.currentDuration;
+        const finalEndMin = finalStartMin + finalDur;
+
+        const startH = Math.floor(finalStartMin / 60);
+        const startM = finalStartMin % 60;
+        const formattedStart = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+
+        const endH = Math.floor(finalEndMin / 60);
+        const endM = finalEndMin % 60;
+        const formattedEnd = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+
+        onUpdateTask(current.taskId, {
+          startTime: formattedStart,
+          endTime: formattedEnd,
+          durationMinutes: finalDur,
+          isFlexible: false
+        });
+
+        setTransformState(null);
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [Boolean(transformState), onUpdateTask]);
+
+  // Escape to deselect in editor mode
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isEditorMode) {
+        if (selectedTransformTaskId) {
+          setSelectedTransformTaskId(null);
+        } else {
+          setIsEditorMode(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEditorMode, selectedTransformTaskId]);
+
   const slotMenuRef = useRef(null);
 
   // Live ticker for time ruler
@@ -374,6 +469,30 @@ export default function TodayView({
               })}
             </div>
 
+            {/* Editor Mode Toggle Button (Pencil Icon) */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextMode = !isEditorMode;
+                setIsEditorMode(nextMode);
+                if (!nextMode) {
+                  setSelectedTransformTaskId(null);
+                  setTransformState(null);
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition active:scale-[0.98] ${
+                isEditorMode
+                  ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-300'
+                  : 'bg-white text-[#64748B] hover:text-[#1A1B1F] border border-black/[0.08] hover:bg-[#F5F4FA]'
+              }`}
+              title={isEditorMode ? 'Exit Editor Mode' : 'Toggle Editor Mode: Drag and resize blocks like vector shapes'}
+            >
+              <span className="material-symbols-outlined text-[16px]">
+                {isEditorMode ? 'check' : 'edit'}
+              </span>
+              <span>{isEditorMode ? 'Save & Done' : 'Editor'}</span>
+            </button>
+
             {/* Quick Add Button */}
             <button
               type="button"
@@ -385,6 +504,34 @@ export default function TodayView({
             </button>
           </div>
         </div>
+
+        {/* ── Editor Mode Instruction & Save Bar ── */}
+        {isEditorMode && (
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-950 text-[12px] shadow-2xs animate-fadeIn">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[15px]">design_services</span>
+              </div>
+              <div className="min-w-0 leading-tight">
+                <span className="font-bold text-amber-900">Interactive Editor Mode: </span>
+                <span className="text-amber-800">
+                  Hold <kbd className="px-1.5 py-0.5 rounded bg-white font-mono text-[10px] font-bold border border-amber-300/80 shadow-3xs">Ctrl</kbd> + Left Click on any calendar block to select. Drag top/bottom edge handles to adjust duration, or drag the body to slide times. Changes save permanently.
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditorMode(false);
+                setSelectedTransformTaskId(null);
+                setTransformState(null);
+              }}
+              className="shrink-0 px-3.5 py-1.5 rounded-xl bg-amber-600 text-white font-semibold text-[11px] hover:bg-amber-700 shadow-xs transition"
+            >
+              Save & Exit Editor
+            </button>
+          </div>
+        )}
 
         {/* ── 2-COLUMN TIME-BLOCKING WORKSPACE ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -785,6 +932,11 @@ export default function TodayView({
                   return (
                     <div
                       key={colDate}
+                      onClick={() => {
+                        if (isEditorMode && selectedTransformTaskId) {
+                          setSelectedTransformTaskId(null);
+                        }
+                      }}
                       className="relative border-r border-black/[0.06] bg-white transition-colors"
                       style={{ height: `${TOTAL_HEIGHT}px` }}
                     >
@@ -859,10 +1011,17 @@ export default function TodayView({
                         {colScheduled.map(({ task, startMin, endMin, duration, lane, totalLanes, isNested, nestedLane, nestedTotalLanes, containerTask, hasNestedChildren }) => {
                           const isFlexible = Boolean(task.isFlexible || task.durationMinutes === null);
 
-                          const topPx = Math.max(0, ((startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
-                          const heightPx = isFlexible ? 36 : Math.max(48, (duration / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                          const isBeingTransformed = transformState?.taskId === task.id;
+                          const isSelectedForTransform = isEditorMode && selectedTransformTaskId === task.id;
 
-                          const isLiveNow = isToday && (currentMinutesToday >= startMin && currentMinutesToday <= endMin);
+                          const displayStartMin = isBeingTransformed ? transformState.currentStartMin : startMin;
+                          const displayDuration = isBeingTransformed ? transformState.currentDuration : duration;
+                          const displayEndMin = displayStartMin + displayDuration;
+
+                          const topPx = Math.max(0, ((displayStartMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                          const heightPx = isFlexible && !isBeingTransformed ? 36 : Math.max(36, (displayDuration / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+
+                          const isLiveNow = isToday && (currentMinutesToday >= displayStartMin && currentMinutesToday <= displayEndMin);
                           const isHigh = task.priority === 'high' || task.impact === 'high';
                           const isLow = task.priority === 'low' || task.impact === 'low';
 
@@ -894,7 +1053,7 @@ export default function TodayView({
                             ? 'bg-[#F0FDF4] hover:bg-[#DCFCE7] text-[#064E3B] border-emerald-200 border-l-[4px] border-l-emerald-500'
                             : 'bg-[#F0F7FF] hover:bg-[#E5F1FF] text-[#0C4A6E] border-blue-200 border-l-[4px] border-l-[#0A84FF]';
 
-                          const timeStr = isFlexible ? format12Hour(startMin) : `${format12Hour(startMin)} – ${format12Hour(endMin % 1440)}`;
+                          const timeStr = isFlexible && !isBeingTransformed ? format12Hour(displayStartMin) : `${format12Hour(displayStartMin)} – ${format12Hour(displayEndMin % 1440)}`;
                           const matchedGoal = goals.find(g => g.id === task.goalId);
 
                           // Card size tiers
@@ -925,17 +1084,48 @@ export default function TodayView({
                             <div
                               key={task.id}
                               onClick={(e) => {
+                                if (isEditorMode) {
+                                  e.stopPropagation();
+                                  if (e.ctrlKey || e.metaKey || isEditorMode) {
+                                    setSelectedTransformTaskId(prev => prev === task.id ? null : task.id);
+                                  }
+                                  return;
+                                }
                                 e.stopPropagation();
                                 setEditingTask(task);
+                              }}
+                              onMouseDown={(e) => {
+                                if (isEditorMode && isSelectedForTransform) {
+                                  if (e.target.closest('button') || e.target.closest('[data-resize-handle="true"]')) return;
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  setTransformState({
+                                    taskId: task.id,
+                                    mode: 'move',
+                                    startY: e.clientY,
+                                    origStartMin: startMin,
+                                    origDuration: duration,
+                                    currentStartMin: startMin,
+                                    currentDuration: duration,
+                                    task
+                                  });
+                                }
                               }}
                               style={{
                                 top: `${topPx}px`,
                                 height: `${heightPx}px`,
                                 width: widthStyle,
                                 left: leftStyle,
-                                zIndex: zIndexVal
+                                zIndex: isSelectedForTransform ? 60 : zIndexVal,
+                                cursor: isSelectedForTransform ? 'move' : isEditorMode ? 'pointer' : 'pointer'
                               }}
-                              className={`absolute rounded-xl pointer-events-auto transition-all cursor-pointer hover:shadow-lg hover:scale-[1.002] hover:z-35 group border ${cardAccent} ${
+                              className={`absolute rounded-xl pointer-events-auto transition-all ${
+                                isSelectedForTransform
+                                  ? 'ring-2 ring-[#0A84FF] shadow-[0_0_0_2px_rgba(10,132,255,0.4),0_12px_32px_rgba(0,0,0,0.18)] z-40'
+                                  : isEditorMode
+                                  ? 'hover:ring-1 hover:ring-amber-400 hover:shadow-md'
+                                  : 'hover:shadow-lg hover:scale-[1.002] hover:z-35'
+                              } group border ${cardAccent} ${
                                 isCompact ? 'p-2 px-3 flex flex-col justify-center' : 'p-3 flex flex-col justify-between'
                               } ${task.completed ? 'opacity-55 grayscale' : ''}`}
                             >
@@ -1187,6 +1377,75 @@ export default function TodayView({
                                       </span>
                                     )}
                                   </div>
+                                </>
+                              )}
+
+                              {/* ── Vector Shape Transform Handles (Editor Mode) ── */}
+                              {isSelectedForTransform && (
+                                <>
+                                  {/* Top Resize Handle (adjust start time) */}
+                                  <div
+                                    data-resize-handle="true"
+                                    onMouseDown={(e) => {
+                                      e.stopPropagation();
+                                      e.preventDefault();
+                                      setTransformState({
+                                        taskId: task.id,
+                                        mode: 'resize-top',
+                                        startY: e.clientY,
+                                        origStartMin: startMin,
+                                        origDuration: duration,
+                                        currentStartMin: startMin,
+                                        currentDuration: duration,
+                                        task
+                                      });
+                                    }}
+                                    className="absolute -top-2 inset-x-2 h-4 flex items-center justify-center cursor-row-resize z-50 group/topH"
+                                    title="Drag up/down to adjust start time"
+                                  >
+                                    <div className="w-12 h-1.5 rounded-full bg-[#0A84FF] shadow-md group-hover/topH:scale-y-150 transition-transform" />
+                                  </div>
+
+                                  {/* Bottom Resize Handle (stretch duration) */}
+                                  <div
+                                    data-resize-handle="true"
+                                    onMouseDown={(e) => {
+                                      e.stopPropagation();
+                                      e.preventDefault();
+                                      setTransformState({
+                                        taskId: task.id,
+                                        mode: 'resize-bottom',
+                                        startY: e.clientY,
+                                        origStartMin: startMin,
+                                        origDuration: duration,
+                                        currentStartMin: startMin,
+                                        currentDuration: duration,
+                                        task
+                                      });
+                                    }}
+                                    className="absolute -bottom-2 inset-x-2 h-4 flex items-center justify-center cursor-row-resize z-50 group/botH"
+                                    title="Drag down/up to adjust duration"
+                                  >
+                                    <div className="w-12 h-1.5 rounded-full bg-[#0A84FF] shadow-md group-hover/botH:scale-y-150 transition-transform" />
+                                  </div>
+
+                                  {/* 4 Vector Corner Square Handles */}
+                                  <div className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-white border-2 border-[#0A84FF] rounded-xs shadow-xs pointer-events-none z-50" />
+                                  <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white border-2 border-[#0A84FF] rounded-xs shadow-xs pointer-events-none z-50" />
+                                  <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 bg-white border-2 border-[#0A84FF] rounded-xs shadow-xs pointer-events-none z-50" />
+                                  <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-white border-2 border-[#0A84FF] rounded-xs shadow-xs pointer-events-none z-50" />
+
+                                  {/* Live Floating HUD Badge */}
+                                  {isBeingTransformed && (
+                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-mono text-[10.5px] font-bold shadow-xl pointer-events-none z-50 whitespace-nowrap flex items-center gap-1.5 border border-white/20 animate-fadeIn">
+                                      <span className="material-symbols-outlined text-[13px] text-amber-400">
+                                        {transformState.mode === 'move' ? 'drag_pan' : 'straighten'}
+                                      </span>
+                                      <span>
+                                        {format12Hour(displayStartMin)} – {format12Hour(displayEndMin % 1440)} ({displayDuration}m)
+                                      </span>
+                                    </div>
+                                  )}
                                 </>
                               )}
                             </div>
