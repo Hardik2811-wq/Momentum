@@ -380,22 +380,22 @@ export default function HabitModal({
                     key={item.id}
                     type="button"
                     onClick={() => setCadence(item.id)}
-                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-left transition-all ${
+                    title={item.period ? `${item.label} (${item.period})` : item.label}
+                    className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl border text-center transition-all ${
                       isSelected
-                        ? 'bg-surface-container-lowest border-primary ring-2 ring-primary/20 shadow-xs'
-                        : 'bg-neutral-50/70 border-black/[0.06] hover:bg-neutral-100/70 text-on-surface-variant'
+                        ? 'bg-surface-container-lowest border-primary ring-2 ring-primary/20 text-on-surface font-bold shadow-xs'
+                        : 'bg-neutral-50/70 border-black/[0.06] hover:bg-neutral-100/70 text-neutral-600 font-medium'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className={`material-symbols-outlined text-[16px] ${isSelected ? 'text-primary' : 'text-outline'}`}>
-                        {item.icon}
-                      </span>
-                      <span className={`text-xs font-semibold truncate ${isSelected ? 'text-on-surface' : 'text-on-surface-variant'}`}>
-                        {item.label}
-                      </span>
-                    </div>
-                    <span className="text-[9px] font-bold px-1 rounded bg-neutral-200/70 text-neutral-600 uppercase tracking-wider shrink-0">
-                      {item.period}
+                    <span
+                      className={`material-symbols-outlined text-[17px] shrink-0 transition-transform ${
+                        isSelected ? 'text-primary scale-110' : 'text-neutral-400'
+                      }`}
+                    >
+                      {item.icon}
+                    </span>
+                    <span className="text-xs tracking-tight whitespace-nowrap">
+                      {item.label}
                     </span>
                   </button>
                 );
