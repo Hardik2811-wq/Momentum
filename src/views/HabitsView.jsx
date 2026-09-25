@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { calcStreak, last7Days, todayKey, DAY_LABELS } from '../store/useStore';
 import HabitModal from '../components/HabitModal';
 
@@ -36,6 +36,116 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
 
   const completionPct = stats.totalHabits ? Math.round((stats.habitsCompletedToday / stats.totalHabits) * 100) : 0;
   const totalGraceDays = habits.reduce((acc, h) => acc + (h.graceDays || 0), 0);
+
+  const currentYear = new Date().getFullYear();
+  const today = todayKey();
+
+  const calendarData = useMemo(() => {
+    const startDate = new Date(currentYear, 0, 1);
+    const endDate = new Date(currentYear, 11, 31);
+
+    // Mon=0, Sun=6
+    const startDayOfWeek = (startDate.getDay() + 6) % 7;
+    const calendarStart = new Date(startDate);
+    calendarStart.setDate(calendarStart.getDate() - startDayOfWeek);
+
+    const dayMap = new Map();
+    habits.forEach(h => {
+      (h.completedDays || []).forEach(d => {
+        if (!dayMap.has(d)) dayMap.set(d, []);
+        dayMap.get(d).push(h);
+      });
+    });
+
+    const weeks = [];
+    let curr = new Date(calendarStart);
+    let lastMonth = -1;
+
+    while (curr <= endDate || (curr.getDay() + 6) % 7 !== 0) {
+      const weekDays = [];
+      let weekMonthLabel = null;
+
+      for (let i = 0; i < 7; i++) {
+        const y = curr.getFullYear();
+        const m = String(curr.getMonth() + 1).padStart(2, '0');
+        const d = String(curr.getDate()).padStart(2, '0');
+        const key = `${y}-${m}-${d}`;
+        const isCurrentYear = y === currentYear;
+
+        if (isCurrentYear && curr.getMonth() !== lastMonth) {
+          weekMonthLabel = curr.toLocaleString('en-US', { month: 'short' });
+          lastMonth = curr.getMonth();
+        }
+
+        const completedHabits = dayMap.get(key) || [];
+        const completedCount = completedHabits.length;
+        const isToday = key === today;
+        const isFuture = key > today;
+
+        weekDays.push({
+          key,
+          dayOfWeek: i,
+          isCurrentYear,
+          isToday,
+          isFuture,
+          completedCount,
+          completedHabits,
+          formattedDate: curr.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+          })
+        });
+
+        curr.setDate(curr.getDate() + 1);
+      }
+
+      weeks.push({ weekMonthLabel, days: weekDays });
+      if (curr > endDate && (curr.getDay() + 6) % 7 === 0) break;
+    }
+
+    return weeks;
+  }, [habits, currentYear, today]);
+
+  const longestYearStreak = useMemo(() => {
+    return habits.reduce((max, h) => {
+      const s = calcStreak(h.completedDays || []);
+      return Math.max(max, s);
+    }, 0);
+  }, [habits]);
+
+  const totalAnnualCompletions = useMemo(() => {
+    return habits.reduce((total, h) => {
+      const valid = (h.completedDays || []).filter(d => d.startsWith(`${currentYear}-`));
+      return total + valid.length;
+    }, 0);
+  }, [habits, currentYear]);
+
+  const handleExportLedger = () => {
+    const ledgerData = {
+      ledgerYear: currentYear,
+      exportedAt: new Date().toISOString(),
+      totalTrackedHabits: habits.length,
+      totalCompletionsThisYear: totalAnnualCompletions,
+      longestStreakDays: longestYearStreak,
+      availableShieldDays: totalGraceDays,
+      habits: habits.map(h => ({
+        id: h.id,
+        title: h.title,
+        cadence: h.cadence,
+        duration: h.duration,
+        currentStreak: calcStreak(h.completedDays || []),
+        annualCheckIns: (h.completedDays || []).filter(d => d.startsWith(`${currentYear}-`)).sort()
+      }))
+    };
+    const blob = new Blob([JSON.stringify(ledgerData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `momentum-habits-ledger-${currentYear}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   return (
     <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-surface">
       <div className="flex flex-col w-full space-y-4 sm:space-y-gutter-2xl">
@@ -310,269 +420,131 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
 </div>
 </div>
 </div>
-{/* Annual Consistency Heatmap Section (GitHub / Apple Health Grid) */}
+{/* Annual Consistency Heatmap Section (Real Dynamic 53-Week Ledger) */}
 <div className="rounded-3xl bg-surface-container-lowest p-gutter-xl shadow-sm space-y-gutter-md">
-<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-gutter-sm">
-<div className="space-y-0.5">
-<div className="flex items-center gap-gutter-sm">
-<h2 className="font-headline-sm text-headline-sm text-on-surface">Annual Consistency Matrix</h2>
-<span className="px-2 py-0.5 rounded-full bg-secondary-fixed-dim/40 text-on-secondary-fixed font-caption text-caption">2025 Ledger</span>
-</div>
-<p className="font-body-sm text-body-sm text-on-surface-variant">365-day macro cadence tracking compound self-mastery over time.</p>
-</div>
-<div className="flex items-center gap-gutter-md">
-<div className="flex items-center gap-1.5 font-caption text-caption text-on-surface-variant">
-<span>Less</span>
-<span className="w-3 h-3 rounded-[3px] bg-surface-container"></span>
-<span className="w-3 h-3 rounded-[3px] bg-secondary-fixed/50"></span>
-<span className="w-3 h-3 rounded-[3px] bg-secondary-container"></span>
-<span className="w-3 h-3 rounded-[3px] bg-secondary"></span>
-<span>More</span>
-</div>
-<div className="h-4 w-px bg-surface-container-highest hidden sm:block"></div>
-<button className="flex items-center gap-1 text-primary font-label-sm text-label-sm hover:underline">
-<span>Export Health Data</span>
-<span className="material-symbols-outlined text-[16px]">ios_share</span>
-</button>
-</div>
-</div>
-{/* Scalable 52-Week Year-at-a-Glance Canvas */}
-<div className="w-full overflow-x-auto pb-gutter-xs">
-<div className="min-w-[760px] flex flex-col gap-1.5 select-none">
-{/* Months Label Bar */}
-<div className="flex justify-between pl-7 pr-2 font-caption text-caption text-on-surface-variant">
-<span>Jan</span>
-<span>Feb</span>
-<span>Mar</span>
-<span>Apr</span>
-<span>May</span>
-<span>Jun</span>
-<span>Jul</span>
-<span>Aug</span>
-<span>Sep</span>
-<span>Oct</span>
-<span>Nov</span>
-<span>Dec</span>
-</div>
-<div className="flex items-start gap-2">
-{/* Day of week legends */}
-<div className="flex flex-col justify-between h-[104px] font-caption text-caption text-outline py-0.5">
-<span>M</span>
-<span>W</span>
-<span>F</span>
-<span>S</span>
-</div>
-{/* Heatmap Grid SVG / Column Generation Simulation */}
-<div className="flex-1 grid grid-flow-col grid-rows-7 gap-1 h-[104px]" id="annual-heatmap-cells">
-{/* Heatmap blocks generated cleanly with intentional density patterns */}
-{/* Week 1 - 10 (Light to active) */}
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/40"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/60"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/40"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/40"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/40"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/30"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-{/* Weeks 11-20 (Spring burst) */}
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/40"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/60"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/40"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-{/* Weeks 21-32 (Current stretch) */}
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/50"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-fixed/40"></div>
-<div className="w-full rounded-[2.5px] bg-secondary-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container"></div>
-<div className="w-full rounded-[2.5px] bg-secondary"></div>
-{/* Future weeks placeholder buffer (soft neutral grey dots) */}
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-<div className="w-full rounded-[2.5px] bg-surface-container-high/60"></div>
-</div>
-</div>
-</div>
-</div>
-{/* Heatmap Meta Footnote */}
-<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-gutter-sm pt-gutter-sm font-caption text-caption text-on-surface-variant">
-<div className="flex items-center gap-gutter-md">
-<span>Longest 2025 Streak: <strong className="text-on-surface">34 Days</strong></span>
-<span>•</span>
-<span>Grace Days Redeemed: <strong className="text-on-surface">4 Days</strong></span>
-<span>•</span>
-<span>Active Shield Pool: <strong className="text-secondary">2 Available</strong></span>
-</div>
-<span className="text-outline">Updated 14 mins ago via Momentum Engine</span>
-</div>
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-gutter-sm">
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-gutter-sm">
+        <h2 className="font-headline-sm text-headline-sm text-on-surface">Annual Consistency Matrix</h2>
+        <span className="px-2 py-0.5 rounded-full bg-secondary-fixed-dim/40 text-on-secondary-fixed font-caption text-caption font-semibold">
+          {currentYear} Ledger
+        </span>
+      </div>
+      <p className="font-body-sm text-body-sm text-on-surface-variant">
+        365-day macro cadence tracking compound self-mastery across all tracked sequences.
+      </p>
+    </div>
+    <div className="flex items-center gap-gutter-md">
+      <div className="flex items-center gap-1.5 font-caption text-caption text-on-surface-variant">
+        <span>Less</span>
+        <span className="w-3 h-3 rounded-[2.5px] bg-surface-container border border-black/[0.04]" title="0 habits checked" />
+        <span className="w-3 h-3 rounded-[2.5px] bg-secondary-fixed/60" title="1 habit checked" />
+        <span className="w-3 h-3 rounded-[2.5px] bg-secondary-container" title="2 habits checked" />
+        <span className="w-3 h-3 rounded-[2.5px] bg-secondary" title="3 habits checked" />
+        <span className="w-3 h-3 rounded-[2.5px] bg-emerald-800" title="4+ habits checked" />
+        <span>More</span>
+      </div>
+      <div className="h-4 w-px bg-surface-container-highest hidden sm:block" />
+      <button
+        type="button"
+        onClick={handleExportLedger}
+        className="flex items-center gap-1 text-primary font-label-sm text-label-sm hover:underline cursor-pointer"
+        title="Download full JSON ledger of all habit completions"
+      >
+        <span>Export Health Data</span>
+        <span className="material-symbols-outlined text-[16px]">ios_share</span>
+      </button>
+    </div>
+  </div>
+
+  {/* Scalable 53-Week Real Ledger Canvas */}
+  <div className="w-full overflow-x-auto pb-gutter-xs">
+    <div className="min-w-[760px] flex flex-col gap-1.5 select-none">
+      <div className="flex items-start gap-2">
+        {/* Day of week legends (Mon, Wed, Fri, Sun) */}
+        <div className="flex flex-col justify-between pt-5 pb-0.5 text-[10px] font-semibold text-outline select-none h-[118px] shrink-0">
+          <span>M</span>
+          <span>W</span>
+          <span>F</span>
+          <span>S</span>
+        </div>
+
+        {/* Heatmap Columns: 53 Real-Data Weeks */}
+        <div className="flex-1 flex gap-[3px] overflow-x-auto pb-1" id="annual-heatmap-cells">
+          {calendarData.map((week, wIdx) => (
+            <div key={wIdx} className="flex flex-col gap-[3px] shrink-0">
+              {/* Month label dynamically placed directly above the week column */}
+              <div className="h-4 text-[10px] font-bold text-on-surface-variant overflow-visible whitespace-nowrap">
+                {week.weekMonthLabel || ''}
+              </div>
+
+              {/* 7 Days in Week (Mon=0 to Sun=6) */}
+              {week.days.map((day) => {
+                if (!day.isCurrentYear) {
+                  return <div key={day.key} className="w-3 h-3 rounded-[2.5px] invisible" />;
+                }
+
+                const tooltip = day.isFuture
+                  ? `${day.formattedDate} • Upcoming Day`
+                  : day.completedCount > 0
+                    ? `${day.formattedDate}: ${day.completedCount} habit${day.completedCount > 1 ? 's' : ''} completed (${day.completedHabits.map(h => h.title).join(', ')})`
+                    : `${day.formattedDate}: No habits completed`;
+
+                let cellColor = 'bg-surface-container border border-black/[0.03] hover:ring-1 hover:ring-black/20';
+                if (day.isFuture) {
+                  cellColor = 'bg-surface-container-high/30 border border-black/[0.03]';
+                } else if (day.completedCount >= 4) {
+                  cellColor = 'bg-emerald-800 hover:ring-1 hover:ring-emerald-900';
+                } else if (day.completedCount === 3) {
+                  cellColor = 'bg-secondary hover:ring-1 hover:ring-secondary/80';
+                } else if (day.completedCount === 2) {
+                  cellColor = 'bg-secondary-container hover:ring-1 hover:ring-secondary-container/80';
+                } else if (day.completedCount === 1) {
+                  cellColor = 'bg-secondary-fixed/70 hover:ring-1 hover:ring-secondary-fixed';
+                }
+
+                if (day.isToday) {
+                  cellColor += ' ring-2 ring-primary ring-offset-1';
+                }
+
+                return (
+                  <div
+                    key={day.key}
+                    title={tooltip}
+                    className={`w-3 h-3 rounded-[2.5px] transition-all cursor-pointer ${cellColor}`}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Real Dynamic Heatmap Meta Footnote */}
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-gutter-sm pt-gutter-sm font-caption text-caption text-on-surface-variant border-t border-outline-variant/15">
+    <div className="flex items-center flex-wrap gap-x-4 gap-y-1">
+      <span>
+        Longest {currentYear} Streak:{' '}
+        <strong className="text-on-surface">{longestYearStreak} {longestYearStreak === 1 ? 'Day' : 'Days'}</strong>
+      </span>
+      <span>•</span>
+      <span>
+        Total Check-ins:{' '}
+        <strong className="text-on-surface">{totalAnnualCompletions} Logged</strong>
+      </span>
+      <span>•</span>
+      <span>
+        Active Shield Pool:{' '}
+        <strong className="text-secondary">{totalGraceDays} Stored</strong>
+      </span>
+    </div>
+    <div className="flex items-center gap-1.5 text-xs text-secondary font-medium">
+      <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+      <span>Live Sync Active</span>
+    </div>
+  </div>
 </div>
 
 </div>
