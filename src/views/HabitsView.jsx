@@ -32,7 +32,18 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
       addHabit(habitData);
     }
   };
-  const [activeDropdown, setActiveDropdown] = useState(null);
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const handleApplyGraceToday = (habit) => {
+    if (!habit.graceDays || habit.graceDays <= 0) return;
+    const today = todayKey();
+    const isCompleted = (habit.completedDays || []).includes(today);
+    if (!isCompleted) {
+      checkInHabit(habit.id, today);
+    }
+    useGraceDay(habit.id);
+  };
 
   const completionPct = stats.totalHabits ? Math.round((stats.habitsCompletedToday / stats.totalHabits) * 100) : 0;
   const totalGraceDays = habits.reduce((acc, h) => acc + (h.graceDays || 0), 0);
@@ -333,58 +344,83 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
           })}
         </div>
         
-        <div className="flex items-center gap-gutter-sm self-end sm:self-center relative">
+        <div className="flex items-center gap-1.5 self-end sm:self-center">
+          {/* 1. Edit Button */}
           <button
+            type="button"
             onClick={() => handleOpenEdit(habit)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-neutral-600 hover:text-on-surface hover:bg-neutral-100 transition-colors"
+            title="Edit habit sequence"
           >
-            <span className="material-symbols-outlined text-[16px]">edit</span>
+            <span className="material-symbols-outlined text-[15px]">edit</span>
             <span>Edit</span>
           </button>
+
+          {/* 2. Grace Shield (Graces the habit for today) */}
           <button
-            onClick={() => setActiveDropdown(activeDropdown === habit.id ? null : habit.id)}
-            className="p-1.5 rounded-full hover:bg-surface-container text-outline hover:text-on-surface transition-colors"
-            aria-label="More options"
+            type="button"
+            onClick={() => handleApplyGraceToday(habit)}
+            disabled={!habit.graceDays || habit.graceDays <= 0}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              habit.graceDays > 0
+                ? 'text-secondary hover:text-secondary hover:bg-secondary-fixed/30 active:scale-95 cursor-pointer'
+                : 'text-neutral-400 opacity-40 cursor-not-allowed'
+            }`}
+            title={
+              habit.graceDays > 0
+                ? `Use 1 Grace Shield for today (${habit.graceDays} available)`
+                : 'No grace shields remaining'
+            }
           >
-            <span className="material-symbols-outlined text-[18px]">more_horiz</span>
+            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: '"FILL" 1' }}>
+              verified_user
+            </span>
+            <span>Shield</span>
+            {habit.graceDays > 0 && (
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary-fixed text-on-secondary-fixed font-bold ml-0.5">
+                {habit.graceDays}
+              </span>
+            )}
           </button>
-          {activeDropdown === habit.id && (
-            <div className="absolute top-full right-0 mt-1 w-36 bg-surface-container-highest rounded-xl shadow-xl py-1 z-50 overflow-hidden border border-outline-variant/30">
+
+          {/* 3. Delete Symbol (With Inline Confirmation) */}
+          {confirmDeleteId === habit.id ? (
+            <div className="flex items-center gap-1.5 bg-red-50 px-2 py-1 rounded-lg border border-red-200 animate-fadeIn">
+              <span className="text-[11px] font-semibold text-error">Delete?</span>
               <button
-                onClick={() => {
-                  setActiveDropdown(null);
-                  handleOpenEdit(habit);
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteHabit(habit.id);
+                  setConfirmDeleteId(null);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
+                className="px-2 py-0.5 rounded bg-error text-white text-[11px] font-bold hover:bg-error/90 transition-all shadow-xs"
               >
-                <span className="material-symbols-outlined text-[16px]">tune</span>
-                <span>Calibrate</span>
+                Yes
               </button>
-              {habit.graceDays > 0 && (
-                <button
-                  onClick={() => {
-                    useGraceDay(habit.id);
-                    setActiveDropdown(null);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-secondary hover:bg-surface-container transition-colors flex items-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-[16px]">shield</span>
-                  <span>Use Shield</span>
-                </button>
-              )}
               <button
-                onClick={() => {
-                  if (window.confirm(`Delete habit sequence "${habit.title}"?`)) {
-                    deleteHabit(habit.id);
-                    setActiveDropdown(null);
-                  }
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmDeleteId(null);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-error hover:bg-surface-container transition-colors flex items-center gap-2"
+                className="px-1.5 py-0.5 text-[11px] text-neutral-500 hover:text-neutral-800 transition-colors"
               >
-                <span className="material-symbols-outlined text-[16px]">delete</span>
-                <span>Delete</span>
+                Cancel
               </button>
             </div>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirmDeleteId(habit.id);
+              }}
+              className="flex items-center gap-1 p-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-error hover:bg-red-50 transition-colors"
+              title={`Delete "${habit.title}"`}
+            >
+              <span className="material-symbols-outlined text-[16px]">delete</span>
+            </button>
           )}
         </div>
       </div>
