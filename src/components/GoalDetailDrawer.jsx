@@ -14,6 +14,175 @@ function getEndOfMonth() {
   return lastDay.toISOString().slice(0, 10);
 }
 
+function InlineGoalCalendar({ selectedDate, onSelectDate }) {
+  const [viewDate, setViewDate] = useState(() => {
+    if (selectedDate) {
+      const d = new Date(`${selectedDate}T12:00:00`);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+  });
+
+  useEffect(() => {
+    if (selectedDate) {
+      const d = new Date(`${selectedDate}T12:00:00`);
+      if (!isNaN(d.getTime())) {
+        setViewDate(d);
+      }
+    }
+  }, [selectedDate]);
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const monthName = viewDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+  const prevMonth = (e) => {
+    e.stopPropagation();
+    setViewDate(new Date(year, month - 1, 1));
+  };
+
+  const nextMonth = (e) => {
+    e.stopPropagation();
+    setViewDate(new Date(year, month + 1, 1));
+  };
+
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const today = todayPlanDate();
+
+  const cells = [];
+  for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+    cells.push({ day: daysInPrevMonth - i, isCurrentMonth: false });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    cells.push({ day: d, isCurrentMonth: true, dateStr: dStr });
+  }
+  const remaining = (7 - (cells.length % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    cells.push({ day: i, isCurrentMonth: false });
+  }
+
+  const getPresetDate = (daysAhead) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysAhead);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const formattedSelected = useMemo(() => {
+    if (!selectedDate) return 'None';
+    const d = new Date(`${selectedDate}T12:00:00`);
+    if (isNaN(d.getTime())) return selectedDate;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }, [selectedDate]);
+
+  const daysDiff = useMemo(() => {
+    if (!selectedDate) return null;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const target = new Date(`${selectedDate}T00:00:00`);
+    if (isNaN(target.getTime())) return null;
+    return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  }, [selectedDate]);
+
+  return (
+    <div className="p-3 bg-white rounded-2xl border border-black/[0.08] shadow-2xs space-y-2.5 animate-in fade-in duration-200">
+      {/* Quick Presets */}
+      <div className="grid grid-cols-3 gap-1">
+        {[
+          { label: '+1 Week', val: getPresetDate(7) },
+          { label: '+1 Month', val: getPresetDate(30) },
+          { label: '+3 Months', val: getPresetDate(90) },
+        ].map(p => (
+          <button
+            key={p.label}
+            type="button"
+            onClick={() => onSelectDate(p.val)}
+            className={`py-1 rounded-lg text-[10px] font-semibold transition text-center ${
+              selectedDate === p.val
+                ? 'bg-[#0A84FF] text-white shadow-3xs'
+                : 'bg-[#F5F4FA] text-[#64748B] hover:bg-[#EBEBF0]'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Month Header */}
+      <div className="flex items-center justify-between px-1">
+        <span className="text-[12px] font-bold text-[#1A1B1F] tracking-tight">{monthName}</span>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={prevMonth}
+            className="p-1 rounded-lg hover:bg-[#F5F4FA] text-[#8E8E93] hover:text-[#1A1B1F] transition"
+            title="Previous month"
+          >
+            <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button
+            type="button"
+            onClick={nextMonth}
+            className="p-1 rounded-lg hover:bg-[#F5F4FA] text-[#8E8E93] hover:text-[#1A1B1F] transition"
+            title="Next month"
+          >
+            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 text-center text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider">
+        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+          <span key={d} className="py-0.5">{d}</span>
+        ))}
+      </div>
+
+      {/* Days Grid */}
+      <div className="grid grid-cols-7 gap-y-1 text-center">
+        {cells.map((cell, idx) => {
+          if (!cell.isCurrentMonth) {
+            return (
+              <div key={idx} className="h-7 flex items-center justify-center text-[11px] text-[#C7C7CC] opacity-30 select-none">
+                {cell.day}
+              </div>
+            );
+          }
+          const isSelected = selectedDate === cell.dateStr;
+          const isToday = cell.dateStr === today;
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => onSelectDate(cell.dateStr)}
+              className={`h-7 w-7 mx-auto rounded-full text-[11px] font-medium transition-all flex items-center justify-center relative ${
+                isSelected
+                  ? 'bg-[#0A84FF] text-white shadow-xs font-bold'
+                  : isToday
+                  ? 'text-[#0A84FF] font-bold bg-blue-50/80 hover:bg-blue-100'
+                  : 'text-[#1A1B1F] hover:bg-[#F0EFF5]'
+              }`}
+            >
+              {cell.day}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Selected Date Summary Footer */}
+      <div className="pt-2 border-t border-black/[0.04] flex items-center justify-between text-[11px]">
+        <span className="text-[#8E8E93] font-medium">Target:</span>
+        <span className="font-bold text-[#0A84FF]">
+          {formattedSelected} {daysDiff !== null ? `(${daysDiff > 0 ? `${daysDiff}d left` : daysDiff === 0 ? 'Today' : `${Math.abs(daysDiff)}d ago`})` : ''}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function GoalDetailDrawer({
   isOpen = false,
   onClose,
@@ -362,7 +531,7 @@ export default function GoalDetailDrawer({
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                 Target Horizon
               </label>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="grid grid-cols-3 gap-1">
                   {[
                     { id: 'open', label: 'Flexible' },
@@ -372,7 +541,14 @@ export default function GoalDetailDrawer({
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setDateType(opt.id)}
+                      onClick={() => {
+                        setDateType(opt.id);
+                        if (opt.id === 'custom' && !targetDate) {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 30);
+                          setTargetDate(d.toISOString().slice(0, 10));
+                        }
+                      }}
                       className={`py-1.5 px-2 rounded-xl text-[11px] font-semibold transition text-center ${
                         dateType === opt.id
                           ? 'bg-[#0A84FF] text-white shadow-xs'
@@ -384,12 +560,11 @@ export default function GoalDetailDrawer({
                   ))}
                 </div>
 
+                {/* Automatically loaded inline calendar when Pick Date is active */}
                 {dateType === 'custom' && (
-                  <input
-                    type="date"
-                    value={targetDate}
-                    onChange={(e) => setTargetDate(e.target.value)}
-                    className="w-full px-3 py-1.5 text-[12px] font-medium rounded-xl border border-black/[0.08] bg-white text-[#1A1B1F] outline-none focus:border-[#0A84FF]"
+                  <InlineGoalCalendar
+                    selectedDate={targetDate}
+                    onSelectDate={(newDate) => setTargetDate(newDate)}
                   />
                 )}
               </div>
