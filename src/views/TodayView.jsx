@@ -101,25 +101,35 @@ export default function TodayView({
   const transformRef = useRef(null);
   const calendarScrollRef = useRef(null);
 
-  // Smart auto-scroll to current hour on initial load (lands directly on active day)
-  useEffect(() => {
-    if (calendarScrollRef.current) {
-      const nowH = new Date().getHours();
-      const targetHour = Math.max(0, nowH - 1);
-      calendarScrollRef.current.scrollTop = targetHour * HOUR_HEIGHT;
+  // Exact vertical centering around the live current-time red laser line
+  const scrollToNow = useCallback((smooth = true) => {
+    if (!calendarScrollRef.current) return;
+    const viewportHeight = calendarScrollRef.current.clientHeight || 600;
+    const now = new Date();
+    const currentMinutesToday = now.getHours() * 60 + now.getMinutes();
+    const timeTop = (currentMinutesToday / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT;
+    // Put the red laser line right in the vertical center of viewport
+    const targetScroll = Math.max(0, Math.round(timeTop - (viewportHeight / 2)));
+
+    if (smooth) {
+      calendarScrollRef.current.scrollTo({
+        top: targetScroll,
+        behavior: 'smooth'
+      });
+    } else {
+      calendarScrollRef.current.scrollTop = targetScroll;
     }
   }, []);
 
-  const scrollToNow = () => {
-    if (calendarScrollRef.current) {
-      const nowH = new Date().getHours();
-      const targetHour = Math.max(0, nowH - 1);
-      calendarScrollRef.current.scrollTo({
-        top: targetHour * HOUR_HEIGHT,
-        behavior: 'smooth'
-      });
-    }
-  };
+  // Smart auto-scroll: automatically center around current time red line on initial load & view changes
+  useEffect(() => {
+    const timer1 = setTimeout(() => scrollToNow(false), 60);
+    const timer2 = setTimeout(() => scrollToNow(true), 260);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [viewDate, scope, scrollToNow]);
 
   useEffect(() => {
     transformRef.current = transformState;
@@ -476,11 +486,11 @@ export default function TodayView({
             {/* Jump to Current Time Button */}
             <button
               type="button"
-              onClick={scrollToNow}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-[#F5F4FA] hover:bg-white text-[#64748B] hover:text-[#0A84FF] border border-black/[0.04] shadow-3xs transition active:scale-95"
-              title="Scroll directly to current hour in 24h timeline"
+              onClick={() => scrollToNow(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-[#F5F4FA] hover:bg-white text-[#64748B] hover:text-red-500 border border-black/[0.04] shadow-3xs transition active:scale-95"
+              title="Center view vertically around current time red line"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0A84FF] animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
               <span>Now</span>
             </button>
 
