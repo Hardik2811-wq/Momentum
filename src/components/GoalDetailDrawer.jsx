@@ -14,7 +14,7 @@ function getEndOfMonth() {
   return lastDay.toISOString().slice(0, 10);
 }
 
-function InlineGoalCalendar({ selectedDate, onSelectDate }) {
+export function InlineGoalCalendar({ selectedDate, onSelectDate }) {
   const [viewDate, setViewDate] = useState(() => {
     if (selectedDate) {
       const d = new Date(`${selectedDate}T12:00:00`);
