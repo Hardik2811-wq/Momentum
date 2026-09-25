@@ -82,10 +82,14 @@ export default function App() {
           <GoalsView
             goals={store.goals}
             addGoal={store.addGoal}
+            updateGoal={store.updateGoal}
             updateGoalProgress={store.updateGoalProgress}
             deleteGoal={store.deleteGoal}
             onOpenQuickAdd={openQuickAdd}
             settings={store.settings}
+            tasks={store.tasks}
+            habits={store.habits}
+            addTask={store.addTask}
           />
         );
       case 'habits':

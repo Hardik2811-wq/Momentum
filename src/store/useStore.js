@@ -481,7 +481,7 @@ export default function useStore() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  /* ── Reactive Goal Metrics derived from Tasks ── */
+  /* ── Reactive Goal Metrics derived from Tasks & Habits ── */
   const reactiveGoals = useMemo(() => {
     return goals.map(g => {
       const linked = tasks.filter(t => t.goalId === g.id);
@@ -495,16 +495,53 @@ export default function useStore() {
         const impactB = b.impact === 'high' || b.priority === 'high' ? 0 : b.impact === 'medium' || b.priority === 'normal' ? 1 : 2;
         return impactA - impactB;
       })[0] || null;
+
+      // Linked habits
+      const linkedHabits = habits.filter(h => (g.linkedHabitIds || []).includes(h.id) || h.linkedGoal === g.title);
+
+      // Compute daysLeft dynamically from targetDate
+      let daysLeft = g.daysLeft;
+      if (g.targetDate && g.dateType !== 'open') {
+        const targetMs = new Date(`${g.targetDate}T23:59:59`).getTime();
+        if (!isNaN(targetMs)) {
+          daysLeft = Math.max(0, Math.ceil((targetMs - Date.now()) / (1000 * 60 * 60 * 24)));
+        }
+      } else if (g.dateType === 'open') {
+        daysLeft = null;
+      }
+
+      // Work progress: derived from tasks or manual progress
+      const workProgress = linked.length
+        ? Math.round((completedCount / linked.length) * 100)
+        : (g.workProgress ?? g.progress ?? 0);
+
+      // Dynamic velocity engine
+      let velocity = g.velocity || 'on-track';
+      if (workProgress === 100) {
+        velocity = 'complete';
+      } else if (g.dateType === 'open' || daysLeft === null) {
+        velocity = workProgress >= 50 ? 'ahead' : 'on-track';
+      } else if (daysLeft !== null && daysLeft <= 14 && activeCount >= 2 && workProgress < 40) {
+        velocity = 'behind';
+      } else if (workProgress >= 65) {
+        velocity = 'ahead';
+      } else {
+        velocity = 'on-track';
+      }
+
       return {
         ...g,
         tasksActive: activeCount,
         linkedTaskCount: linked.length,
         completedTaskCount: completedCount,
-        workProgress: linked.length ? Math.round((completedCount / linked.length) * 100) : g.progress,
-        nextTask
+        workProgress,
+        daysLeft,
+        velocity,
+        nextTask,
+        linkedHabits
       };
     });
-  }, [goals, tasks]);
+  }, [goals, tasks, habits]);
 
   /* Tasks Actions */
   const addTask = useCallback((task) => {
@@ -608,10 +645,51 @@ export default function useStore() {
   }, [setTasks]);
 
   /* Goals Actions */
-  const addGoal = useCallback((goal) => {
+  const addGoal = useCallback((goalData) => {
     const newId = 'g' + Date.now();
-    setGoals(prev => [...prev, { ...goal, id: newId, progress: 0, velocity: 'on-track' }]);
-    showToast(`Goal created: "${goal.title}"`);
+    const { initialTasks = [], linkedHabitIds = [], ...rest } = goalData;
+
+    const createdGoal = {
+      ...rest,
+      id: newId,
+      categories: Array.isArray(rest.categories) && rest.categories.length ? rest.categories : [rest.category || 'career'],
+      linkedHabitIds: Array.isArray(linkedHabitIds) ? linkedHabitIds : [],
+      progress: 0,
+      createdAt: Date.now()
+    };
+
+    setGoals(prev => [...prev, createdGoal]);
+
+    // If initial tasks provided, auto-create linked tasks in Planner
+    if (Array.isArray(initialTasks) && initialTasks.length > 0) {
+      const formattedTasks = initialTasks
+        .filter(t => t && (typeof t === 'string' ? t.trim() : t.title?.trim()))
+        .map((t, idx) => {
+          const title = typeof t === 'string' ? t.trim() : t.title.trim();
+          return {
+            id: Date.now() + idx + 1,
+            title,
+            goalId: newId,
+            completed: false,
+            dueDate: 'This Week',
+            priority: 'normal',
+            energy: 'Medium',
+            areas: createdGoal.categories,
+            createdAt: Date.now() + idx
+          };
+        });
+      if (formattedTasks.length > 0) {
+        setTasks(prev => [...formattedTasks, ...prev]);
+      }
+    }
+
+    showToast(`Goal created: "${createdGoal.title}"`);
+    return newId;
+  }, [setGoals, setTasks, showToast]);
+
+  const updateGoal = useCallback((id, patch) => {
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...patch } : g));
+    showToast('Goal updated');
   }, [setGoals, showToast]);
 
   const updateGoalProgress = useCallback((id, delta) => {
@@ -974,7 +1052,7 @@ export default function useStore() {
 
   return {
     tasks, addTask, updateTask, toggleTask, deleteTask, toggleSubtask,
-    goals: reactiveGoals, addGoal, updateGoalProgress, deleteGoal,
+    goals: reactiveGoals, addGoal, updateGoal, updateGoalProgress, deleteGoal,
     habits, checkInHabit, addHabit, deleteHabit, useGraceDay,
     reflections, updateReflection, saveWeeklyReview,
     settings, updateSettings, updateProfile,
