@@ -32,9 +32,7 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
       addHabit(habitData);
     }
   };
-  const [showGraceInfo, setShowGraceInfo] = useState(true);
   const [activeDropdown, setActiveDropdown] = useState(null);
-
 
   const completionPct = stats.totalHabits ? Math.round((stats.habitsCompletedToday / stats.totalHabits) * 100) : 0;
   const totalGraceDays = habits.reduce((acc, h) => acc + (h.graceDays || 0), 0);
@@ -58,10 +56,6 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
 <p className="font-body-md text-body-md text-on-surface-variant">Calibrated consistency without burnout. Built with graceful resilience.</p>
 </div>
 <div className="flex items-center gap-gutter-md self-stretch sm:self-auto">
-<button onClick={() => setShowGraceInfo(!showGraceInfo)} className="flex items-center gap-gutter-sm px-gutter-lg py-2.5 rounded-full bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all shadow-sm active:scale-[0.98]" id="grace-popover-trigger">
-<span className="material-symbols-outlined text-[20px] text-tertiary">shield_with_heart</span>
-<span className="font-label-md text-label-md">Grace Protocol</span>
-</button>
 <button onClick={handleOpenCreate} className="flex items-center gap-gutter-sm px-gutter-lg py-2.5 rounded-full bg-primary-container text-on-primary-container hover:bg-primary transition-all shadow-sm active:scale-[0.98]">
 <span className="material-symbols-outlined text-[20px]">add</span>
 <span className="font-label-md text-label-md">New Habit</span>
@@ -288,98 +282,8 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
   );
 })}
 </div>
-{/* Right Column: Non-Punitive Grace Popover Mockup & Quick Reflections (4 cols) */}
-<div className="xl:col-span-4 space-y-gutter-base">
-{/* Live Non-Punitive Apple Philosophy Showcase Sheet */}
-{showGraceInfo && (
-<div className="rounded-3xl bg-surface-container-lowest p-gutter-xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] relative overflow-hidden">
-<div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-primary via-tertiary to-secondary"></div>
-<div className="flex items-center justify-between pb-gutter-sm">
-<div className="flex items-center gap-2">
-<div className="w-7 h-7 rounded-full bg-tertiary-fixed flex items-center justify-center text-tertiary">
-<span className="material-symbols-outlined text-[16px]">psychology</span>
-</div>
-<span className="font-caption text-caption uppercase tracking-wider text-on-surface-variant">Grace Safeguard Protocol</span>
-</div>
-<span className="w-2.5 h-2.5 rounded-full bg-secondary animate-ping"></span>
-</div>
-{/* Popover Body with friendly Cupertino microcopy */}
-<div className="mt-gutter-sm space-y-gutter-sm">
-<div className="w-12 h-12 rounded-2xl bg-surface-container-low flex items-center justify-center text-primary-container">
-<span className="material-symbols-outlined text-[28px]" style={{ 'fontVariationSettings': "\"FILL\" 1" }}>spa</span>
-</div>
-<h4 className="font-headline-sm text-headline-sm text-on-surface">Missed yesterday? No big deal.</h4>
-<p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-            Real life ebbs and flows. Momentum OS never penalizes your progress with zeroed tallies or alarming red flags. How would you like to recalibrate?
-          </p>
-</div>
-{/* 3 Friendly Cupertino Action Options */}
-<div className="mt-gutter-lg space-y-gutter-sm">
-<button
-  onClick={() => {
-    const target = habits.find(h => (h.graceDays || 0) > 0) || habits[0];
-    if (target) {
-      useGraceDay(target.id);
-    }
-  }}
-  className="w-full text-left p-gutter-md rounded-2xl bg-surface-container-low hover:bg-surface-container transition-all flex items-center justify-between group active:scale-[0.99]"
->
-<div className="flex items-center gap-gutter-sm">
-<div className="w-8 h-8 rounded-xl bg-surface-container-lowest flex items-center justify-center text-secondary shadow-xs">
-<span className="material-symbols-outlined text-[18px]">verified_user</span>
-</div>
-<div>
-<div className="font-label-md text-label-md text-on-surface">Use 1 Grace Day</div>
-<div className="font-caption text-caption text-on-surface-variant">Streak continues uninterrupted ({totalGraceDays} stored)</div>
-</div>
-</div>
-<span className="material-symbols-outlined text-[18px] text-outline group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
-</button>
-<button
-  onClick={() => {
-    const firstHabit = habits[0];
-    if (firstHabit) {
-      checkInHabit(firstHabit.id);
-    }
-  }}
-  className="w-full text-left p-gutter-md rounded-2xl bg-surface-container-low hover:bg-surface-container transition-all flex items-center justify-between group active:scale-[0.99]"
->
-<div className="flex items-center gap-gutter-sm">
-<div className="w-8 h-8 rounded-xl bg-surface-container-lowest flex items-center justify-center text-primary shadow-xs">
-<span className="material-symbols-outlined text-[18px]">schedule</span>
-</div>
-<div>
-<div className="font-label-md text-label-md text-on-surface">Instant Check-In Sprints</div>
-<div className="font-caption text-caption text-on-surface-variant">Quick toggle today's primary habit</div>
-</div>
-</div>
-<span className="material-symbols-outlined text-[18px] text-outline group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
-</button>
-<button
-  onClick={() => setShowNewHabit(true)}
-  className="w-full text-left p-gutter-md rounded-2xl bg-surface-container-low hover:bg-surface-container transition-all flex items-center justify-between group active:scale-[0.99]"
->
-<div className="flex items-center gap-gutter-sm">
-<div className="w-8 h-8 rounded-xl bg-surface-container-lowest flex items-center justify-center text-tertiary shadow-xs">
-<span className="material-symbols-outlined text-[18px]">tune</span>
-</div>
-<div>
-<div className="font-label-md text-label-md text-on-surface">Add Micro-Habit Step</div>
-<div className="font-caption text-caption text-on-surface-variant">Downscale to 5m micro-version</div>
-</div>
-</div>
-<span className="material-symbols-outlined text-[18px] text-outline group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
-</button>
-</div>
-<div className="mt-gutter-md pt-gutter-md border-none flex items-center justify-between font-caption text-caption text-on-surface-variant">
-<span className="flex items-center gap-1">
-<span className="material-symbols-outlined text-[14px]">info</span>
-            No guilt strikes policy
-          </span>
-<span className="font-medium text-secondary">Healthy habit design</span>
-</div>
-</div>
-)}
+{/* Right Column: Wisdom & Weekly Rhythm */}
+<div className="xl:col-span-4 space-y-gutter-base xl:sticky xl:top-20">
 {/* Quick Micro-Context Card with editorial photo */}
 <div className="rounded-2xl bg-surface-container-lowest p-gutter-lg shadow-sm space-y-gutter-md">
 <div className="relative w-full h-36 rounded-xl overflow-hidden">
