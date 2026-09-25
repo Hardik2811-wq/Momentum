@@ -8,6 +8,12 @@ const CATEGORY_MAP = {
   finance:  { label: 'Finance & Freedom', color: 'primary', icon: 'payments' },
 };
 
+function getEndOfMonth() {
+  const d = new Date();
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return lastDay.toISOString().slice(0, 10);
+}
+
 export default function GoalDetailDrawer({
   isOpen = false,
   onClose,
@@ -77,12 +83,16 @@ export default function GoalDetailDrawer({
 
   const handleSave = () => {
     if (!title.trim()) return;
+    let computedDate = null;
+    if (dateType === 'month') computedDate = getEndOfMonth();
+    else if (dateType === 'custom') computedDate = targetDate || null;
+
     onUpdateGoal?.(goal.id, {
       title: title.trim(),
       why: why.trim(),
       categories,
       dateType,
-      targetDate: dateType === 'open' ? null : targetDate,
+      targetDate: computedDate,
       status,
       linkedHabitIds
     });
@@ -96,6 +106,7 @@ export default function GoalDetailDrawer({
       title: newTaskTitle.trim(),
       goalId: goal.id,
       completed: false,
+      plannedDate: todayPlanDate(),
       dueDate: 'This Week',
       priority: 'normal',
       energy: 'Medium',
@@ -128,305 +139,346 @@ export default function GoalDetailDrawer({
     : (goal.workProgress ?? goal.progress ?? 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/40 backdrop-blur-md animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col justify-between overflow-hidden animate-in slide-in-from-right duration-300 border-l border-black/[0.08]"
+        className="w-full max-w-4xl max-h-[92vh] sm:max-h-[88vh] rounded-2xl sm:rounded-3xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col text-[#1A1B1F] transition-all animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Top Header ── */}
-        <div className="px-6 py-4 border-b border-black/[0.06] flex items-center justify-between bg-white shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#0A84FF]" />
-            <span className="text-[12px] font-bold uppercase tracking-wider text-[#64748B]">
-              Goal Command Center
-            </span>
+        {/* ── Refined Linear Header ── */}
+        <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-black/[0.06] bg-[#FAFAFC] shrink-0">
+          <div className="flex items-center gap-3">
+            <span className={`w-2.5 h-2.5 rounded-full ${status === 'completed' ? 'bg-emerald-500' : status === 'paused' ? 'bg-amber-400' : 'bg-[#0A84FF]'}`} />
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] font-bold uppercase tracking-wider text-[#64748B]">
+                Goal Command Center
+              </span>
+              <span className="text-slate-300">•</span>
+              {/* Status Switcher */}
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="text-[11px] font-bold px-2 py-0.5 rounded-full border border-black/[0.08] bg-white text-[#1A1B1F] outline-none cursor-pointer hover:border-black/[0.2] transition"
+              >
+                <option value="active">Active Horizon</option>
+                <option value="completed">Completed</option>
+                <option value="paused">Paused</option>
+              </select>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Status Switcher */}
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="text-[11px] font-bold px-2.5 py-1 rounded-full border border-black/[0.08] bg-[#F8F8FC] text-[#1A1B1F] outline-none"
-            >
-              <option value="active">Active Horizon</option>
-              <option value="completed">Completed</option>
-              <option value="paused">Paused</option>
-            </select>
-
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={onClose}
-              className="p-1 rounded-lg text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-[#F5F4FA] transition"
+              type="button"
+              onClick={() => {
+                if (onDeleteGoal && goal?.id) {
+                  onDeleteGoal(goal.id);
+                  onClose();
+                }
+              }}
+              title="Delete goal"
+              className="p-1.5 rounded-xl text-[#8E8E93] hover:text-red-500 hover:bg-red-50 transition"
             >
-              <span className="material-symbols-outlined text-[20px]">close</span>
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+            <div className="w-px h-4 bg-black/[0.08] mx-1" />
+            <button
+              type="button"
+              onClick={onClose}
+              title="Close (Esc)"
+              className="p-1.5 rounded-xl text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-black/5 transition"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
           </div>
         </div>
 
-        {/* ── Scrollable Body ── */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-
-          {/* Goal Title Input */}
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#8E8E93] mb-1">
-              Horizon Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-xl font-bold text-[#1A1B1F] tracking-tight outline-none border-b border-transparent focus:border-[#0A84FF] transition pb-1"
-            />
-          </div>
-
-          {/* Categories Multi-Select */}
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#8E8E93] mb-1.5">
-              Categories
-            </label>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {Object.entries(CATEGORY_MAP).map(([catKey, info]) => {
-                const isSelected = categories.includes(catKey);
-                return (
-                  <button
-                    key={catKey}
-                    type="button"
-                    onClick={() => toggleCategory(catKey)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold transition border ${
-                      isSelected
-                        ? 'bg-[#0A84FF] text-white border-[#0A84FF] shadow-3xs'
-                        : 'bg-[#F8F8FC] text-[#64748B] border-black/[0.06] hover:bg-[#F0EFF5]'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[13px]">{info.icon}</span>
-                    <span>{info.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Target Horizon / Deadline */}
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#8E8E93] mb-1.5">
-              Target Horizon
-            </label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {[
-                { id: 'open', label: 'Open / Flexible' },
-                { id: 'month', label: 'End of Month' },
-                { id: 'custom', label: 'Specific Date' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setDateType(opt.id)}
-                  className={`px-3 py-1 rounded-xl text-[11px] font-semibold transition border ${
-                    dateType === opt.id
-                      ? 'bg-[#1A1B1F] text-white border-[#1A1B1F]'
-                      : 'bg-[#F8F8FC] text-[#64748B] border-black/[0.06]'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-
-              {dateType === 'custom' && (
-                <input
-                  type="date"
-                  value={targetDate}
-                  onChange={(e) => setTargetDate(e.target.value)}
-                  className="px-2.5 py-1 text-[11px] rounded-xl border border-black/[0.08] bg-[#F8F8FC] outline-none"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* The Why (Optional Emotional Anchor) */}
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#8E8E93] mb-1">
-              Personal Anchor (The Why)
-            </label>
-            <textarea
-              rows="2"
-              value={why}
-              onChange={(e) => setWhy(e.target.value)}
-              placeholder="Why does this matter? What is the core outcome?"
-              className="w-full px-3 py-2 text-[12px] rounded-xl bg-[#F8F8FC] border border-black/[0.06] text-[#1A1B1F] outline-none focus:bg-white focus:border-[#0A84FF] transition resize-none"
-            />
-          </div>
-
-          {/* ── Deep Work Focus Investment Widget ── */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50/70 to-indigo-50/40 border border-blue-100 flex items-center justify-between">
+        {/* ── Two-Column Linear Workspace Body ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+          {/* ── Left Column: Primary Content Canvas (7 cols ~ 58%) ── */}
+          <div className="lg:col-span-7 p-5 sm:p-6 overflow-visible lg:overflow-y-auto space-y-5 border-r-0 lg:border-r border-black/[0.06]">
+            {/* Hero Title (Borderless & Prominent) */}
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#0A84FF]">Deep Work Invested</span>
-              <div className="mt-0.5 text-xl font-bold text-[#1A1B1F]">
-                {focusStats.hours} <span className="text-xs font-normal text-[#64748B]">hours ({focusStats.count} focus blocks)</span>
-              </div>
-            </div>
-
-            {openTasks.length > 0 && onStartFocus && (
-              <button
-                type="button"
-                onClick={() => onStartFocus(openTasks[0].id)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[11px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-95"
-              >
-                <span className="material-symbols-outlined text-[15px]">play_arrow</span>
-                <span>Focus Now</span>
-              </button>
-            )}
-          </div>
-
-          {/* ── Execution Task Pipeline ── */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[12px] font-bold uppercase tracking-wider text-[#1A1B1F]">
-                  Execution Pipeline
-                </span>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-[#F0EFF5] text-[#64748B]">
-                  {progressPercent}% Done ({completedTasks.length}/{linkedTasks.length})
-                </span>
-              </div>
-            </div>
-
-            {/* Quick Inline Task Creator */}
-            <form onSubmit={handleCreateTask} className="flex items-center gap-2">
-              <input
-                type="text"
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder="+ Add deliverable to this goal (Press Enter)..."
-                className="flex-1 px-3 py-2 text-[12px] rounded-xl bg-[#F8F8FC] border border-black/[0.06] text-[#1A1B1F] placeholder:text-[#8E8E93] outline-none focus:bg-white focus:border-[#0A84FF] transition"
+              <textarea
+                rows={2}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Strategic Horizon Title..."
+                className="w-full text-xl sm:text-2xl font-bold text-[#1A1B1F] placeholder-slate-300 bg-transparent border-none outline-none resize-none tracking-tight leading-snug focus:ring-0"
               />
-              <button
-                type="submit"
-                disabled={!newTaskTitle.trim()}
-                className="px-3 py-2 rounded-xl bg-[#0A84FF] text-white text-[11px] font-semibold hover:bg-[#0071E3] transition disabled:opacity-40"
-              >
-                Add
-              </button>
-            </form>
-
-            {/* Incomplete Tasks Checklist */}
-            <div className="space-y-1.5">
-              {openTasks.map(task => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-black/[0.06] shadow-3xs hover:border-black/[0.12] transition"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => onToggleTask?.(task.id)}
-                      className="text-[#8E8E93] hover:text-[#0A84FF] transition shrink-0"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">check_box_outline_blank</span>
-                    </button>
-                    <span className="text-[12px] font-medium text-[#1A1B1F] truncate">
-                      {task.title}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {task.dueDate && (
-                      <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-[#F8F8FC] text-[#64748B]">
-                        {task.dueDate}
-                      </span>
-                    )}
-                    {onStartFocus && (
-                      <button
-                        type="button"
-                        onClick={() => onStartFocus(task.id)}
-                        className="p-1 rounded text-[#8E8E93] hover:text-[#0A84FF]"
-                        title="Start Pomodoro focus on this task"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">play_circle</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {openTasks.length === 0 && (
-                <p className="text-[12px] text-[#8E8E93] italic py-2">
-                  No active tasks. Add deliverables above to move this horizon forward.
-                </p>
-              )}
             </div>
 
-            {/* Completed Tasks Toggle */}
-            {completedTasks.length > 0 && (
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCompletedTasks(!showCompletedTasks)}
-                  className="text-[11px] font-bold text-[#8E8E93] hover:text-[#1A1B1F] flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[14px]">
-                    {showCompletedTasks ? 'expand_less' : 'expand_more'}
-                  </span>
-                  <span>{completedTasks.length} Completed {completedTasks.length === 1 ? 'task' : 'tasks'}</span>
-                </button>
+            {/* Personal Anchor (The Why) */}
+            <div>
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                <span className="material-symbols-outlined text-[15px] text-[#0A84FF]">psychology</span>
+                <span>Personal Anchor (The Why)</span>
+              </div>
+              <textarea
+                rows={3}
+                value={why}
+                onChange={(e) => setWhy(e.target.value)}
+                placeholder="Why does this strategic vector matter? What is the core emotional outcome..."
+                className="w-full p-3.5 rounded-2xl bg-[#F8F8FB] border border-black/[0.06] text-[13px] leading-relaxed text-[#1A1B1F] placeholder-slate-400 outline-none focus:bg-white focus:border-[#0A84FF] focus:ring-3 focus:ring-[#0A84FF]/10 transition resize-none shadow-2xs"
+              />
+            </div>
 
-                {showCompletedTasks && (
-                  <div className="mt-2 space-y-1.5">
-                    {completedTasks.map(task => (
+            {/* Execution Task Pipeline */}
+            <div>
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-[#0A84FF]">checklist</span>
+                  <span>Execution Pipeline</span>
+                  <span className="text-slate-500 font-medium normal-case">
+                    ({completedTasks.length}/{linkedTasks.length})
+                  </span>
+                </span>
+                {linkedTasks.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
                       <div
-                        key={task.id}
-                        className="flex items-center justify-between p-2 rounded-xl bg-[#F8F8FC] text-[#8E8E93] line-through text-[12px]"
-                      >
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onToggleTask?.(task.id)}
-                            className="text-emerald-500 hover:text-[#8E8E93]"
-                          >
-                            <span className="material-symbols-outlined text-[17px]">check_box</span>
-                          </button>
-                          <span className="truncate">{task.title}</span>
-                        </div>
-                      </div>
-                    ))}
+                        className="h-full bg-[#0A84FF] rounded-full transition-all duration-300"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-semibold">{progressPercent}%</span>
                   </div>
                 )}
               </div>
-            )}
+
+              {/* Quick Inline Task Creator */}
+              <form onSubmit={handleCreateTask} className="flex items-center gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="+ Add deliverable to this goal (Press Enter)..."
+                  className="flex-1 px-3.5 py-2 text-[12px] rounded-xl bg-[#F8F8FC] border border-black/[0.06] text-[#1A1B1F] placeholder:text-[#8E8E93] outline-none focus:bg-white focus:border-[#0A84FF] transition"
+                />
+                <button
+                  type="submit"
+                  disabled={!newTaskTitle.trim()}
+                  className="px-3.5 py-2 rounded-xl bg-[#0A84FF] text-white text-[11px] font-semibold hover:bg-[#0071E3] transition disabled:opacity-40 shadow-3xs"
+                >
+                  Add
+                </button>
+              </form>
+
+              {/* Open Deliverables Checklist */}
+              <div className="space-y-1.5">
+                {openTasks.map(task => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-black/[0.06] shadow-3xs hover:border-black/[0.12] transition"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => onToggleTask?.(task.id)}
+                        className="text-[#8E8E93] hover:text-[#0A84FF] transition shrink-0"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">check_box_outline_blank</span>
+                      </button>
+                      <span className="text-[12px] font-medium text-[#1A1B1F] truncate">
+                        {task.title}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {task.dueDate && (
+                        <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-[#F8F8FC] text-[#64748B]">
+                          {task.dueDate}
+                        </span>
+                      )}
+                      {onStartFocus && (
+                        <button
+                          type="button"
+                          onClick={() => onStartFocus(task.id)}
+                          className="p-1 rounded text-[#8E8E93] hover:text-[#0A84FF]"
+                          title="Start Pomodoro focus on this deliverable"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {openTasks.length === 0 && (
+                  <p className="text-[12px] text-[#8E8E93] italic py-3 text-center bg-[#F8F8FC] rounded-xl border border-black/[0.03]">
+                    No pending deliverables. Add deliverables above to advance this goal.
+                  </p>
+                )}
+              </div>
+
+              {/* Completed Tasks Toggle */}
+              {completedTasks.length > 0 && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCompletedTasks(!showCompletedTasks)}
+                    className="text-[11px] font-bold text-[#8E8E93] hover:text-[#1A1B1F] flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">
+                      {showCompletedTasks ? 'expand_less' : 'expand_more'}
+                    </span>
+                    <span>{completedTasks.length} Completed {completedTasks.length === 1 ? 'deliverable' : 'deliverables'}</span>
+                  </button>
+
+                  {showCompletedTasks && (
+                    <div className="mt-2 space-y-1.5">
+                      {completedTasks.map(task => (
+                        <div
+                          key={task.id}
+                          className="flex items-center justify-between p-2 rounded-xl bg-[#F8F8FC] text-[#8E8E93] line-through text-[12px]"
+                        >
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => onToggleTask?.(task.id)}
+                              className="text-emerald-500 hover:text-[#8E8E93]"
+                            >
+                              <span className="material-symbols-outlined text-[17px]">check_box</span>
+                            </button>
+                            <span className="truncate">{task.title}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* ── Connected Driving Habits ── */}
-          {habits && habits.length > 0 && (
-            <div className="pt-2 border-t border-black/[0.04] space-y-2">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#8E8E93]">
-                Connected Driving Rituals
+          {/* ── Right Column: Configuration & Rituals (5 cols ~ 42%) ── */}
+          <div className="lg:col-span-5 p-5 sm:p-6 overflow-visible lg:overflow-y-auto space-y-5 bg-[#FBFBFE]/70">
+            {/* Target Horizon / Timeframe */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Target Horizon
               </label>
-              <div className="flex items-center gap-2 flex-wrap">
-                {habits.map(habit => {
-                  const isLinked = linkedHabitIds.includes(habit.id);
-                  return (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { id: 'open', label: 'Flexible' },
+                    { id: 'month', label: 'End of Month' },
+                    { id: 'custom', label: 'Pick Date' }
+                  ].map(opt => (
                     <button
-                      key={habit.id}
+                      key={opt.id}
                       type="button"
-                      onClick={() => toggleHabit(habit.id)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold transition border ${
-                        isLinked
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-3xs'
-                          : 'bg-[#F8F8FC] text-[#64748B] border-black/[0.06] hover:bg-[#F0EFF5]'
+                      onClick={() => setDateType(opt.id)}
+                      className={`py-1.5 px-2 rounded-xl text-[11px] font-semibold transition text-center ${
+                        dateType === opt.id
+                          ? 'bg-[#0A84FF] text-white shadow-xs'
+                          : 'bg-[#F0EFF5] text-[#1A1B1F] hover:bg-[#E5E5EB]'
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[13px]">{habit.icon || 'repeat'}</span>
-                      <span>{habit.title}</span>
-                      {isLinked && <span className="material-symbols-outlined text-[13px]">done</span>}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {dateType === 'custom' && (
+                  <input
+                    type="date"
+                    value={targetDate}
+                    onChange={(e) => setTargetDate(e.target.value)}
+                    className="w-full px-3 py-1.5 text-[12px] font-medium rounded-xl border border-black/[0.08] bg-white text-[#1A1B1F] outline-none focus:border-[#0A84FF]"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Categories Multi-Select */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Life Areas & Categories
+              </label>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {Object.entries(CATEGORY_MAP).map(([catKey, info]) => {
+                  const isSelected = categories.includes(catKey);
+                  return (
+                    <button
+                      key={catKey}
+                      type="button"
+                      onClick={() => toggleCategory(catKey)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition border ${
+                        isSelected
+                          ? 'bg-[#0A84FF] text-white border-[#0A84FF] shadow-3xs'
+                          : 'bg-white text-[#64748B] border-black/[0.08] hover:bg-[#F0EFF5]'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">{info.icon}</span>
+                      <span>{info.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
-          )}
 
+            {/* Deep Work Focus Hours Tracker */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/50 border border-blue-100 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#0A84FF]">
+                  Deep Work Invested
+                </span>
+                <div className="mt-0.5 text-xl font-bold text-[#1A1B1F]">
+                  {focusStats.hours} <span className="text-xs font-normal text-[#64748B]">hours ({focusStats.count} blocks)</span>
+                </div>
+              </div>
+
+              {openTasks.length > 0 && onStartFocus && (
+                <button
+                  type="button"
+                  onClick={() => onStartFocus(openTasks[0].id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[11px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-[15px]">play_arrow</span>
+                  <span>Focus Now</span>
+                </button>
+              )}
+            </div>
+
+            {/* Connected Driving Rituals */}
+            {habits && habits.length > 0 && (
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                  Connected Driving Rituals
+                </label>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {habits.map(habit => {
+                    const isLinked = linkedHabitIds.includes(habit.id);
+                    return (
+                      <button
+                        key={habit.id}
+                        type="button"
+                        onClick={() => toggleHabit(habit.id)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition border ${
+                          isLinked
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-3xs'
+                            : 'bg-white text-[#64748B] border-black/[0.08] hover:bg-[#F0EFF5]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">{habit.icon || 'repeat'}</span>
+                        <span>{habit.title}</span>
+                        {isLinked && <span className="material-symbols-outlined text-[12px]">done</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Bottom Fixed Action Bar ── */}
-        <div className="px-6 py-4 border-t border-black/[0.06] bg-[#FAFAFC] flex items-center justify-between gap-3 shrink-0">
+        <div className="px-5 sm:px-6 py-3.5 border-t border-black/[0.06] bg-[#FAFAFC] flex items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -435,7 +487,7 @@ export default function GoalDetailDrawer({
                 onClose();
               }
             }}
-            className="text-[11px] font-semibold text-red-500 hover:text-red-700 transition"
+            className="text-[12px] font-semibold text-red-500 hover:text-red-700 transition"
           >
             Delete Goal
           </button>
