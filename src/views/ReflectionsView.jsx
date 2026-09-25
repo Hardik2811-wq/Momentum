@@ -12,6 +12,49 @@ const REASONS = [
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+const MOOD_LEVELS = {
+  5: {
+    label: 'Peak',
+    emoji: '⚡',
+    short: 'Peak',
+    activeClass: 'bg-emerald-500/10 hover:bg-emerald-500/15 border-emerald-500/30 text-emerald-800 dark:text-emerald-300',
+    barColor: 'bg-emerald-500',
+    dotColor: 'bg-emerald-500'
+  },
+  4: {
+    label: 'Good',
+    emoji: '🔋',
+    short: 'Good',
+    activeClass: 'bg-teal-500/10 hover:bg-teal-500/15 border-teal-500/30 text-teal-800 dark:text-teal-300',
+    barColor: 'bg-teal-500',
+    dotColor: 'bg-teal-500'
+  },
+  3: {
+    label: 'Steady',
+    emoji: '☕',
+    short: 'Steady',
+    activeClass: 'bg-amber-500/10 hover:bg-amber-500/15 border-amber-500/30 text-amber-800 dark:text-amber-300',
+    barColor: 'bg-amber-500',
+    dotColor: 'bg-amber-500'
+  },
+  2: {
+    label: 'Low',
+    emoji: '📉',
+    short: 'Low',
+    activeClass: 'bg-orange-500/10 hover:bg-orange-500/15 border-orange-500/30 text-orange-800 dark:text-orange-300',
+    barColor: 'bg-orange-500',
+    dotColor: 'bg-orange-500'
+  },
+  1: {
+    label: 'Drained',
+    emoji: '🪫',
+    short: 'Drained',
+    activeClass: 'bg-rose-500/10 hover:bg-rose-500/15 border-rose-500/30 text-rose-800 dark:text-rose-300',
+    barColor: 'bg-rose-500',
+    dotColor: 'bg-rose-500'
+  }
+};
+
 export default function ReflectionsView({
   tasks = [],
   goals = [],
@@ -127,6 +170,24 @@ export default function ReflectionsView({
     if (momentumScore >= 45) return 'Steady pacing • Opportunities exist to tighten daily anchors.';
     return 'Recalibration window • Focus on small daily wins to rebuild momentum.';
   }, [momentumScore]);
+
+  const todayIdx = useMemo(() => new Date().getDay(), []);
+
+  const moodAvg = useMemo(() => {
+    const vals = Object.values(moodRatings || {});
+    if (!vals.length) return '4.0';
+    const sum = vals.reduce((acc, curr) => acc + Number(curr), 0);
+    return (sum / vals.length).toFixed(1);
+  }, [moodRatings]);
+
+  const moodBatteryHealth = useMemo(() => {
+    const score = parseFloat(moodAvg);
+    if (score >= 4.3) return { label: 'Peak Capacity', color: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/25' };
+    if (score >= 3.6) return { label: 'Optimal Flow', color: 'text-teal-700 dark:text-teal-300 bg-teal-500/10 border-teal-500/25' };
+    if (score >= 2.8) return { label: 'Steady Reserve', color: 'text-amber-700 dark:text-amber-300 bg-amber-500/10 border-amber-500/25' };
+    if (score >= 2.0) return { label: 'Depleted Energy', color: 'text-orange-700 dark:text-orange-300 bg-orange-500/10 border-orange-500/25' };
+    return { label: 'Burnout Risk Alert', color: 'text-rose-700 dark:text-rose-300 bg-rose-500/10 border-rose-500/25' };
+  }, [moodAvg]);
 
   // Real Dynamic Life Area Allocation
   const categoryBreakdown = useMemo(() => {
@@ -524,40 +585,130 @@ export default function ReflectionsView({
 
         {/* ── Weekly Energy & Mood Log (Mon-Sun) ── */}
         <div className="p-4 sm:p-gutter-base rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04]">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
-              <h3 className="font-title text-title text-on-surface">Daily Energy &amp; Mood Telemetry</h3>
-              <p className="font-caption text-caption text-on-surface-variant">Self-reported cognitive battery (1 = Drained, 5 = Peak Flow)</p>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">bolt</span>
+                <h3 className="font-title text-title text-on-surface">Daily Energy &amp; Mood Telemetry</h3>
+              </div>
+              <p className="font-caption text-caption text-on-surface-variant">
+                Cognitive battery tracking (1 = Drained, 5 = Peak Flow) • Tap card to cycle or tap segments
+              </p>
             </div>
-            <span className="font-label-sm text-xs font-semibold text-tertiary">Avg: 4.1 / 5</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${moodBatteryHealth.color}`}>
+                {moodBatteryHealth.label}
+              </span>
+              <span className="font-label-sm text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-container text-on-surface border border-black/[0.04]">
+                Avg: <strong className="text-primary">{moodAvg}</strong> / 5
+              </span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1.5 sm:gap-3 text-center mt-3">
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 text-center mt-3">
             {DAYS.map((day, idx) => {
-              const rating = moodRatings[idx] || 4;
-              const colors = ['bg-red-400', 'bg-orange-400', 'bg-amber-400', 'bg-blue-400', 'bg-emerald-500'];
+              const rating = Number(moodRatings[idx]) || 4;
+              const config = MOOD_LEVELS[rating] || MOOD_LEVELS[3];
+              const isToday = idx === todayIdx;
+
+              const handleStep = (delta, e) => {
+                e?.stopPropagation();
+                let nextVal = rating + delta;
+                if (nextVal > 5) nextVal = 1;
+                if (nextVal < 1) nextVal = 5;
+                updateReflection?.({
+                  moodRatings: { ...moodRatings, [idx]: nextVal }
+                });
+              };
+
+              const handleSetRating = (lvl, e) => {
+                e?.stopPropagation();
+                updateReflection?.({
+                  moodRatings: { ...moodRatings, [idx]: lvl }
+                });
+              };
+
               return (
-                <div key={day} className="flex flex-col items-center p-2 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
-                  <span className="font-caption text-[11px] font-bold text-on-surface-variant uppercase">{day}</span>
-                  <div className="my-1.5 flex items-center justify-center">
-                    <span className={`w-3 h-3 rounded-full ${colors[rating - 1]}`} />
+                <div
+                  key={day}
+                  onClick={(e) => handleStep(1, e)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleStep(1, e);
+                    }
+                  }}
+                  className={`group relative flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-2xl border transition-all duration-150 cursor-pointer select-none active:scale-[0.97] ${
+                    isToday
+                      ? 'ring-2 ring-primary/60 shadow-sm ' + config.activeClass
+                      : config.activeClass
+                  }`}
+                  title={`Click ${day} card to cycle rating (1-5)`}
+                >
+                  {/* Day Header & Today Marker */}
+                  <div className="flex flex-col items-center gap-0.5 w-full">
+                    <span className="font-caption text-[11px] font-bold tracking-wider uppercase opacity-85">
+                      {day}
+                    </span>
+                    {isToday ? (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-primary text-on-primary tracking-tight leading-none scale-95 shadow-xs">
+                        Today
+                      </span>
+                    ) : (
+                      <span className="text-[9px] text-transparent select-none leading-none py-0.5">·</span>
+                    )}
                   </div>
-                  <select
-                    value={rating}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10);
-                      updateReflection?.({
-                        moodRatings: { ...moodRatings, [idx]: val }
-                      });
-                    }}
-                    className="bg-transparent border-none text-[11px] font-semibold text-on-surface cursor-pointer focus:outline-none text-center"
-                  >
-                    <option value={5}>⚡ 5 (Peak)</option>
-                    <option value={4}>🔋 4 (Good)</option>
-                    <option value={3}>☕ 3 (Steady)</option>
-                    <option value={2}>📉 2 (Low)</option>
-                    <option value={1}>🪫 1 (Drained)</option>
-                  </select>
+
+                  {/* Rating Icon & State */}
+                  <div className="my-1.5 flex flex-col items-center">
+                    <span className="text-xl sm:text-2xl transform transition-transform group-hover:scale-110">
+                      {config.emoji}
+                    </span>
+                    <span className="text-xs sm:text-sm font-extrabold tracking-tight mt-0.5">
+                      {rating}<span className="text-[10px] font-normal opacity-60">/5</span>
+                    </span>
+                    <span className="text-[10px] font-semibold tracking-tight opacity-90 truncate max-w-full">
+                      {config.short}
+                    </span>
+                  </div>
+
+                  {/* 5-segment Mini Energy Gauge */}
+                  <div className="w-full flex items-center justify-center gap-1 my-1 px-0.5">
+                    {[1, 2, 3, 4, 5].map((lvl) => (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={(e) => handleSetRating(lvl, e)}
+                        className={`h-1.5 flex-1 rounded-full transition-all ${
+                          lvl <= rating ? config.barColor : 'bg-black/10 dark:bg-white/10'
+                        } hover:h-2`}
+                        title={`Set ${day} to ${lvl}`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Stepper buttons */}
+                  <div className="flex items-center justify-between w-full mt-1 pt-1 border-t border-black/[0.05] dark:border-white/[0.05]">
+                    <button
+                      type="button"
+                      onClick={(e) => handleStep(-1, e)}
+                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/10 text-on-surface-variant font-bold text-xs"
+                      title="Decrease (-1)"
+                    >
+                      -
+                    </button>
+                    <span className="text-[9px] font-medium opacity-50">tap</span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleStep(1, e)}
+                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/10 text-on-surface-variant font-bold text-xs"
+                      title="Increase (+1)"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               );
             })}
