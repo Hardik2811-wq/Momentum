@@ -1,19 +1,29 @@
 import React, { useState, useEffect } from 'react';
 
-const DURATION_PRESETS = ['15 mins', '30 mins', '45 mins', '60 mins', '90 mins'];
+const DURATION_PRESETS = ['Open / Flex', '15 mins', '30 mins', '45 mins', '60 mins', '90 mins'];
 
 const CADENCE_OPTIONS = [
+  { id: 'Anytime', label: 'Flexible / Anytime', icon: 'schedule', period: 'All Day' },
   { id: 'Morning Ritual', label: 'Morning Ritual', icon: 'wb_sunny', period: 'AM' },
   { id: 'Afternoon Flow', label: 'Afternoon Flow', icon: 'bolt', period: 'PM' },
-  { id: 'Evening Wind-down', label: 'Evening Wind-down', icon: 'nights_stay', period: 'Night' },
-  { id: 'Anytime', label: 'Flexible / Anytime', icon: 'schedule', period: 'All Day' }
+  { id: 'Evening Wind-down', label: 'Evening Wind-down', icon: 'nights_stay', period: 'Night' }
 ];
 
 const FREQUENCY_OPTIONS = [
   { id: 'Every Day', label: 'Every Day', desc: '7 days / week' },
   { id: 'Weekdays', label: 'Weekdays', desc: 'Mon – Fri' },
-  { id: '4 Days / Wk', label: '4 Days / Wk', desc: 'Flexible cadence' },
-  { id: '3 Days / Wk', label: '3 Days / Wk', desc: 'Active recovery' }
+  { id: '3 Days / Wk', label: '3 Days / Wk', desc: 'Active cadence' },
+  { id: 'Custom', label: 'Custom', desc: 'Choose specific days' }
+];
+
+const WEEK_DAYS = [
+  { id: 'Mon', label: 'Monday', short: 'M' },
+  { id: 'Tue', label: 'Tuesday', short: 'T' },
+  { id: 'Wed', label: 'Wednesday', short: 'W' },
+  { id: 'Thu', label: 'Thursday', short: 'T' },
+  { id: 'Fri', label: 'Friday', short: 'F' },
+  { id: 'Sat', label: 'Saturday', short: 'S' },
+  { id: 'Sun', label: 'Sunday', short: 'S' }
 ];
 
 const ICONS_CATALOG = [
@@ -142,12 +152,23 @@ export default function HabitModal({
   const [isCustomDuration, setIsCustomDuration] = useState(false);
   const [icon, setIcon] = useState('terminal');
   const [colorToken, setColorToken] = useState('primary');
-  const [cadence, setCadence] = useState('Morning Ritual');
+  const [cadence, setCadence] = useState('Anytime');
   const [targetFrequency, setTargetFrequency] = useState('Every Day');
+  const [customDays, setCustomDays] = useState(['Mon', 'Wed', 'Fri']);
   const [linkedGoal, setLinkedGoal] = useState('');
   const [description, setDescription] = useState('');
   const [graceDays, setGraceDays] = useState(1);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const toggleCustomDay = (dayId) => {
+    setCustomDays(prev => {
+      if (prev.includes(dayId)) {
+        if (prev.length <= 1) return prev; // Keep at least one active day
+        return prev.filter(d => d !== dayId);
+      }
+      return [...prev, dayId];
+    });
+  };
 
   useEffect(() => {
     if (habit) {
@@ -159,8 +180,9 @@ export default function HabitModal({
       setIcon(foundIcon);
       const matched = ICONS_CATALOG.find(i => i.icon === foundIcon);
       setColorToken(habit.colorToken || matched?.colorToken || 'primary');
-      setCadence(habit.cadence || 'Morning Ritual');
+      setCadence(habit.cadence || 'Anytime');
       setTargetFrequency(habit.targetFrequency || 'Every Day');
+      setCustomDays(habit.customDays || ['Mon', 'Wed', 'Fri']);
       setLinkedGoal(habit.linkedGoal || '');
       setDescription(habit.description || '');
       setGraceDays(habit.graceDays ?? 1);
@@ -171,8 +193,9 @@ export default function HabitModal({
       setIsCustomDuration(false);
       setIcon('terminal');
       setColorToken('primary');
-      setCadence('Morning Ritual');
+      setCadence('Anytime');
       setTargetFrequency('Every Day');
+      setCustomDays(['Mon', 'Wed', 'Fri']);
       setLinkedGoal(goals.length > 0 ? goals[0].title : '');
       setDescription('');
       setGraceDays(1);
@@ -191,11 +214,12 @@ export default function HabitModal({
     onSave({
       ...(habit || {}),
       title: title.trim(),
-      duration: duration.trim() || '30 mins',
+      duration: duration.trim() || 'Open / Flex',
       icon,
       colorToken: colorToken || activeSignpost.colorToken || 'primary',
       cadence,
       targetFrequency,
+      customDays: targetFrequency === 'Custom' ? customDays : null,
       linkedGoal: linkedGoal.trim(),
       description: description.trim(),
       graceDays: Number(graceDays) || 0
@@ -290,7 +314,7 @@ export default function HabitModal({
                   <span>•</span>
                   <span className="inline-flex items-center gap-1 font-medium">
                     <span className="material-symbols-outlined text-[14px] text-outline">repeat</span>
-                    {targetFrequency}
+                    {targetFrequency === 'Custom' ? `Custom (${customDays.join(', ')})` : targetFrequency}
                   </span>
                   <span>•</span>
                   <span className="inline-flex items-center gap-1 text-secondary font-medium">
@@ -419,9 +443,16 @@ export default function HabitModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Frequency Segmented Group */}
             <div className="space-y-2">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
-                Target Frequency
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                  Target Frequency
+                </label>
+                {targetFrequency === 'Custom' && (
+                  <span className="text-[11px] font-semibold text-primary">
+                    {customDays.length} day{customDays.length !== 1 ? 's' : ''}/wk
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 {FREQUENCY_OPTIONS.map((freq) => {
                   const isSelected = targetFrequency === freq.id;
@@ -444,6 +475,32 @@ export default function HabitModal({
                   );
                 })}
               </div>
+
+              {/* Day-of-Week Picker when Custom is selected */}
+              {targetFrequency === 'Custom' && (
+                <div className="pt-1.5 animate-fadeIn">
+                  <div className="flex items-center gap-1">
+                    {WEEK_DAYS.map((d) => {
+                      const isDaySelected = customDays.includes(d.id);
+                      return (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => toggleCustomDay(d.id)}
+                          className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            isDaySelected
+                              ? 'bg-neutral-900 text-white shadow-xs scale-102'
+                              : 'bg-surface-container-low/80 hover:bg-surface-container text-on-surface-variant border border-black/[0.04]'
+                          }`}
+                          title={d.label}
+                        >
+                          {d.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Duration Presets */}
