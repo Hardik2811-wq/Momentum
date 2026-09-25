@@ -128,6 +128,97 @@ export default function ReflectionsView({
     return 'Recalibration window • Focus on small daily wins to rebuild momentum.';
   }, [momentumScore]);
 
+  // Real Dynamic Life Area Allocation
+  const categoryBreakdown = useMemo(() => {
+    const areaCounts = {
+      'Career & Craft': 0,
+      'Deep Focus': 0,
+      'Health & Vitality': 0,
+      'Creative & Expression': 0,
+      'Personal & Life': 0,
+      'Habit Consistency': 0
+    };
+
+    let totalWeight = 0;
+
+    tasks.forEach(t => {
+      const taskAreas = Array.isArray(t.areas) && t.areas.length > 0
+        ? t.areas
+        : (t.category ? [t.category] : ['Career & Craft']);
+      
+      const weight = t.durationMinutes || 30;
+      taskAreas.forEach(a => {
+        if (areaCounts[a] !== undefined) {
+          areaCounts[a] += weight;
+        } else {
+          areaCounts['Career & Craft'] += weight;
+        }
+        totalWeight += weight;
+      });
+    });
+
+    habits.forEach(h => {
+      const habitWeight = 30 * ((h.completedDays || []).length || 1);
+      areaCounts['Habit Consistency'] += habitWeight;
+      totalWeight += habitWeight;
+    });
+
+    const areasConfig = [
+      { id: 'Career & Craft', label: 'Career & Craft', barColor: 'bg-blue-500', dotColor: 'bg-blue-500' },
+      { id: 'Deep Focus', label: 'Deep Focus', barColor: 'bg-indigo-500', dotColor: 'bg-indigo-500' },
+      { id: 'Health & Vitality', label: 'Health & Vitality', barColor: 'bg-emerald-500', dotColor: 'bg-emerald-500' },
+      { id: 'Creative & Expression', label: 'Creative & Expression', barColor: 'bg-purple-500', dotColor: 'bg-purple-500' }
+    ];
+
+    const safeTotal = totalWeight > 0 ? totalWeight : 1;
+
+    const items = areasConfig.map(cfg => {
+      const weight = areaCounts[cfg.id] || 0;
+      const pct = totalWeight > 0 ? Math.round((weight / safeTotal) * 100) : 0;
+      let status = 'Balanced';
+      let statusColor = 'text-neutral-500';
+      if (pct >= 40) {
+        status = 'Dominant Focus';
+        statusColor = 'text-primary font-bold';
+      } else if (pct >= 20) {
+        status = 'Optimal Cadence';
+        statusColor = 'text-emerald-600 font-semibold';
+      } else if (pct > 0) {
+        status = 'Light Cadence';
+        statusColor = 'text-amber-600 font-medium';
+      } else {
+        status = 'Untracked';
+        statusColor = 'text-neutral-400 font-normal';
+      }
+      return {
+        ...cfg,
+        pct,
+        status,
+        statusColor
+      };
+    });
+
+    const activeItems = items.filter(i => i.pct > 0);
+    const topArea = [...items].sort((a, b) => b.pct - a.pct)[0];
+
+    let diagnosis = 'Energy distribution across primary life areas is harmoniously balanced.';
+    let isBalanced = true;
+    if (topArea && topArea.pct >= 55) {
+      diagnosis = `Heavy concentration in ${topArea.label} (${topArea.pct}%). Consider scheduling cross-domain recovery to prevent burnout.`;
+      isBalanced = false;
+    } else if (topArea && topArea.pct >= 35) {
+      diagnosis = `${topArea.label} leads execution velocity (${topArea.pct}%), backed by steady multi-domain engagement.`;
+    }
+
+    return {
+      items,
+      activeItems: activeItems.length > 0 ? activeItems : items,
+      topArea,
+      diagnosis,
+      isBalanced
+    };
+  }, [tasks, habits]);
+
   // Export JSON/Markdown
   const handleExport = (format) => {
     const data = {
@@ -377,39 +468,56 @@ export default function ReflectionsView({
             </div>
           </div>
 
-          {/* Category Time Shift (Radar Balance) */}
+          {/* Category Time Shift (Real Dynamic Life Area Allocation) */}
           <div className="p-4 sm:p-gutter-base rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04] flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="font-title text-title text-on-surface">Category Balance Shift</h3>
-                <p className="font-caption text-caption text-on-surface-variant">Quarterly holistic equilibrium overlay</p>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="font-title text-title text-on-surface font-semibold">Category Balance Shift</h3>
+                  <p className="font-caption text-caption text-on-surface-variant">Active cycle life-area equilibrium</p>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-full text-caption font-semibold ${
+                  categoryBreakdown.isBalanced
+                    ? 'bg-secondary-container/60 text-secondary border border-secondary/20'
+                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }`}>
+                  {categoryBreakdown.isBalanced ? 'Balanced' : 'Focus Skewed'}
+                </span>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-secondary-container/60 text-secondary font-caption text-caption font-semibold">
-                Balanced
-              </span>
+
+              {/* Multi-Segment Distribution Bar */}
+              <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden flex my-2">
+                {categoryBreakdown.activeItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`h-full ${item.barColor} transition-all duration-500`}
+                    style={{ width: `${item.pct}%` }}
+                    title={`${item.label}: ${item.pct}%`}
+                  />
+                ))}
+              </div>
+
+              {/* 4 Life Area Metrics Grid */}
+              <div className="grid grid-cols-2 gap-2 my-1 text-xs">
+                {categoryBreakdown.items.map((item) => (
+                  <div key={item.id} className="p-2 rounded-xl bg-surface-container-low border border-black/[0.03]">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={`w-2 h-2 rounded-full ${item.dotColor}`} />
+                      <span className="text-on-surface-variant text-[10px] uppercase font-bold truncate">
+                        {item.label}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1">
+                      <span className="font-bold text-on-surface text-sm">{item.pct}%</span>
+                      <span className={`text-[10px] ${item.statusColor}`}>{item.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 my-1 text-xs">
-              <div className="p-2 rounded-xl bg-surface-container-low">
-                <span className="text-on-surface-variant block text-[10px] uppercase font-bold">Deep Work</span>
-                <span className="font-semibold text-on-surface">62% (+8% this wk)</span>
-              </div>
-              <div className="p-2 rounded-xl bg-surface-container-low">
-                <span className="text-on-surface-variant block text-[10px] uppercase font-bold">Habits &amp; Health</span>
-                <span className="font-semibold text-secondary">24% (Optimal)</span>
-              </div>
-              <div className="p-2 rounded-xl bg-surface-container-low">
-                <span className="text-on-surface-variant block text-[10px] uppercase font-bold">Creative Play</span>
-                <span className="font-semibold text-amber-600">14% (Under target)</span>
-              </div>
-              <div className="p-2 rounded-xl bg-surface-container-low">
-                <span className="text-on-surface-variant block text-[10px] uppercase font-bold">Administration</span>
-                <span className="font-semibold text-on-surface">&lt; 5% (Lean)</span>
-              </div>
-            </div>
-
-            <p className="font-caption text-[11px] text-on-surface-variant mt-1">
-              Creative exploration is slightly depressed by deadline sprint pressure.
+            <p className="font-caption text-[11px] text-on-surface-variant mt-2 border-t border-surface-container/60 pt-2">
+              {categoryBreakdown.diagnosis}
             </p>
           </div>
         </div>
