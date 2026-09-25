@@ -101,8 +101,10 @@ export default function App() {
             habits={store.habits}
             checkInHabit={store.checkInHabit}
             addHabit={store.addHabit}
+            updateHabit={store.updateHabit}
             deleteHabit={store.deleteHabit}
             useGraceDay={store.useGraceDay}
+            goals={store.goals}
             stats={store.stats}
           />
         );

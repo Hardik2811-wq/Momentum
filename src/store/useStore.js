@@ -712,27 +712,36 @@ export default function useStore() {
   }, [goals, setGoals, showToast]);
 
   /* Habits Actions */
-  const checkInHabit = useCallback((id) => {
-    const today = todayKey();
+  const checkInHabit = useCallback((id, targetDateKey = null) => {
+    const targetDay = targetDateKey || todayKey();
     setHabits(prev => prev.map(h => {
       if (h.id !== id) return h;
       const days = h.completedDays || [];
-      const alreadyChecked = days.includes(today);
+      const alreadyChecked = days.includes(targetDay);
       if (!alreadyChecked && settings.soundEffects) {
         playChime('complete');
       }
       if (alreadyChecked) {
-        return { ...h, completedDays: days.filter(d => d !== today) };
+        return { ...h, completedDays: days.filter(d => d !== targetDay) };
       }
-      return { ...h, completedDays: [...days, today] };
+      return { ...h, completedDays: [...days, targetDay] };
     }));
   }, [setHabits, settings.soundEffects]);
 
   const addHabit = useCallback((habit) => {
     setHabits(prev => [...prev, {
-      ...habit, id: 'h' + Date.now(), completedDays: [], graceDays: 0,
+      id: 'h' + Date.now(),
+      completedDays: [],
+      graceDays: habit.graceDays ?? 1,
+      colorToken: habit.colorToken || 'primary',
+      ...habit,
     }]);
     showToast(`Habit added: "${habit.title}"`);
+  }, [setHabits, showToast]);
+
+  const updateHabit = useCallback((id, patch) => {
+    setHabits(prev => prev.map(h => h.id === id ? { ...h, ...patch } : h));
+    showToast('Habit updated');
   }, [setHabits, showToast]);
 
   const deleteHabit = useCallback((id) => {
@@ -1053,7 +1062,7 @@ export default function useStore() {
   return {
     tasks, addTask, updateTask, toggleTask, deleteTask, toggleSubtask,
     goals: reactiveGoals, addGoal, updateGoal, updateGoalProgress, deleteGoal,
-    habits, checkInHabit, addHabit, deleteHabit, useGraceDay,
+    habits, checkInHabit, addHabit, updateHabit, deleteHabit, useGraceDay,
     reflections, updateReflection, saveWeeklyReview,
     settings, updateSettings, updateProfile,
     updateCustomUiLayout, resetCustomUiLayout,
