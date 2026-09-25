@@ -17,55 +17,115 @@ const FREQUENCY_OPTIONS = [
 ];
 
 const ICONS_CATALOG = [
-  { icon: 'terminal', label: 'Deep Work' },
-  { icon: 'directions_run', label: 'Cardio' },
-  { icon: 'fitness_center', label: 'Strength' },
-  { icon: 'auto_stories', label: 'Reading' },
-  { icon: 'self_improvement', label: 'Zen' },
-  { icon: 'music_note', label: 'Music' },
-  { icon: 'water_drop', label: 'Hydration' },
-  { icon: 'bolt', label: 'Energy' },
-  { icon: 'brush', label: 'Creative' },
-  { icon: 'bedtime', label: 'Sleep' },
-  { icon: 'restaurant', label: 'Nutrition' },
-  { icon: 'hiking', label: 'Outdoors' }
-];
-
-const COLOR_PALETTES = {
-  primary: {
-    id: 'primary',
-    name: 'Cobalt',
-    hex: '#0A84FF',
-    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
-    ringClass: 'ring-blue-500/40',
-    borderClass: 'border-blue-500',
-    iconBg: 'bg-[#D7E2FF] text-[#00458F]',
-    cardBorder: 'border-blue-500/20',
-    btnClass: 'bg-primary text-white shadow-blue-500/25'
+  {
+    icon: 'terminal',
+    label: 'Deep Work',
+    colorToken: 'primary',
+    accentHex: '#0A84FF',
+    activeClass: 'bg-blue-50/80 border-blue-500 text-blue-700 ring-2 ring-blue-500/20',
+    iconBg: 'bg-blue-100 text-blue-800',
+    btnClass: 'bg-[#0A84FF] text-white shadow-blue-500/20'
   },
-  secondary: {
-    id: 'secondary',
-    name: 'Emerald',
-    hex: '#006E28',
-    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    ringClass: 'ring-emerald-600/40',
-    borderClass: 'border-emerald-600',
-    iconBg: 'bg-[#D8F3DE] text-[#00531D]',
-    cardBorder: 'border-emerald-500/20',
-    btnClass: 'bg-[#006E28] text-white shadow-emerald-600/25'
+  {
+    icon: 'directions_run',
+    label: 'Cardio',
+    colorToken: 'secondary',
+    accentHex: '#F97316',
+    activeClass: 'bg-orange-50/80 border-orange-500 text-orange-700 ring-2 ring-orange-500/20',
+    iconBg: 'bg-orange-100 text-orange-800',
+    btnClass: 'bg-[#F97316] text-white shadow-orange-500/20'
   },
-  tertiary: {
-    id: 'tertiary',
-    name: 'Iris',
-    hex: '#5E5CE6',
-    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
-    ringClass: 'ring-purple-500/40',
-    borderClass: 'border-purple-500',
-    iconBg: 'bg-[#E2DFFF] text-[#3F3CB9]',
-    cardBorder: 'border-purple-500/20',
-    btnClass: 'bg-[#5E5CE6] text-white shadow-purple-500/25'
+  {
+    icon: 'fitness_center',
+    label: 'Strength',
+    colorToken: 'primary',
+    accentHex: '#E11D48',
+    activeClass: 'bg-rose-50/80 border-rose-500 text-rose-700 ring-2 ring-rose-500/20',
+    iconBg: 'bg-rose-100 text-rose-800',
+    btnClass: 'bg-[#E11D48] text-white shadow-rose-500/20'
+  },
+  {
+    icon: 'auto_stories',
+    label: 'Reading',
+    colorToken: 'tertiary',
+    accentHex: '#6366F1',
+    activeClass: 'bg-indigo-50/80 border-indigo-500 text-indigo-700 ring-2 ring-indigo-500/20',
+    iconBg: 'bg-indigo-100 text-indigo-800',
+    btnClass: 'bg-[#6366F1] text-white shadow-indigo-500/20'
+  },
+  {
+    icon: 'self_improvement',
+    label: 'Zen',
+    colorToken: 'secondary',
+    accentHex: '#059669',
+    activeClass: 'bg-emerald-50/80 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20',
+    iconBg: 'bg-emerald-100 text-emerald-800',
+    btnClass: 'bg-[#059669] text-white shadow-emerald-500/20'
+  },
+  {
+    icon: 'music_note',
+    label: 'Music',
+    colorToken: 'tertiary',
+    accentHex: '#9333EA',
+    activeClass: 'bg-purple-50/80 border-purple-500 text-purple-700 ring-2 ring-purple-500/20',
+    iconBg: 'bg-purple-100 text-purple-800',
+    btnClass: 'bg-[#9333EA] text-white shadow-purple-500/20'
+  },
+  {
+    icon: 'water_drop',
+    label: 'Hydration',
+    colorToken: 'primary',
+    accentHex: '#06B6D4',
+    activeClass: 'bg-cyan-50/80 border-cyan-500 text-cyan-700 ring-2 ring-cyan-500/20',
+    iconBg: 'bg-cyan-100 text-cyan-800',
+    btnClass: 'bg-[#06B6D4] text-white shadow-cyan-500/20'
+  },
+  {
+    icon: 'bolt',
+    label: 'Energy',
+    colorToken: 'secondary',
+    accentHex: '#D97706',
+    activeClass: 'bg-amber-50/80 border-amber-500 text-amber-800 ring-2 ring-amber-500/20',
+    iconBg: 'bg-amber-100 text-amber-800',
+    btnClass: 'bg-[#D97706] text-white shadow-amber-500/20'
+  },
+  {
+    icon: 'brush',
+    label: 'Creative',
+    colorToken: 'tertiary',
+    accentHex: '#EC4899',
+    activeClass: 'bg-pink-50/80 border-pink-500 text-pink-700 ring-2 ring-pink-500/20',
+    iconBg: 'bg-pink-100 text-pink-800',
+    btnClass: 'bg-[#EC4899] text-white shadow-pink-500/20'
+  },
+  {
+    icon: 'bedtime',
+    label: 'Sleep',
+    colorToken: 'tertiary',
+    accentHex: '#4F46E5',
+    activeClass: 'bg-violet-50/80 border-violet-500 text-violet-700 ring-2 ring-violet-500/20',
+    iconBg: 'bg-violet-100 text-violet-800',
+    btnClass: 'bg-[#4F46E5] text-white shadow-violet-500/20'
+  },
+  {
+    icon: 'restaurant',
+    label: 'Nutrition',
+    colorToken: 'secondary',
+    accentHex: '#16A34A',
+    activeClass: 'bg-green-50/80 border-green-500 text-green-700 ring-2 ring-green-500/20',
+    iconBg: 'bg-green-100 text-green-800',
+    btnClass: 'bg-[#16A34A] text-white shadow-green-500/20'
+  },
+  {
+    icon: 'hiking',
+    label: 'Outdoors',
+    colorToken: 'secondary',
+    accentHex: '#0D9488',
+    activeClass: 'bg-teal-50/80 border-teal-500 text-teal-700 ring-2 ring-teal-500/20',
+    iconBg: 'bg-teal-100 text-teal-800',
+    btnClass: 'bg-[#0D9488] text-white shadow-teal-500/20'
   }
-};
+];
 
 export default function HabitModal({
   isOpen,
@@ -95,8 +155,10 @@ export default function HabitModal({
       const dur = habit.duration || '30 mins';
       setDuration(dur);
       setIsCustomDuration(!DURATION_PRESETS.includes(dur));
-      setIcon(habit.icon || 'terminal');
-      setColorToken(habit.colorToken || 'primary');
+      const foundIcon = habit.icon || 'terminal';
+      setIcon(foundIcon);
+      const matched = ICONS_CATALOG.find(i => i.icon === foundIcon);
+      setColorToken(habit.colorToken || matched?.colorToken || 'primary');
       setCadence(habit.cadence || 'Morning Ritual');
       setTargetFrequency(habit.targetFrequency || 'Every Day');
       setLinkedGoal(habit.linkedGoal || '');
@@ -120,7 +182,7 @@ export default function HabitModal({
 
   if (!isOpen) return null;
 
-  const activeColor = COLOR_PALETTES[colorToken] || COLOR_PALETTES.primary;
+  const activeSignpost = ICONS_CATALOG.find(i => i.icon === icon) || ICONS_CATALOG[0];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -131,7 +193,7 @@ export default function HabitModal({
       title: title.trim(),
       duration: duration.trim() || '30 mins',
       icon,
-      colorToken,
+      colorToken: colorToken || activeSignpost.colorToken || 'primary',
       cadence,
       targetFrequency,
       linkedGoal: linkedGoal.trim(),
@@ -154,7 +216,7 @@ export default function HabitModal({
         {/* Subtle Ambient Color Line */}
         <div
           className="h-1 w-full transition-colors duration-300"
-          style={{ backgroundColor: activeColor.hex }}
+          style={{ backgroundColor: activeSignpost.accentHex }}
         />
 
         {/* Modal Header */}
@@ -162,7 +224,7 @@ export default function HabitModal({
           <div>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container-low font-label-sm text-label-sm text-on-surface-variant font-medium">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeColor.hex }} />
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeSignpost.accentHex }} />
                 {isEditing ? 'Sequence Calibration' : 'New Habit Architecture'}
               </span>
             </div>
@@ -194,7 +256,7 @@ export default function HabitModal({
 
             <div className="flex items-start gap-4">
               <div
-                className={`w-12 h-12 rounded-2xl ${activeColor.iconBg} flex items-center justify-center shrink-0 shadow-xs transition-all`}
+                className={`w-12 h-12 rounded-2xl ${activeSignpost.iconBg} flex items-center justify-center shrink-0 shadow-xs transition-all`}
               >
                 <span
                   className="material-symbols-outlined text-[24px]"
@@ -213,7 +275,7 @@ export default function HabitModal({
                     {duration}
                   </span>
                   {linkedGoal && (
-                    <span className="text-xs font-semibold flex items-center gap-0.5" style={{ color: activeColor.hex }}>
+                    <span className="text-xs font-semibold flex items-center gap-0.5" style={{ color: activeSignpost.accentHex }}>
                       <span>→ {linkedGoal}</span>
                       <span className="material-symbols-outlined text-[13px]">arrow_outward</span>
                     </span>
@@ -246,54 +308,39 @@ export default function HabitModal({
             </div>
           </div>
 
-          {/* 2. Habit Title Input */}
+          {/* 2. Habit Title Input (Ultra-Clean, High Craft Minimalist) */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-              Practice Identity &amp; Title
-            </label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Morning Deep Work, Zone 2 Cardio, Evening Reading"
-              className="w-full px-4 py-3 rounded-2xl bg-surface-container-low border border-black/[0.08] text-base font-semibold text-on-surface placeholder:text-outline/70 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-              autoFocus
-            />
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                Habit Title
+              </label>
+              <span className="text-[11px] text-neutral-400">Name your recurring practice</span>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Morning Deep Work, Zone 2 Cardio, Evening Reading"
+                className="w-full px-4 py-3 rounded-2xl bg-neutral-50/70 hover:bg-neutral-50 focus:bg-white border border-neutral-200/90 text-base font-semibold text-neutral-900 placeholder:text-neutral-400/60 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus:outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/[0.04] transition-all"
+                autoFocus
+              />
+            </div>
           </div>
 
-          {/* 3. Icon Catalog & Color Palettes */}
-          <div className="space-y-3">
+          {/* 3. Curated Visual Signpost Grid (Auto Color-Themed) */}
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Visual Signpost &amp; Color Accent
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                Visual Signpost &amp; Theme
               </label>
-
-              {/* Accent Color Swatches */}
-              <div className="flex items-center gap-1.5 p-1 bg-surface-container-low rounded-full border border-black/[0.06]">
-                {Object.values(COLOR_PALETTES).map((pal) => {
-                  const isSelected = colorToken === pal.id;
-                  return (
-                    <button
-                      key={pal.id}
-                      type="button"
-                      onClick={() => setColorToken(pal.id)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                        isSelected
-                          ? 'bg-white shadow-xs text-on-surface'
-                          : 'text-on-surface-variant hover:text-on-surface'
-                      }`}
-                      title={pal.name}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: pal.hex }} />
-                      <span>{pal.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              <span className="text-[11px] font-medium text-neutral-400">
+                Auto-calibrates color accent
+              </span>
             </div>
 
-            {/* Curated Icon Grid (3x4 desktop, clean touch areas) */}
+            {/* Curated Icon Grid (Auto-Assigned Colors, zero manual palette clutter) */}
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
               {ICONS_CATALOG.map((item) => {
                 const isSelected = icon === item.icon;
@@ -301,20 +348,31 @@ export default function HabitModal({
                   <button
                     key={item.icon}
                     type="button"
-                    onClick={() => setIcon(item.icon)}
-                    className={`flex flex-col items-center justify-center py-2 px-1.5 rounded-xl border transition-all ${
+                    onClick={() => {
+                      setIcon(item.icon);
+                      setColorToken(item.colorToken);
+                    }}
+                    className={`group/icon relative flex flex-col items-center justify-center py-2.5 px-2 rounded-2xl border text-center transition-all ${
                       isSelected
-                        ? `${activeColor.iconBg} border-transparent ring-2 ${activeColor.ringClass} shadow-xs scale-102 font-bold`
-                        : 'bg-surface-container-low/70 border-transparent hover:border-black/[0.08] hover:bg-surface-container-low text-on-surface-variant hover:text-on-surface'
+                        ? `${item.activeClass} shadow-xs scale-[1.03] font-bold`
+                        : 'bg-neutral-50/70 border-neutral-200/60 hover:bg-neutral-100/70 hover:border-neutral-300 text-neutral-600 hover:text-neutral-900'
                     }`}
+                    title={`${item.label}`}
                   >
+                    {/* Subtle color pip on top right indicating signature shade */}
                     <span
-                      className="material-symbols-outlined text-[22px] mb-1"
+                      className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full transition-opacity opacity-50 group-hover/icon:opacity-100"
+                      style={{ backgroundColor: item.accentHex }}
+                    />
+                    <span
+                      className="material-symbols-outlined text-[22px] mb-1 transition-transform group-hover/icon:scale-110"
                       style={isSelected ? { fontVariationSettings: '"FILL" 1' } : {}}
                     >
                       {item.icon}
                     </span>
-                    <span className="text-[11px] leading-none tracking-tight">{item.label}</span>
+                    <span className="text-[11px] leading-tight tracking-tight">
+                      {item.label}
+                    </span>
                   </button>
                 );
               })}
@@ -323,7 +381,7 @@ export default function HabitModal({
 
           {/* 4. Cadence & Rhythm (Grid of 2x2 with generous breathing room, NO truncation) */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
               Daily Anchor Window
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -361,7 +419,7 @@ export default function HabitModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Frequency Segmented Group */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
                 Target Frequency
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -391,7 +449,7 @@ export default function HabitModal({
             {/* Duration Presets */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
                   Block Duration
                 </label>
                 <button
@@ -438,7 +496,7 @@ export default function HabitModal({
           {/* 6. Context & Anchor (Subtle Grouped Container) */}
           <div className="rounded-2xl bg-surface-container-low/50 border border-black/[0.06] p-4 sm:p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h5 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+              <h5 className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
                 Contextual Anchors &amp; Grace Shield
               </h5>
               <span className="text-[11px] text-outline">Protects streak momentum</span>
@@ -553,7 +611,7 @@ export default function HabitModal({
               </button>
               <button
                 type="submit"
-                className={`flex items-center gap-1.5 px-6 py-2.5 rounded-full ${activeColor.btnClass} font-semibold text-xs tracking-wide shadow-sm hover:opacity-95 active:scale-95 transition-all`}
+                className={`flex items-center gap-1.5 px-6 py-2.5 rounded-full ${activeSignpost.btnClass} font-semibold text-xs tracking-wide shadow-sm hover:opacity-95 active:scale-95 transition-all`}
               >
                 <span className="material-symbols-outlined text-[16px]">
                   {isEditing ? 'check' : 'add'}
