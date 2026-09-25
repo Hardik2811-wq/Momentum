@@ -54,11 +54,19 @@ function format12Hour(minutes) {
   return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-const START_HOUR = 8;
-const END_HOUR = 20;
-const TOTAL_HOURS = END_HOUR - START_HOUR; // 12 hours
-const HOUR_HEIGHT = 70; // 70px per hour: optimal breathing room & typography
-const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT; // 840px
+function formatHourAxis(hourNum) {
+  if (hourNum === 0 || hourNum === 24) return '12 AM';
+  if (hourNum === 12) return '12 PM';
+  const ampm = hourNum >= 12 ? 'PM' : 'AM';
+  const hr = hourNum % 12;
+  return `${hr} ${ampm}`;
+}
+
+const START_HOUR = 0; // 12:00 AM midnight
+const END_HOUR = 24;  // 11:59 PM night
+const TOTAL_HOURS = END_HOUR - START_HOUR; // Full 24-hour day
+const HOUR_HEIGHT = 64; // 64px per hour: sleek density & pixel-perfect 16px/15min snapping
+const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT; // 1536px full day height
 
 
 
@@ -91,6 +99,27 @@ export default function TodayView({
   const [selectedTransformTaskId, setSelectedTransformTaskId] = useState(null);
   const [transformState, setTransformState] = useState(null);
   const transformRef = useRef(null);
+  const calendarScrollRef = useRef(null);
+
+  // Smart auto-scroll to current hour on initial load (lands directly on active day)
+  useEffect(() => {
+    if (calendarScrollRef.current) {
+      const nowH = new Date().getHours();
+      const targetHour = Math.max(0, nowH - 1);
+      calendarScrollRef.current.scrollTop = targetHour * HOUR_HEIGHT;
+    }
+  }, []);
+
+  const scrollToNow = () => {
+    if (calendarScrollRef.current) {
+      const nowH = new Date().getHours();
+      const targetHour = Math.max(0, nowH - 1);
+      calendarScrollRef.current.scrollTo({
+        top: targetHour * HOUR_HEIGHT,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   useEffect(() => {
     transformRef.current = transformState;
@@ -444,6 +473,17 @@ export default function TodayView({
               </div>
             </div>
 
+            {/* Jump to Current Time Button */}
+            <button
+              type="button"
+              onClick={scrollToNow}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-[#F5F4FA] hover:bg-white text-[#64748B] hover:text-[#0A84FF] border border-black/[0.04] shadow-3xs transition active:scale-95"
+              title="Scroll directly to current hour in 24h timeline"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0A84FF] animate-pulse" />
+              <span>Now</span>
+            </button>
+
             {/* Scope Switcher: Day | 3-Day | Week */}
             <div className="flex items-center p-1 rounded-xl bg-[#F5F4FA] border border-black/[0.04]">
               {[
@@ -790,7 +830,10 @@ export default function TodayView({
               <span className="text-[11px] text-[#8E8E93] hidden sm:inline">• Click or drop tasks across hours</span>
             </div>
 
-            <div className="relative overflow-x-auto select-none border border-black/[0.06] rounded-xl bg-[#FAFAFC]">
+            <div
+              ref={calendarScrollRef}
+              className="relative overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] min-h-[580px] select-none border border-black/[0.06] rounded-xl bg-[#FAFAFC]"
+            >
               <div
                 className="grid"
                 style={{
@@ -799,7 +842,7 @@ export default function TodayView({
                 }}
               >
                 {/* Corner Spacer */}
-                <div className="h-10 border-b border-r border-black/[0.06] bg-[#F5F4FA]" />
+                <div className="sticky top-0 z-30 h-10 border-b border-r border-black/[0.06] bg-[#F5F4FA]" />
 
                 {/* Column Headers */}
                 {columnDates.map(colDate => {
@@ -811,8 +854,8 @@ export default function TodayView({
                   return (
                     <div
                       key={colDate}
-                      className={`h-10 px-3 flex items-center justify-between border-b border-r border-black/[0.06] ${
-                        isToday ? 'bg-blue-50/70 text-[#0A84FF]' : 'bg-[#F5F4FA] text-[#64748B]'
+                      className={`sticky top-0 z-30 h-10 px-3 flex items-center justify-between border-b border-r border-black/[0.06] backdrop-blur-md ${
+                        isToday ? 'bg-blue-50/95 text-[#0A84FF]' : 'bg-[#F5F4FA]/95 text-[#64748B]'
                       }`}
                     >
                       <div className="flex items-center gap-1.5 font-bold text-[12px]">
@@ -836,14 +879,16 @@ export default function TodayView({
                   {Array.from({ length: TOTAL_HOURS }).map((_, i) => {
                     const hourNum = START_HOUR + i;
                     const hourLabel = `${String(hourNum).padStart(2, '0')}:00`;
+                    const axisLabel = formatHourAxis(hourNum);
                     const topPos = i * HOUR_HEIGHT;
                     return (
                       <div
                         key={hourLabel}
                         style={{ top: `${topPos}px`, height: `${HOUR_HEIGHT}px` }}
                         className="absolute left-0 right-0 border-b border-black/[0.04] pr-1.5 pt-1 text-right font-mono text-[10px] text-[#8E8E93]"
+                        title={hourLabel}
                       >
-                        {hourLabel}
+                        {axisLabel}
                       </div>
                     );
                   })}
@@ -977,7 +1022,11 @@ export default function TodayView({
                             }}
                             onClick={() => onOpenQuickAdd?.({ initialTime: hourLabel, initialDate: colDate })}
                             className={`absolute left-0 right-0 border-b border-black/[0.05] transition-colors cursor-pointer group flex items-start justify-end p-1.5 ${
-                              isHovered ? 'bg-blue-100/60 ring-2 ring-blue-400 inset-0' : 'hover:bg-blue-50/40'
+                              isHovered
+                                ? 'bg-blue-100/60 ring-2 ring-blue-400 inset-0'
+                                : (hourNum < 6 || hourNum >= 22)
+                                  ? 'bg-[#F8F8FC]/80 hover:bg-blue-50/40'
+                                  : 'bg-white hover:bg-blue-50/40'
                             }`}
                           >
                             {/* Subtle half-hour divider */}
