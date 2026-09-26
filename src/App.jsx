@@ -18,10 +18,14 @@ import AuthGate from './components/AuthGate';
 import OnboardingModal from './components/OnboardingModal';
 import UniversalBlockEditor from './components/UniversalBlockEditor';
 import UniversalLayoutApplier from './components/UniversalLayoutApplier';
+import GoalModal from './components/GoalModal';
+import HabitModal from './components/HabitModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
   const [quickAddProps, setQuickAddProps] = useState({});
   const [isUniversalEditorMode, setIsUniversalEditorMode] = useState(false);
   const store = useStore();
@@ -193,11 +197,29 @@ export default function App() {
         />
       )}
 
-      {/* Mobile Native Bottom Tab Bar */}
+      {/* Mobile Native Bottom Tab Bar with Speed Dial */}
       <MobileTabBar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickAdd={openQuickAdd}
+        onOpenNewGoal={() => setIsGoalModalOpen(true)}
+        onOpenNewHabit={() => setIsHabitModalOpen(true)}
+      />
+
+      {/* Goal Creation Modal accessible globally */}
+      <GoalModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        onAddGoal={store.addGoal}
+        habits={store.habits}
+      />
+
+      {/* Habit Creation Modal accessible globally */}
+      <HabitModal
+        isOpen={isHabitModalOpen}
+        onClose={() => setIsHabitModalOpen(false)}
+        onSave={store.addHabit}
+        goals={store.goals}
       />
 
       {/* Quick Add Modal with Goal and Habit Linkage */}
