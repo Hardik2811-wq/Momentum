@@ -1,4 +1,30 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Timer,
+  Pencil,
+  Check,
+  Plus,
+  Layers,
+  Inbox,
+  ArrowRight,
+  Search,
+  CheckCircle2,
+  Square,
+  CheckSquare,
+  Repeat,
+  Calendar,
+  Play,
+  Trash2,
+  X,
+  Flag,
+  ListChecks,
+  Move,
+  Maximize2
+} from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import DeleteRecurringModal from '../components/DeleteRecurringModal';
 import {
@@ -83,6 +109,7 @@ const TodayView = React.memo(function TodayView({
 }) {
   const [viewDate, setViewDate] = useState(() => todayPlanDate());
   const [scope, setScope] = useState('day'); // 'day' | '3day' | 'week'
+  const [mobileTab, setMobileTab] = useState('schedule'); // 'schedule' | 'tray'
   const [trayFilterMode, setTrayFilterMode] = useState('unscheduled'); // Default to unscheduled to eliminate duplicates
   const [trayAreaFilter, setTrayAreaFilter] = useState('all');
   const [traySearch, setTraySearch] = useState('');
@@ -101,15 +128,14 @@ const TodayView = React.memo(function TodayView({
   const transformRef = useRef(null);
   const calendarScrollRef = useRef(null);
 
-  // Exact vertical centering around the live current-time red laser line
+  // Smart auto-scroll: centers around current time or 8 AM waking window
   const scrollToNow = useCallback((smooth = true) => {
     if (!calendarScrollRef.current) return;
-    const viewportHeight = calendarScrollRef.current.clientHeight || 600;
     const now = new Date();
     const currentMinutesToday = now.getHours() * 60 + now.getMinutes();
     const timeTop = (currentMinutesToday / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT;
-    // Put the red laser line right in the vertical center of viewport
-    const targetScroll = Math.max(0, Math.round(timeTop - (viewportHeight / 2)));
+    // Position current time ~70px from top so current and upcoming tasks are in prime view
+    const targetScroll = Math.max(0, Math.round(timeTop - 70));
 
     if (smooth) {
       calendarScrollRef.current.scrollTo({
@@ -121,15 +147,47 @@ const TodayView = React.memo(function TodayView({
     }
   }, []);
 
+  const scrollToHour = useCallback((hour) => {
+    if (!calendarScrollRef.current) return;
+    const targetScroll = Math.max(0, Math.round((hour / TOTAL_HOURS) * TOTAL_HEIGHT - 20));
+    calendarScrollRef.current.scrollTo({
+      top: targetScroll,
+      behavior: 'smooth'
+    });
+  }, []);
+
   // Smart auto-scroll: automatically center around current time red line on initial load & view changes
   useEffect(() => {
-    const timer1 = setTimeout(() => scrollToNow(false), 60);
-    const timer2 = setTimeout(() => scrollToNow(true), 260);
+    const isToday = viewDate === todayPlanDate();
+    const timer1 = setTimeout(() => {
+      if (isToday) {
+        scrollToNow(false);
+      } else if (calendarScrollRef.current) {
+        calendarScrollRef.current.scrollTop = 8 * HOUR_HEIGHT; // Default to 8 AM waking anchor
+      }
+    }, 60);
+    const timer2 = setTimeout(() => {
+      if (isToday) {
+        scrollToNow(true);
+      }
+    }, 260);
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
   }, [viewDate, scope, scrollToNow]);
+
+  // When switching mobile tab back to schedule, ensure scroll position is aligned
+  useEffect(() => {
+    if (mobileTab === 'schedule') {
+      const isToday = viewDate === todayPlanDate();
+      const timer = setTimeout(() => {
+        if (isToday) scrollToNow(false);
+        else if (calendarScrollRef.current) calendarScrollRef.current.scrollTop = 8 * HOUR_HEIGHT;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [mobileTab, viewDate, scrollToNow]);
 
   useEffect(() => {
     transformRef.current = transformState;
@@ -280,7 +338,12 @@ const TodayView = React.memo(function TodayView({
       isFlexible: false
     });
     setActiveSlotMenuTaskId(null);
+    toast.success(`Slotted "${target.title}" at ${timeStr}`);
   };
+
+  const totalUnscheduledCount = useMemo(() => {
+    return tasks.filter(t => !t.completed && !t.startTime).length;
+  }, [tasks]);
 
   const handleUnslotTask = (taskId) => {
     onUpdateTask(taskId, {
@@ -485,171 +548,241 @@ const TodayView = React.memo(function TodayView({
     if (scope === 'day') {
       const isToday = viewDate === todayPlanDate();
       const d = new Date(`${viewDate}T12:00:00`);
-      const formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
-      return { main: formatted, isToday };
+      const longDate = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+      const shortDate = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      return { main: longDate, short: shortDate, isToday };
     }
     const first = new Date(`${columnDates[0]}T12:00:00`);
     const last = new Date(`${columnDates[columnDates.length - 1]}T12:00:00`);
     const formatted = `${first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${last.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-    return { main: formatted, isToday: columnDates.includes(todayPlanDate()) };
+    const shortFormatted = `${first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${last.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    return { main: formatted, short: shortFormatted, isToday: columnDates.includes(todayPlanDate()) };
   }, [viewDate, scope, columnDates]);
 
   return (
-    <main className="w-full pt-16 md:pt-12 px-3 sm:px-6 md:px-margin-desktop py-4 min-h-screen bg-[#F6F7FA] text-[#1A1B1F] select-none">
-      <div className="flex flex-col w-full gap-4 pb-12 max-w-[1560px] mx-auto">
+    <main className="w-full pt-16 md:pt-12 px-2.5 sm:px-6 md:px-margin-desktop py-2 sm:py-4 min-h-screen bg-[#F6F7FA] text-[#1A1B1F] select-none">
+      <div className="flex flex-col w-full gap-3 sm:gap-4 pb-28 md:pb-16 max-w-[1560px] mx-auto">
 
         {/* ── TOP HERO CONTROL BAR ── */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs">
-          {/* Left: Navigation & Date Range */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1 bg-[#F5F4FA] p-1 rounded-xl border border-black/[0.04]">
+        <div className="flex flex-col gap-2.5 p-3 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs">
+          {/* Top Row: Navigation, Date, Capacity, Actions */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            {/* Left: Navigation & Date Range */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-0.5 bg-[#F5F4FA] p-0.5 sm:p-1 rounded-xl border border-black/[0.04]">
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  title="Previous"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToday}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition ${
+                    viewDate === todayPlanDate()
+                      ? 'bg-white text-[#0A84FF] shadow-xs'
+                      : 'text-[#64748B] hover:text-[#1A1B1F]'
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  title="Next"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h1 className="text-[14px] sm:text-[17px] font-bold tracking-tight text-[#1A1B1F]">
+                  <span className="hidden sm:inline">{viewRangeTitle.main}</span>
+                  <span className="inline sm:hidden">{viewRangeTitle.short}</span>
+                </h1>
+                {viewRangeTitle.isToday && (
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-blue-50 text-[#0A84FF] border border-blue-200/80 uppercase tracking-wider">
+                    Today
+                  </span>
+                )}
+              </div>
+
+              {/* Compact Header Pill for Next Task (Desktop only) */}
+              {upNextTask && (
+                <div
+                  onClick={() => setEditingTask(upNextTask)}
+                  className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50/90 text-amber-950 border border-amber-200/70 text-[11px] font-medium cursor-pointer hover:bg-amber-100 transition shadow-2xs"
+                  title="Click to view next upcoming task"
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="font-bold text-amber-900">Next:</span>
+                  <span className="truncate max-w-[150px] font-semibold">{upNextTask.title}</span>
+                  <span className="font-mono text-amber-800 font-bold">({upNextTask.startTime})</span>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Workload, Scope (Desktop), Editor & Quick Add */}
+            <div className="flex items-center gap-2">
+              {/* Workload Capacity Meter */}
+              <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#F5F4FA] border border-black/[0.04] text-[11px]">
+                <Timer className="w-3.5 h-3.5 text-[#0A84FF]" />
+                <div className="flex flex-col min-w-[110px]">
+                  <div className="flex items-center justify-between text-[9.5px] font-semibold text-[#64748B]">
+                    <span>{(totalScheduledMinutesInView / 60).toFixed(1)}h / {(targetMinutesInView / 60).toFixed(0)}h</span>
+                    <span className={capacityPercent > 90 ? 'text-red-600 font-bold' : capacityPercent > 65 ? 'text-amber-600' : 'text-[#0A84FF]'}>
+                      {capacityPercent > 90 ? 'Full' : capacityPercent > 65 ? 'Balanced' : 'Light'}
+                    </span>
+                  </div>
+                  <div className="w-full h-1 bg-black/[0.06] rounded-full overflow-hidden mt-0.5">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        capacityPercent > 90 ? 'bg-red-500' : capacityPercent > 65 ? 'bg-amber-500' : 'bg-[#0A84FF]'
+                      }`}
+                      style={{ width: `${capacityPercent}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Jump to Current Time Button (Desktop) */}
               <button
                 type="button"
-                onClick={handlePrev}
-                title="Previous"
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition"
+                onClick={() => scrollToNow(true)}
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-[#F5F4FA] hover:bg-white text-[#64748B] hover:text-red-500 border border-black/[0.04] shadow-3xs transition active:scale-95"
+                title="Center view vertically around current time red line"
               >
-                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                <span>Now</span>
               </button>
+
+              {/* Scope Switcher (Desktop) */}
+              <div className="hidden lg:flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04]">
+                {[
+                  { id: 'day', label: 'Day' },
+                  { id: '3day', label: '3-Day' },
+                  { id: 'week', label: 'Week' }
+                ].map(s => {
+                  const isSelected = scope === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setScope(s.id)}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${
+                        isSelected
+                          ? 'bg-white text-[#0A84FF] shadow-xs'
+                          : 'text-[#64748B] hover:text-[#1A1B1F]'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Editor Mode Toggle Button (Desktop only) */}
               <button
                 type="button"
-                onClick={handleToday}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
-                  viewDate === todayPlanDate()
+                onClick={() => {
+                  const nextMode = !isEditorMode;
+                  setIsEditorMode(nextMode);
+                  if (!nextMode) {
+                    setSelectedTransformTaskId(null);
+                    setTransformState(null);
+                  }
+                }}
+                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition active:scale-[0.98] ${
+                  isEditorMode
+                    ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-300'
+                    : 'bg-white text-[#64748B] hover:text-[#1A1B1F] border border-black/[0.08] hover:bg-[#F5F4FA]'
+                }`}
+                title={isEditorMode ? 'Exit Editor Mode' : 'Toggle Editor Mode: Drag and resize blocks like vector shapes'}
+              >
+                {isEditorMode ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
+                <span>{isEditorMode ? 'Save & Done' : 'Editor'}</span>
+              </button>
+
+              {/* Quick Add Button */}
+              <button
+                type="button"
+                onClick={() => onOpenQuickAdd?.()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[12px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-[0.98]"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New Task</span>
+                <span className="sm:hidden">Task</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom Row (Mobile only: lg:hidden) - Segmented Switcher & Mobile Scope */}
+          <div className="flex lg:hidden items-center justify-between gap-2 pt-2 border-t border-black/[0.04]">
+            {/* Mobile Tab Switcher */}
+            <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04] flex-1">
+              <button
+                type="button"
+                onClick={() => setMobileTab('schedule')}
+                className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition flex items-center justify-center gap-1.5 ${
+                  mobileTab === 'schedule'
                     ? 'bg-white text-[#0A84FF] shadow-xs'
                     : 'text-[#64748B] hover:text-[#1A1B1F]'
                 }`}
               >
-                Today
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Schedule</span>
               </button>
               <button
                 type="button"
-                onClick={handleNext}
-                title="Next"
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition"
+                onClick={() => setMobileTab('tray')}
+                className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition flex items-center justify-center gap-1.5 ${
+                  mobileTab === 'tray'
+                    ? 'bg-white text-[#0A84FF] shadow-xs'
+                    : 'text-[#64748B] hover:text-[#1A1B1F]'
+                }`}
               >
-                <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                <Inbox className="w-3.5 h-3.5" />
+                <span>Task Tray</span>
+                {totalUnscheduledCount > 0 && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    mobileTab === 'tray' ? 'bg-[#0A84FF] text-white' : 'bg-black/[0.08] text-[#64748B]'
+                  }`}>
+                    {totalUnscheduledCount}
+                  </span>
+                )}
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <h1 className="text-[15px] sm:text-[17px] font-bold tracking-tight text-[#1A1B1F]">
-                {viewRangeTitle.main}
-              </h1>
-              {viewRangeTitle.isToday && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-[#0A84FF] border border-blue-200/80 uppercase tracking-wider">
-                  Today
-                </span>
-              )}
-            </div>
-
-            {/* Compact Header Pill for Next Task (Zero screen clutter) */}
-            {upNextTask && (
-              <div
-                onClick={() => setEditingTask(upNextTask)}
-                className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50/90 text-amber-950 border border-amber-200/70 text-[11px] font-medium cursor-pointer hover:bg-amber-100 transition shadow-2xs"
-                title="Click to view next upcoming task"
-              >
-                <span className="material-symbols-outlined text-[13px] text-amber-600">schedule</span>
-                <span className="font-bold text-amber-900">Next:</span>
-                <span className="truncate max-w-[150px] font-semibold">{upNextTask.title}</span>
-                <span className="font-mono text-amber-800 font-bold">({upNextTask.startTime})</span>
+            {/* Mobile Scope Switcher (only when on Schedule) */}
+            {mobileTab === 'schedule' && (
+              <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04]">
+                {[
+                  { id: 'day', label: 'Day' },
+                  { id: '3day', label: '3D' },
+                  { id: 'week', label: 'Wk' }
+                ].map(s => {
+                  const isSelected = scope === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setScope(s.id)}
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ${
+                        isSelected
+                          ? 'bg-white text-[#0A84FF] shadow-xs'
+                          : 'text-[#64748B]'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
               </div>
             )}
-          </div>
-
-          {/* Right: Capacity Gauge, Scope Switcher & Quick Add */}
-          <div className="flex items-center gap-3 flex-wrap justify-between lg:justify-end">
-            {/* Workload Capacity Meter */}
-            <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04] text-[11px]">
-              <span className="material-symbols-outlined text-[15px] text-[#0A84FF]">timer</span>
-              <div className="flex flex-col min-w-[130px]">
-                <div className="flex items-center justify-between text-[10px] font-semibold text-[#64748B]">
-                  <span>{(totalScheduledMinutesInView / 60).toFixed(1)}h / {(targetMinutesInView / 60).toFixed(0)}h</span>
-                  <span className={capacityPercent > 90 ? 'text-red-600 font-bold' : capacityPercent > 65 ? 'text-amber-600' : 'text-[#0A84FF]'}>
-                    {capacityPercent > 90 ? 'Full' : capacityPercent > 65 ? 'Balanced' : 'Light'}
-                  </span>
-                </div>
-                <div className="w-full h-1.5 bg-black/[0.06] rounded-full overflow-hidden mt-0.5">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      capacityPercent > 90 ? 'bg-red-500' : capacityPercent > 65 ? 'bg-amber-500' : 'bg-[#0A84FF]'
-                    }`}
-                    style={{ width: `${capacityPercent}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Jump to Current Time Button */}
-            <button
-              type="button"
-              onClick={() => scrollToNow(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-[#F5F4FA] hover:bg-white text-[#64748B] hover:text-red-500 border border-black/[0.04] shadow-3xs transition active:scale-95"
-              title="Center view vertically around current time red line"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              <span>Now</span>
-            </button>
-
-            {/* Scope Switcher: Day | 3-Day | Week */}
-            <div className="flex items-center p-1 rounded-xl bg-[#F5F4FA] border border-black/[0.04]">
-              {[
-                { id: 'day', label: 'Day' },
-                { id: '3day', label: '3-Day' },
-                { id: 'week', label: 'Week' }
-              ].map(s => {
-                const isSelected = scope === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setScope(s.id)}
-                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${
-                      isSelected
-                        ? 'bg-white text-[#0A84FF] shadow-xs'
-                        : 'text-[#64748B] hover:text-[#1A1B1F]'
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Editor Mode Toggle Button (Pencil Icon) */}
-            <button
-              type="button"
-              onClick={() => {
-                const nextMode = !isEditorMode;
-                setIsEditorMode(nextMode);
-                if (!nextMode) {
-                  setSelectedTransformTaskId(null);
-                  setTransformState(null);
-                }
-              }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition active:scale-[0.98] ${
-                isEditorMode
-                  ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-300'
-                  : 'bg-white text-[#64748B] hover:text-[#1A1B1F] border border-black/[0.08] hover:bg-[#F5F4FA]'
-              }`}
-              title={isEditorMode ? 'Exit Editor Mode' : 'Toggle Editor Mode: Drag and resize blocks like vector shapes'}
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {isEditorMode ? 'check' : 'edit'}
-              </span>
-              <span>{isEditorMode ? 'Save & Done' : 'Editor'}</span>
-            </button>
-
-            {/* Quick Add Button */}
-            <button
-              type="button"
-              onClick={() => onOpenQuickAdd?.()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[12px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-[0.98]"
-            >
-              <span className="material-symbols-outlined text-[16px]">add</span>
-              <span>New Task</span>
-            </button>
           </div>
         </div>
 
@@ -658,7 +791,7 @@ const TodayView = React.memo(function TodayView({
           <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-950 text-[12px] shadow-2xs animate-fadeIn">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[15px]">design_services</span>
+                <Layers className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0 leading-tight">
                 <span className="font-bold text-amber-900">Interactive Editor Mode: </span>
@@ -682,27 +815,38 @@ const TodayView = React.memo(function TodayView({
         )}
 
         {/* ── 2-COLUMN TIME-BLOCKING WORKSPACE ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
 
           {/* ══════════════════════════════════════════════════════
               LEFT COLUMN: UNIFIED TASK TRAY (3.5 cols)
              ══════════════════════════════════════════════════════ */}
-          <div className="lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3">
-            <div data-block-id="today-task-tray" className="flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs min-h-[580px]">
+          <div className={`lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3 ${
+            mobileTab === 'tray' ? 'flex' : 'hidden lg:flex'
+          }`}>
+            <div data-block-id="today-task-tray" className="flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs min-h-[480px]">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0A84FF] flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[16px]">pending_actions</span>
+                    <Inbox className="w-4 h-4" />
                   </div>
                   <div>
                     <h2 className="text-[13px] font-bold text-[#1A1B1F] tracking-tight">Task Tray</h2>
                     <p className="text-[10px] text-[#64748B]">Drag into calendar or click Slot</p>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded-full bg-[#F5F4FA] text-[#64748B] text-[11px] font-bold">
-                  {trayTasks.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-[#F5F4FA] text-[#64748B] text-[11px] font-bold">
+                    {trayTasks.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMobileTab('schedule')}
+                    className="lg:hidden px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-blue-50 text-[#0A84FF] hover:bg-blue-100 transition"
+                  >
+                    View Schedule
+                  </button>
+                </div>
               </div>
 
               {/* Quick Add into Tray Form */}
@@ -719,7 +863,7 @@ const TodayView = React.memo(function TodayView({
                     type="submit"
                     className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md bg-[#0A84FF] text-white flex items-center justify-center text-[11px]"
                   >
-                    <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
               </form>
@@ -749,9 +893,7 @@ const TodayView = React.memo(function TodayView({
               {/* Tray Search & Area Filters */}
               <div className="space-y-2">
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[14px] text-[#94A3B8]">
-                    search
-                  </span>
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                   <input
                     type="text"
                     placeholder="Search tray..."
@@ -787,7 +929,7 @@ const TodayView = React.memo(function TodayView({
                             : 'bg-[#F5F4FA] text-[#64748B] hover:bg-[#EBEBF0]'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[11px]">{area.icon}</span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${area.dotClass}`} />
                         <span>{area.shortLabel}</span>
                       </button>
                     );
@@ -799,7 +941,7 @@ const TodayView = React.memo(function TodayView({
               <div className="space-y-2 flex-1 max-h-[620px] overflow-y-auto pr-0.5">
                 {trayTasks.length === 0 ? (
                   <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-1.5 my-4">
-                    <span className="material-symbols-outlined text-[24px] text-emerald-500">check_circle</span>
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
                     <p className="text-[12px] font-semibold text-[#1A1B1F]">
                       {trayFilterMode === 'unscheduled' ? 'No unscheduled tasks!' : 'No tasks match filter'}
                     </p>
@@ -842,7 +984,7 @@ const TodayView = React.memo(function TodayView({
                             }}
                             className="mt-0.5 text-[#94A3B8] hover:text-[#0A84FF] transition shrink-0"
                           >
-                            <span className="material-symbols-outlined text-[16px]">check_box_outline_blank</span>
+                            <Square className="w-4 h-4" />
                           </button>
 
                           <div className="flex-1 min-w-0">
@@ -862,7 +1004,7 @@ const TodayView = React.memo(function TodayView({
 
                               {task.recurrence && task.recurrence !== 'none' && (
                                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-700" title={`Repeats ${task.recurrence}`}>
-                                  <span className="material-symbols-outlined text-[11px]">sync</span>
+                                  <Repeat className="w-2.5 h-2.5" />
                                   <span className="capitalize">{task.recurrence}</span>
                                 </span>
                               )}
@@ -889,7 +1031,7 @@ const TodayView = React.memo(function TodayView({
                                   : 'bg-[#0A84FF]/10 hover:bg-[#0A84FF] text-[#0A84FF] hover:text-white'
                               }`}
                             >
-                              <span className="material-symbols-outlined text-[12px]">schedule</span>
+                              <Clock className="w-3 h-3" />
                               <span>{isAlreadySlotted ? 'Move' : 'Slot'}</span>
                             </button>
 
@@ -909,7 +1051,7 @@ const TodayView = React.memo(function TodayView({
                                     className="w-full text-left px-2 py-1 rounded-lg text-[11px] font-semibold text-[#1A1B1F] hover:bg-blue-50 hover:text-[#0A84FF] flex items-center justify-between transition"
                                   >
                                     <span>{slotTime}</span>
-                                    <span className="material-symbols-outlined text-[13px] opacity-60">add</span>
+                                    <Plus className="w-3.5 h-3.5 opacity-60" />
                                   </button>
                                 ))}
                               </div>
@@ -927,26 +1069,61 @@ const TodayView = React.memo(function TodayView({
           {/* ══════════════════════════════════════════════════════
               RIGHT COLUMN: FULL-WIDTH CALENDAR CANVAS (8.5 cols)
              ══════════════════════════════════════════════════════ */}
-          <div data-block-id="today-calendar-card" className="lg:col-span-8 xl:col-span-8.5 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
+          <div data-block-id="today-calendar-card" className={`lg:col-span-8 xl:col-span-8.5 p-2.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden ${
+            mobileTab === 'schedule' ? 'block' : 'hidden lg:block'
+          }`}>
+            <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-[#0A84FF]">calendar_view_week</span>
-                <span className="text-[13px] font-bold text-[#1A1B1F]">
-                  {scope === 'day' ? 'Daily Schedule' : scope === '3day' ? '3-Day Rolling Horizon' : '7-Day Weekly Grid'}
-                </span>
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0A84FF] flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-[#0A84FF]" />
+                </div>
+                <div>
+                  <span className="text-[13px] font-bold text-[#1A1B1F]">
+                    {scope === 'day' ? 'Daily Schedule' : scope === '3day' ? '3-Day Rolling Horizon' : '7-Day Weekly Grid'}
+                  </span>
+                  <span className="text-[10px] text-[#8E8E93] hidden sm:inline ml-2">• Click or drop tasks across hours</span>
+                </div>
               </div>
-              <span className="text-[11px] text-[#8E8E93] hidden sm:inline">• Click or drop tasks across hours</span>
+
+              {/* Quick time anchors on mobile/desktop */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => scrollToHour(8)}
+                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-[#F5F4FA] text-[#64748B] hover:text-[#0A84FF] transition"
+                  title="Jump to 8:00 AM"
+                >
+                  8 AM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToHour(13)}
+                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-[#F5F4FA] text-[#64748B] hover:text-[#0A84FF] transition"
+                  title="Jump to 1:00 PM"
+                >
+                  1 PM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToNow(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-[#0A84FF] hover:bg-blue-100 transition active:scale-95"
+                  title="Jump to Current Time"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  <span>Now</span>
+                </button>
+              </div>
             </div>
 
             <div
               ref={calendarScrollRef}
-              className="relative overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] min-h-[580px] select-none border border-black/[0.06] rounded-xl bg-[#FAFAFC]"
+              className="relative overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] sm:max-h-[calc(100vh-190px)] min-h-[460px] select-none border border-black/[0.06] rounded-xl bg-[#FAFAFC]"
             >
               <div
                 className="grid"
                 style={{
-                  gridTemplateColumns: `54px repeat(${columnDates.length}, minmax(${scope === 'week' ? '120px' : scope === '3day' ? '220px' : '360px'}, 1fr))`,
-                  minWidth: scope === 'week' ? '920px' : scope === '3day' ? '700px' : '100%'
+                  gridTemplateColumns: `48px repeat(${columnDates.length}, minmax(${scope === 'week' ? '120px' : scope === '3day' ? '200px' : '0'}, 1fr))`,
+                  minWidth: scope === 'week' ? '880px' : scope === '3day' ? '600px' : '100%'
                 }}
               >
                 {/* Corner Spacer */}
@@ -1222,9 +1399,11 @@ const TodayView = React.memo(function TodayView({
                                         }}
                                         className="text-inherit opacity-75 hover:opacity-100 transition shrink-0"
                                       >
-                                        <span className="material-symbols-outlined text-[15px]">
-                                          {task.completed ? 'check_box' : 'check_box_outline_blank'}
-                                        </span>
+                                        {task.completed ? (
+                                          <CheckSquare className="w-4 h-4 text-emerald-600" />
+                                        ) : (
+                                          <Square className="w-4 h-4 text-slate-400 hover:text-[#0A84FF]" />
+                                        )}
                                       </button>
 
                                       {isLiveNow && !task.completed && (
@@ -1264,7 +1443,7 @@ const TodayView = React.memo(function TodayView({
                                           }}
                                           className="p-0.5 rounded bg-white text-[#0A84FF] shadow-xs hover:scale-105 transition"
                                         >
-                                          <span className="material-symbols-outlined text-[13px]">play_arrow</span>
+                                          <Play className="w-3 h-3 fill-current" />
                                         </button>
                                       )}
                                       <button
@@ -1280,9 +1459,11 @@ const TodayView = React.memo(function TodayView({
                                         }}
                                         className="p-0.5 rounded bg-white text-slate-500 hover:text-red-500 shadow-xs hover:scale-105 transition"
                                       >
-                                        <span className="material-symbols-outlined text-[13px]">
-                                          {task.recurrence && task.recurrence !== 'none' ? 'delete' : 'close'}
-                                        </span>
+                                        {task.recurrence && task.recurrence !== 'none' ? (
+                                          <Trash2 className="w-3 h-3" />
+                                        ) : (
+                                          <X className="w-3 h-3" />
+                                        )}
                                       </button>
                                     </div>
                                   </div>
@@ -1297,13 +1478,13 @@ const TodayView = React.memo(function TodayView({
                                     </span>
                                     {task.recurrence && task.recurrence !== 'none' && (
                                       <span className="hidden sm:inline-flex items-center gap-0.5 text-[9px] font-bold text-teal-700 bg-teal-50 px-1 py-0.2 rounded border border-teal-200/50 shrink-0" title={`Repeats ${task.recurrence}`}>
-                                        <span className="material-symbols-outlined text-[10px]">sync</span>
+                                        <Repeat className="w-2.5 h-2.5" />
                                         <span className="capitalize">{task.recurrence}</span>
                                       </span>
                                     )}
                                     {matchedGoal && (
                                       <span className="hidden md:inline-flex items-center gap-1 text-[9px] font-medium text-slate-500 truncate max-w-[130px]">
-                                        <span className="material-symbols-outlined text-[10px]">flag</span>
+                                        <Flag className="w-2.5 h-2.5" />
                                         <span className="truncate">{matchedGoal.title}</span>
                                       </span>
                                     )}
@@ -1324,9 +1505,11 @@ const TodayView = React.memo(function TodayView({
                                           }}
                                           className="text-inherit opacity-75 hover:opacity-100 transition shrink-0"
                                         >
-                                          <span className="material-symbols-outlined text-[17px]">
-                                            {task.completed ? 'check_box' : 'check_box_outline_blank'}
-                                          </span>
+                                          {task.completed ? (
+                                            <CheckSquare className="w-4 h-4 text-emerald-600" />
+                                          ) : (
+                                            <Square className="w-4 h-4 text-slate-400 hover:text-[#0A84FF]" />
+                                          )}
                                         </button>
 
                                         {isLiveNow && !task.completed && (
@@ -1357,7 +1540,7 @@ const TodayView = React.memo(function TodayView({
                                             }}
                                             className="p-1 rounded-md bg-white text-[#0A84FF] shadow-xs hover:scale-105 transition"
                                           >
-                                            <span className="material-symbols-outlined text-[14px]">play_arrow</span>
+                                            <Play className="w-3.5 h-3.5 fill-current" />
                                           </button>
                                         )}
                                         <button
@@ -1373,9 +1556,11 @@ const TodayView = React.memo(function TodayView({
                                           }}
                                           className="p-1 rounded-md bg-white text-slate-500 hover:text-red-500 shadow-xs hover:scale-105 transition"
                                         >
-                                          <span className="material-symbols-outlined text-[14px]">
-                                            {task.recurrence && task.recurrence !== 'none' ? 'delete' : 'close'}
-                                          </span>
+                                          {task.recurrence && task.recurrence !== 'none' ? (
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          ) : (
+                                            <X className="w-3.5 h-3.5" />
+                                          )}
                                         </button>
                                       </div>
                                     </div>
@@ -1383,7 +1568,7 @@ const TodayView = React.memo(function TodayView({
                                     {/* Focus Window Indicator for Container Tasks */}
                                     {hasNestedChildren && (
                                       <div className="flex items-center gap-1.5 text-[9.5px] font-semibold text-red-900/80 bg-red-100/50 border border-red-200/50 rounded-md px-2 py-0.5 mt-1.5 w-fit">
-                                        <span className="material-symbols-outlined text-[12px]">splitscreen</span>
+                                        <Layers className="w-3 h-3" />
                                         <span>Focus Window (Contains sub-blocks)</span>
                                         {task.notes && <span className="opacity-75">• Notes attached</span>}
                                       </div>
@@ -1410,9 +1595,11 @@ const TodayView = React.memo(function TodayView({
                                               }}
                                               className="flex items-center gap-1.5 text-[10px] opacity-85 hover:opacity-100 transition"
                                             >
-                                              <span className="material-symbols-outlined text-[12px]">
-                                                {st.completed ? 'check_box' : 'check_box_outline_blank'}
-                                              </span>
+                                              {st.completed ? (
+                                                <CheckSquare className="w-3 h-3 text-emerald-600" />
+                                              ) : (
+                                                <Square className="w-3 h-3 text-slate-400" />
+                                              )}
                                               <span className={st.completed ? 'line-through opacity-60' : ''}>{st.title}</span>
                                             </div>
                                           ))}
@@ -1430,13 +1617,13 @@ const TodayView = React.memo(function TodayView({
                                       </span>
                                       {task.recurrence && task.recurrence !== 'none' && (
                                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-white/80 font-bold text-[9px] text-teal-800 border border-teal-200/60" title={`Repeats ${task.recurrence}`}>
-                                          <span className="material-symbols-outlined text-[10px]">sync</span>
+                                          <Repeat className="w-2.5 h-2.5" />
                                           <span className="capitalize">{task.recurrence}</span>
                                         </span>
                                       )}
                                       {matchedGoal && (
                                         <span className="hidden md:inline-flex items-center gap-1 text-[9px] font-semibold bg-white/60 px-1.5 py-0.2 rounded">
-                                          <span className="material-symbols-outlined text-[10px]">flag</span>
+                                          <Flag className="w-2.5 h-2.5" />
                                           <span className="truncate max-w-[120px]">{matchedGoal.title}</span>
                                         </span>
                                       )}
@@ -1444,7 +1631,7 @@ const TodayView = React.memo(function TodayView({
 
                                     {Array.isArray(task.subtasks) && task.subtasks.length > 0 && (
                                       <span className="flex items-center gap-1 text-[9px] font-semibold bg-white/70 px-1.5 py-0.2 rounded">
-                                        <span className="material-symbols-outlined text-[11px]">checklist</span>
+                                        <ListChecks className="w-3 h-3" />
                                         <span>
                                           {task.subtasks.filter(s => s.completed).length}/{task.subtasks.length}
                                         </span>
@@ -1512,9 +1699,11 @@ const TodayView = React.memo(function TodayView({
                                   {/* Live Floating HUD Badge */}
                                   {isBeingTransformed && (
                                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-mono text-[10.5px] font-bold shadow-xl pointer-events-none z-50 whitespace-nowrap flex items-center gap-1.5 border border-white/20 animate-fadeIn">
-                                      <span className="material-symbols-outlined text-[13px] text-amber-400">
-                                        {transformState.mode === 'move' ? 'drag_pan' : 'straighten'}
-                                      </span>
+                                      {transformState.mode === 'move' ? (
+                                        <Move className="w-3 h-3 text-amber-400" />
+                                      ) : (
+                                        <Maximize2 className="w-3 h-3 text-amber-400" />
+                                      )}
                                       <span>
                                         {format12Hour(displayStartMin)} – {format12Hour(displayEndMin % 1440)} ({displayDuration}m)
                                       </span>
