@@ -109,6 +109,33 @@ export default function ReflectionsView({
     })[0];
   }, [habits]);
 
+  // Derived tasks for Recognition Over Recall
+  const completedTasks = useMemo(() => {
+    return tasks.filter(t => t.completed || t.status === 'done');
+  }, [tasks]);
+
+  const incompleteTasks = useMemo(() => {
+    return tasks.filter(t => !t.completed && t.status !== 'done');
+  }, [tasks]);
+
+  const retrospectiveProgress = useMemo(() => {
+    let filled = 0;
+    if (workedWell && workedWell.trim()) filled++;
+    if (pushedBack && pushedBack.trim()) filled++;
+    if (onePriority && onePriority.trim()) filled++;
+    if (frictionTask && frictionTask.trim()) filled++;
+    return filled;
+  }, [workedWell, pushedBack, onePriority, frictionTask]);
+
+  const previousWeekScore = useMemo(() => {
+    if (history && history.length > 0) {
+      return history[0].momentumScore ?? 66;
+    }
+    return 45;
+  }, [history]);
+
+  const scoreDelta = momentumScore - previousWeekScore;
+
   // Honest dynamic status and coach narrative based on actual performance
   const coachStatus = useMemo(() => {
     if (completionRate >= 80 && momentumScore >= 70) {
@@ -341,7 +368,7 @@ export default function ReflectionsView({
 
   return (
     <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-surface">
-      <div className="flex flex-col w-full space-y-4 sm:space-y-gutter-xl max-w-6xl mx-auto pb-10">
+      <div className="flex flex-col w-full space-y-4 sm:space-y-gutter-xl max-w-6xl mx-auto pb-28">
 
         {/* ── Header Row with Scope Switcher ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -428,28 +455,79 @@ export default function ReflectionsView({
                   </span>
                   <div>
                     <h3 className="font-title text-title text-on-surface font-semibold">Executive Coach Narrative</h3>
-                    <p className="font-caption text-[11px] text-on-surface-variant">Computed from active cadence across tasks &amp; goals</p>
+                    <p className="font-caption text-[11px] text-on-surface-variant">Real-time diagnosis synthesized across tasks, habits &amp; goals</p>
                   </div>
                 </div>
                 <span className={`px-2.5 py-0.5 rounded-full text-caption font-semibold ${coachStatus.badgeClass}`}>
                   {coachStatus.badge}
                 </span>
               </div>
-              <p className="font-body-md text-body-md text-on-surface leading-relaxed mt-2">
+              <p className="font-body-md text-xs sm:text-sm text-on-surface leading-relaxed mt-2 mb-3">
                 {coachNarrative}
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-3 mt-3 border-t border-surface-container text-xs text-on-surface-variant">
-              <span className="flex items-center gap-1 text-secondary font-medium">
-                <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                {completionRate >= 80 ? '+14% velocity (Optimal)' : completionRate >= 50 ? '+6% velocity (Steady)' : 'Pacing below baseline'}
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1 text-primary font-medium">
-                <span className="material-symbols-outlined text-[14px]">verified</span>
-                {goalsOnTrack} of {totalGoals} Goals on Track
-              </span>
+            {/* 3 Scannable Bento Indicator Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-surface-container">
+              {/* Delivery Velocity Bento */}
+              <div className="p-2.5 rounded-xl bg-surface-container-low border border-black/[0.03] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[10px] text-on-surface-variant font-bold uppercase">
+                  <span>Task Velocity</span>
+                  <span className={completionRate >= 80 ? 'text-emerald-600' : 'text-amber-600'}>
+                    {completionRate >= 80 ? 'Optimal' : completionRate >= 50 ? 'Steady' : 'Lagging'}
+                  </span>
+                </div>
+                <div className="my-1">
+                  <span className="text-base font-extrabold text-on-surface">{completed}/{total}</span>
+                  <span className="text-[11px] text-on-surface-variant ml-1 font-semibold">({completionRate}%)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('retrospective-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="text-[10px] font-semibold text-primary hover:underline text-left"
+                >
+                  Log Rollover Tasks →
+                </button>
+              </div>
+
+              {/* Habit Engine Bento */}
+              <div className="p-2.5 rounded-xl bg-surface-container-low border border-black/[0.03] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[10px] text-on-surface-variant font-bold uppercase">
+                  <span>Habit Anchors</span>
+                  <span className={habitsCompletedToday === totalHabits && totalHabits > 0 ? 'text-emerald-600' : 'text-blue-600'}>
+                    {habitsCompletedToday === totalHabits && totalHabits > 0 ? 'Firing' : 'Active'}
+                  </span>
+                </div>
+                <div className="my-1">
+                  <span className="text-base font-extrabold text-on-surface">{habitsCompletedToday}/{totalHabits}</span>
+                  <span className="text-[11px] text-on-surface-variant ml-1 font-semibold">locked today</span>
+                </div>
+                <span className="text-[10px] font-semibold text-secondary truncate">
+                  {totalHabits - habitsCompletedToday > 0 ? `${totalHabits - habitsCompletedToday} pending today` : 'All daily anchors locked'}
+                </span>
+              </div>
+
+              {/* Milestone Horizon Bento */}
+              <div className="p-2.5 rounded-xl bg-surface-container-low border border-black/[0.03] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[10px] text-on-surface-variant font-bold uppercase">
+                  <span>Horizon Pace</span>
+                  <span className={stalledGoal ? 'text-rose-600' : 'text-emerald-600'}>
+                    {stalledGoal ? 'Stalled' : 'On Track'}
+                  </span>
+                </div>
+                <div className="my-1 truncate">
+                  <span className="text-xs font-extrabold text-on-surface truncate block" title={stalledGoal ? stalledGoal.title : `${goalsOnTrack}/${totalGoals} Goals On Track`}>
+                    {stalledGoal ? stalledGoal.title : `${goalsOnTrack}/${totalGoals} On Track`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('goal-pacing-alert')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="text-[10px] font-semibold text-primary hover:underline text-left truncate"
+                >
+                  {stalledGoal ? 'Unblock Milestone →' : 'View Goal Cadence →'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -460,7 +538,7 @@ export default function ReflectionsView({
               <span className="material-symbols-outlined text-amber-500 text-[20px]" style={{ fontVariationSettings: '"FILL" 1' }}>bolt</span>
             </div>
             
-            <div className="relative w-28 h-28 my-2 flex items-center justify-center">
+            <div className="relative w-28 h-28 my-1 flex items-center justify-center">
               <svg className="w-28 h-28 -rotate-90" viewBox="0 0 36 36">
                 <path className="text-surface-container-high" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3.2" />
                 <path className="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${momentumScore}, 100`} strokeLinecap="round" strokeWidth="3.2" />
@@ -471,9 +549,24 @@ export default function ReflectionsView({
               </div>
             </div>
 
-            <p className="font-caption text-caption text-on-surface-variant">
+            {/* Score Delta Anchor */}
+            <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border my-1 ${
+              scoreDelta >= 0
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-rose-50 text-rose-700 border-rose-200'
+            }`}>
+              <span className="material-symbols-outlined text-[13px]">
+                {scoreDelta >= 0 ? 'trending_up' : 'trending_down'}
+              </span>
+              <span>{scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} pts vs last review</span>
+            </div>
+
+            <p className="font-caption text-[11px] text-on-surface-variant mt-0.5">
               {momentumPercentileNote}
             </p>
+            <span className="text-[10px] text-primary font-semibold mt-1">
+              ✨ Locking review secures +15 projection pts
+            </span>
           </div>
         </div>
 
@@ -716,7 +809,7 @@ export default function ReflectionsView({
         </div>
 
         {/* ── GUIDED JOURNALING: #8, #9, #10, #13, #34 ── */}
-        <div className="space-y-3 sm:space-y-gutter-base">
+        <div id="retrospective-section" className="space-y-3 sm:space-y-gutter-base scroll-mt-20">
           <div className="flex items-center justify-between">
             <h2 className="font-headline-sm text-headline-sm text-on-surface">Structured Guided Retrospective</h2>
             <span className="text-on-surface-variant font-caption text-xs">Auto-saves to local storage</span>
@@ -738,18 +831,42 @@ export default function ReflectionsView({
                   className="w-full p-3 rounded-xl bg-surface-container-low border border-black/[0.06] text-on-surface text-body-sm placeholder:text-on-surface-variant/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none transition-all"
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase">Quick Add:</span>
-                {['Morning 90m block', 'Zero Slack before 11AM', 'Streak consistency', 'Deep Focus sprint'].map(chip => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • ${chip}` : chip })}
-                    className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors"
-                  >
-                    + {chip}
-                  </button>
-                ))}
+
+              {/* 1-Tap Recognition: Actual Completed Tasks first, then starter presets */}
+              <div className="space-y-1.5 mt-2.5">
+                {completedTasks.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold uppercase flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">verified</span>
+                      Completed Wins:
+                    </span>
+                    {completedTasks.slice(0, 4).map(t => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • Finished "${t.title}"` : `Finished "${t.title}"` })}
+                        className="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
+                        title={`Add "${t.title}" to wins`}
+                      >
+                        <span>+</span>
+                        <span className="truncate max-w-[150px]">{t.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] text-on-surface-variant font-bold uppercase">Quick Add:</span>
+                  {['Morning 90m block', 'Zero Slack before 11AM', 'Streak consistency', 'Deep Focus sprint'].map(chip => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • ${chip}` : chip })}
+                      className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                    >
+                      + {chip}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -777,18 +894,42 @@ export default function ReflectionsView({
                   className="w-full p-3 rounded-xl bg-surface-container-low border border-black/[0.06] text-on-surface text-body-sm placeholder:text-on-surface-variant/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none transition-all"
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase">Quick Add:</span>
-                {['Evening workout', 'Architecture RFC', 'Backlog triage', 'Book reading'].map(chip => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • ${chip}` : chip })}
-                    className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors"
-                  >
-                    + {chip}
-                  </button>
-                ))}
+
+              {/* 1-Tap Recognition: Actual Rolled/Incomplete Tasks first, then starter presets */}
+              <div className="space-y-1.5 mt-2.5">
+                {incompleteTasks.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold uppercase flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">update</span>
+                      Rolled Over:
+                    </span>
+                    {incompleteTasks.slice(0, 4).map(t => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • Rolled "${t.title}"` : `Rolled "${t.title}"` })}
+                        className="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
+                        title={`Mark "${t.title}" as pushed back`}
+                      >
+                        <span>+</span>
+                        <span className="truncate max-w-[150px]">{t.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] text-on-surface-variant font-bold uppercase">Quick Add:</span>
+                  {['Evening workout', 'Architecture RFC', 'Backlog triage', 'Book reading'].map(chip => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • ${chip}` : chip })}
+                      className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                    >
+                      + {chip}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -821,18 +962,41 @@ export default function ReflectionsView({
                   className="w-full p-3 rounded-xl bg-surface-container-low border border-black/[0.06] text-on-surface text-body-sm placeholder:text-on-surface-variant/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none transition-all"
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase">Preset:</span>
-                {['Ship Portfolio v3', 'Close API migration', 'Tempo Half Marathon', 'Knowledge Hub v1'].map(chip => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => updateReflection?.({ onePriority: chip })}
-                    className="px-2 py-0.5 rounded-lg bg-primary-fixed/50 hover:bg-primary-fixed text-primary text-[10px] font-semibold transition-colors"
-                  >
-                    {chip}
-                  </button>
-                ))}
+
+              {/* 1-Tap Recognition: Link active goals directly */}
+              <div className="space-y-1.5 mt-2.5">
+                {goals.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-primary font-bold uppercase flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">flag</span>
+                      Active Horizon:
+                    </span>
+                    {goals.slice(0, 3).map(g => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => updateReflection?.({ onePriority: `Advance "${g.title}" milestone`, targetGoalId: g.id })}
+                        className="px-2 py-0.5 rounded-lg bg-primary-fixed/60 hover:bg-primary-fixed text-primary text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
+                      >
+                        <span>+</span>
+                        <span className="truncate max-w-[140px]">{g.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] text-on-surface-variant font-bold uppercase">Preset:</span>
+                  {['Ship Portfolio v3', 'Close API migration', 'Tempo Half Marathon', 'Knowledge Hub v1'].map(chip => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => updateReflection?.({ onePriority: chip })}
+                      className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -874,7 +1038,7 @@ export default function ReflectionsView({
         {/* ── Velocity Calibration & Habit Tune-Up ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-gutter-base">
           {/* Stalled Goal Velocity Speedometer or Clean Horizon State */}
-          <div className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04] flex flex-col justify-between">
+          <div id="goal-pacing-alert" className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04] flex flex-col justify-between scroll-mt-24">
             {stalledGoal ? (
               <>
                 <div className="flex items-center justify-between">
@@ -1012,6 +1176,45 @@ export default function ReflectionsView({
         </div>
 
       </div>
+
+      {/* ── STICKY REVIEW COMPLETION BAR (Thumb-Zone Ergonomics & Goal Gradient) ── */}
+      <aside aria-label="Review completion bar" className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 md:right-8 sm:w-[500px] z-30 bg-surface-container-lowest/95 backdrop-blur-md shadow-2xl border border-black/10 dark:border-white/10 rounded-2xl p-3 px-4 flex flex-col sm:flex-row items-center justify-between gap-3 transition-all animate-fadeIn">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[20px]">assignment_turned_in</span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-xs text-on-surface">Weekly Review</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-surface-container-high text-on-surface-variant">
+                {retrospectiveProgress}/4 Prompts
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-on-surface-variant">
+              <span className={workedWell.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+                {workedWell.trim() ? '✓ Wins' : '○ Wins'}
+              </span>
+              <span>•</span>
+              <span className={pushedBack.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+                {pushedBack.trim() ? '✓ Slipped' : '○ Slipped'}
+              </span>
+              <span>•</span>
+              <span className={onePriority.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+                {onePriority.trim() ? '✓ Priority' : '○ Priority'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowFinalizeConfirm(true)}
+          className="w-full sm:w-auto px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-label-md text-xs font-bold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+        >
+          <span>Finalize Week</span>
+          <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </button>
+      </aside>
 
       <ConfirmModal
         isOpen={showFinalizeConfirm}
