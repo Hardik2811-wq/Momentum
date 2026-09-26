@@ -24,6 +24,8 @@ export default function Header({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const mobileMenuRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
@@ -45,6 +47,9 @@ export default function Header({
     const handleGlobalClick = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) {
         setShowNotifications(false);
+      }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target)) {
+        setShowMobileMenu(false);
       }
     };
     window.addEventListener('mousedown', handleGlobalClick);
@@ -190,6 +195,50 @@ export default function Header({
                   <li className="px-4 py-3 text-[12px] text-[#BBBBC0]">No recent tasks.</li>
                 )}
               </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Extra Menu (Stats, Review, Config) */}
+        <div className="relative md:hidden" ref={mobileMenuRef}>
+          <button
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            aria-label="More options"
+            className="p-1.5 rounded-lg text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-black/[0.05] transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">more_vert</span>
+          </button>
+
+          {showMobileMenu && (
+            <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-black/[0.08] rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-fadeIn">
+              <button
+                onClick={() => { setActiveTab('reflections'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold transition-colors ${
+                  activeTab === 'reflections' ? 'text-primary bg-primary/5' : 'text-on-surface hover:bg-black/[0.04]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[17px]">auto_stories</span>
+                <span>Review</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab('analytics'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold transition-colors ${
+                  activeTab === 'analytics' ? 'text-primary bg-primary/5' : 'text-on-surface hover:bg-black/[0.04]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[17px]">insights</span>
+                <span>Stats</span>
+              </button>
+              <div className="my-1 border-t border-black/[0.06]" />
+              <button
+                onClick={() => { setActiveTab('settings'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold transition-colors ${
+                  activeTab === 'settings' ? 'text-primary bg-primary/5' : 'text-on-surface hover:bg-black/[0.04]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[17px]">tune</span>
+                <span>Settings</span>
+              </button>
             </div>
           )}
         </div>

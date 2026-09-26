@@ -93,32 +93,69 @@ const DashboardView = React.memo(function DashboardView({
   }, [todayTasks, filter, quickWinMinutes]);
 
   const nextTask = useMemo(() => todayTasks.find(task => !task.completed) || null, [todayTasks]);
+
+  // Deduplicate active focus target from today's list below
+  const queueTasks = useMemo(() => {
+    if (!nextTask) return visibleTasks;
+    return visibleTasks.filter(t => t.id !== nextTask.id || t.completed);
+  }, [visibleTasks, nextTask]);
+
   const checkedHabits = useMemo(() => habits.filter(habit => habit.completedDays?.includes(today)).length, [habits, today]);
   const activeGoals = useMemo(() => goals.filter(goal => goal.velocity !== 'complete').slice(0, 3), [goals]);
 
   return (
-    <main className="w-full min-h-screen bg-surface pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl">
-      <div className="mx-auto w-full max-w-[1440px] space-y-6">
-        <header data-block-id="dashboard-header" className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-surface-container-low px-3 py-1 text-xs font-semibold text-on-surface-variant border border-black/[0.04]">
-              <span className="material-symbols-outlined text-[14px] text-primary">calendar_today</span>
-              <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+    <main className="w-full min-h-screen bg-surface pt-16 md:pt-12 px-3 sm:px-6 md:px-margin-desktop py-3 sm:py-gutter-xl">
+      <div className="mx-auto w-full max-w-[1440px] space-y-4 sm:space-y-6">
+        <header data-block-id="dashboard-header" className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-2.5 py-0.5 text-[11px] font-semibold text-on-surface-variant border border-black/[0.04] mb-1">
+              <span className="material-symbols-outlined text-[13px] text-primary">calendar_today</span>
+              <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
             </div>
-            <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-on-surface">{greeting}, {userName}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-on-surface-variant">
-              <span>Plan today. Do next task. Review week.</span>
-              <span className="hidden sm:inline-block opacity-40">•</span>
-              <span className="font-semibold text-primary inline-flex items-center gap-1">
-                <span className="material-symbols-outlined text-[15px]">trending_up</span>
-                {completedTodayTasksCount}/{todayTasks.length} Completed ({todayTasks.length ? Math.round((completedTodayTasksCount / todayTasks.length) * 100) : 0}%)
-              </span>
-            </div>
+            <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-on-surface truncate">
+              {greeting}, {userName}
+            </h1>
+            <p className="hidden sm:block text-xs sm:text-sm text-on-surface-variant mt-0.5">
+              Plan today. Do next task. Review week.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Live Progress Ring Widget */}
+            <div className="flex items-center gap-2 bg-surface-container-lowest border border-black/[0.05] rounded-2xl p-1.5 sm:px-3 sm:py-1.5 shadow-2xs">
+              <div className="relative w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center shrink-0">
+                <svg className="w-8 h-8 sm:w-9 sm:h-9 -rotate-90" viewBox="0 0 36 36">
+                  <path
+                    className="text-surface-container-high"
+                    strokeWidth="3.5"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <path
+                    className="text-primary transition-all duration-700 ease-out"
+                    strokeDasharray={`${todayTasks.length ? Math.round((completedTodayTasksCount / todayTasks.length) * 100) : 0}, 100`}
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                </svg>
+                <span className="absolute text-[9px] sm:text-[10px] font-extrabold text-on-surface">
+                  {todayTasks.length ? Math.round((completedTodayTasksCount / todayTasks.length) * 100) : 0}%
+                </span>
+              </div>
+              <div className="hidden sm:flex flex-col text-left pr-1">
+                <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Today</span>
+                <span className="text-xs font-bold text-primary">{completedTodayTasksCount}/{todayTasks.length} Done</span>
+              </div>
+            </div>
+
+            {/* Desktop Add Task Button */}
             <button
               onClick={onOpenQuickAdd}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+              className="hidden md:inline-flex items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
               <span>Add task</span>
@@ -210,9 +247,11 @@ const DashboardView = React.memo(function DashboardView({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold tracking-tight text-on-surface">Today</h2>
+                  <h2 className="text-xl font-bold tracking-tight text-on-surface">
+                    {nextTask ? 'Upcoming Queue' : 'Today'}
+                  </h2>
                   <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
-                    {visibleTasks.length} {visibleTasks.length === 1 ? 'task' : 'tasks'}
+                    {queueTasks.length} {queueTasks.length === 1 ? 'task' : 'tasks'}
                   </span>
                 </div>
                 <p className="text-xs text-on-surface-variant mt-0.5">
@@ -248,8 +287,8 @@ const DashboardView = React.memo(function DashboardView({
             </div>
 
             <div className="space-y-3">
-              {visibleTasks.length ? (
-                visibleTasks.map(task => (
+              {queueTasks.length ? (
+                queueTasks.map(task => (
                   <TaskCard
                     key={task.id}
                     task={task}
@@ -263,16 +302,20 @@ const DashboardView = React.memo(function DashboardView({
                   />
                 ))
               ) : (
-                <div className="rounded-2xl border border-dashed border-outline-variant/30 bg-surface-container-lowest p-8 text-center">
-                  <span className="material-symbols-outlined text-[32px] text-on-surface-variant/40 mb-2 block">task_alt</span>
-                  <p className="text-sm font-semibold text-on-surface">No tasks match this view.</p>
-                  <p className="text-xs text-on-surface-variant mt-1">Clear filters or queue a new priority below.</p>
+                <div className="rounded-2xl border border-dashed border-outline-variant/30 bg-surface-container-lowest p-6 text-center">
+                  <span className="material-symbols-outlined text-[28px] text-emerald-500 mb-1 block">task_alt</span>
+                  <p className="text-sm font-semibold text-on-surface">
+                    {nextTask ? 'All queue tasks complete!' : 'All today tasks completed!'}
+                  </p>
+                  <p className="text-xs text-on-surface-variant mt-0.5">
+                    {nextTask ? 'Focus on your active target above.' : 'Add new tasks or plan tomorrow.'}
+                  </p>
                 </div>
               )}
 
               <button
                 onClick={onOpenQuickAdd}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/50 bg-primary/[0.02] hover:bg-primary/[0.05] p-3.5 text-sm font-semibold text-primary transition-all active:scale-[0.99] cursor-pointer"
+                className="hidden sm:flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/50 bg-primary/[0.02] hover:bg-primary/[0.05] p-3 text-sm font-semibold text-primary transition-all active:scale-[0.99] cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">add_circle</span>
                 <span>Add task for today</span>
@@ -370,13 +413,13 @@ const DashboardView = React.memo(function DashboardView({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-none snap-x md:grid md:grid-cols-3">
             {activeGoals.length ? (
               activeGoals.map(goal => {
                 const progress = goal.workProgress ?? goal.progress ?? 0;
                 const next = goal.nextTask?.title;
                 return (
-                  <div key={goal.id} className="rounded-xl bg-surface-container-low border border-black/[0.03] p-4 flex flex-col justify-between hover:shadow-xs transition-shadow">
+                  <div key={goal.id} className="min-w-[270px] sm:min-w-0 flex-1 snap-start rounded-xl bg-surface-container-low border border-black/[0.03] p-4 flex flex-col justify-between hover:shadow-xs transition-shadow">
                     <button onClick={() => setActiveTab('goals')} className="w-full text-left">
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-bold text-on-surface">{goal.title}</span>

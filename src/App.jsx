@@ -182,14 +182,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Floating Action Button (FAB) for Mobile Quick Add */}
-      <button
-        onClick={openQuickAdd}
-        aria-label="Quick Add"
-        className="md:hidden fixed right-4 bottom-20 z-40 w-14 h-14 rounded-full bg-gradient-to-tr from-[#0A84FF] to-[#5E5CE6] text-white flex items-center justify-center shadow-[0_8px_24px_rgba(10,132,255,0.4)] active:scale-95 transition-all"
-      >
-        <span className="material-symbols-outlined text-[28px]">add</span>
-      </button>
 
       {/* Real Pomodoro Deep Work Focus Bar */}
       {(store.settings?.showFocusBar ?? true) && (

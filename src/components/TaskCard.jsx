@@ -174,9 +174,9 @@ const TaskCard = React.memo(function TaskCard({
           </span>
         )}
 
-        {/* Life Areas (show up to 1 to avoid clutter) */}
+        {/* Life Areas (show up to 1 to avoid clutter, hide on mobile) */}
         {Array.isArray(task.areas) && task.areas.slice(0, 1).map(area => (
-          <span key={area} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-container text-[11px] font-medium text-on-surface-variant">
+          <span key={area} className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-container text-[11px] font-medium text-on-surface-variant">
             <span className="material-symbols-outlined text-[12px] opacity-70">category</span>
             <span>{area}</span>
           </span>
