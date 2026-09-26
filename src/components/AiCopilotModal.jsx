@@ -4,10 +4,10 @@ import { parseDocumentFile } from '../lib/documentParser';
 import { generateExecutivePlanWithAI, hasUserApiKey } from '../lib/groqClient';
 import { todayPlanDate } from '../lib/taskMetadata';
 
-const STARTER_PROMPTS = [
-  { label: 'Upload project doc & schedule tasks', prompt: 'I have attached a document. Please review it and extract key goals, daily habits, and scheduled tasks.' },
-  { label: 'Build 30-day fitness & energy habit plan', prompt: 'Create an achievable 30-day health & vitality plan with morning workouts, hydration habits, and scheduled exercise sessions.' },
-  { label: 'Plan product launch week schedule', prompt: 'Help me plan a high-impact launch week. Create goals for deployment, daily check-in habits, and timed execution tasks.' }
+const QUICK_CHIPS = [
+  { label: 'Schedule from document', prompt: 'I have attached a project document. Analyze the deliverables, milestones, and schedule them into my Planner.' },
+  { label: 'Break down a 30-day goal', prompt: 'Help me break down a major 30-day objective into actionable weekly milestones, daily habits, and scheduled tasks.' },
+  { label: 'Plan today’s focus queue', prompt: 'Review my priorities and construct an optimal, time-blocked execution schedule for today.' }
 ];
 
 export default function AiCopilotModal({
@@ -21,14 +21,7 @@ export default function AiCopilotModal({
   addTask,
   onOpenApiKeyModal
 }) {
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: 'Hello! I am your Executive AI Copilot. Drop or attach any **PDF, Word (.docx), or text document**, and I will analyze it to suggest an execution plan with scheduled tasks, daily habits, and strategic horizons for you to approve in 1 click.',
-      hasPlan: false
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [attachedDoc, setAttachedDoc] = useState(null);
   const [isParsingDoc, setIsParsingDoc] = useState(false);
@@ -80,7 +73,7 @@ export default function AiCopilotModal({
     const userMsg = {
       id: userMsgId,
       role: 'user',
-      content: query || `Please analyze this document: ${attachedDoc?.name}`,
+      content: query || `Analyze document: ${attachedDoc?.name}`,
       docName: attachedDoc?.name
     };
 
@@ -107,7 +100,7 @@ export default function AiCopilotModal({
           {
             id: 'err-' + Date.now(),
             role: 'assistant',
-            content: `⚠️ ${result.error || 'Failed to generate plan. Please try again or check your API key.'}`,
+            content: `Unable to complete request: ${result.error || 'Check connection or API key.'}`,
             hasPlan: false
           }
         ]);
@@ -118,7 +111,7 @@ export default function AiCopilotModal({
       const assistantMsg = {
         id: 'asst-' + Date.now(),
         role: 'assistant',
-        content: data.message || 'Here is your strategic execution blueprint:',
+        content: data.message || 'Here is the proposed schedule based on your input:',
         hasPlan: Boolean(data.hasPlan && data.plan),
         plan: data.plan || null
       };
@@ -130,7 +123,7 @@ export default function AiCopilotModal({
         {
           id: 'err-' + Date.now(),
           role: 'assistant',
-          content: `⚠️ Error communicating with AI: ${err.message}`,
+          content: `Connection error: ${err.message}`,
           hasPlan: false
         }
       ]);
@@ -217,8 +210,8 @@ export default function AiCopilotModal({
 
     try {
       confetti({
-        particleCount: 80,
-        spread: 70,
+        particleCount: 60,
+        spread: 55,
         origin: { y: 0.6 }
       });
     } catch {}
@@ -226,47 +219,65 @@ export default function AiCopilotModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full sm:max-w-2xl h-[92vh] sm:h-[85vh] sm:max-h-[760px] bg-[#FBFBFE] sm:rounded-3xl border-t sm:border border-black/[0.08] shadow-[0_24px_80px_rgba(0,0,0,0.18)] flex flex-col overflow-hidden text-[#1A1B1F] transition-all animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
+      <div className="w-full sm:max-w-xl h-[88vh] sm:h-[80vh] sm:max-h-[720px] bg-white sm:rounded-2xl border-t sm:border border-black/[0.08] shadow-xl flex flex-col overflow-hidden text-[#1A1B1F]">
         
-        {/* Mobile Grabber */}
+        {/* Mobile Drag Notch */}
         <div className="sm:hidden pt-2.5 pb-1 flex justify-center bg-white shrink-0">
-          <div className="w-10 h-1 bg-black/15 rounded-full" />
+          <div className="w-9 h-1 bg-black/15 rounded-full" />
         </div>
 
-        {/* Header */}
-        <div className="px-5 py-3.5 border-b border-black/[0.06] bg-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#0A84FF] to-[#8B5CF6] text-white flex items-center justify-center shadow-md shadow-blue-500/20">
-              <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm tracking-tight text-[#1A1B1F]">Executive AI Copilot</h3>
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-blue-50 text-[#0A84FF] border border-blue-200/60 tracking-wider">
-                  Llama 3.3 70B
-                </span>
-              </div>
-              <p className="text-[11px] text-[#64748B]">
-                Upload documents &amp; plan schedules autonomously
-              </p>
-            </div>
+        {/* Minimal Header (Linear / Raycast Style) */}
+        <header className="px-5 py-3 border-b border-black/[0.06] flex items-center justify-between shrink-0 bg-white select-none">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <h3 className="font-semibold text-[13px] text-[#1A1B1F] tracking-tight">Copilot</h3>
+            <span className="text-[#8E8E93] text-[12px]">• Plan &amp; Schedule</span>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl text-[#64748B] hover:text-[#1A1B1F] hover:bg-black/5 flex items-center justify-center transition cursor-pointer"
+            className="w-7 h-7 rounded-lg text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-black/[0.04] flex items-center justify-center transition cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
-        </div>
+        </header>
 
-        {/* Chat / Messages scroll area */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#F5F4FA]/70">
+        {/* Message Canvas / Empty State */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+          
+          {/* Clean, quiet empty state (no bot monologue) */}
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4 py-8">
+              <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1A1B1F] flex items-center justify-center mb-3">
+                <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
+              </div>
+              <h4 className="font-semibold text-sm text-[#1A1B1F] tracking-tight">What are we executing?</h4>
+              <p className="text-xs text-[#8E8E93] max-w-xs mt-1 leading-relaxed">
+                Drop a project document or write your goals to build a schedule.
+              </p>
+
+              {/* Minimalist Quick Chips */}
+              <div className="flex flex-wrap gap-2 justify-center mt-5 max-w-sm">
+                {QUICK_CHIPS.map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSendMessage(chip.prompt)}
+                    className="px-3 py-1.5 rounded-full bg-black/[0.03] hover:bg-black/[0.07] border border-black/[0.05] text-[11px] font-medium text-[#444] transition-colors cursor-pointer"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Messages */}
           {messages.map((msg) => {
             const isUser = msg.role === 'user';
             const isPlanApplied = appliedPlans.has(msg.id);
@@ -276,190 +287,148 @@ export default function AiCopilotModal({
                 key={msg.id}
                 className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-full`}
               >
-                {/* Message Bubble */}
-                <div
-                  className={`p-4 rounded-2xl max-w-[92%] sm:max-w-[85%] text-xs sm:text-[13px] leading-relaxed shadow-sm ${
-                    isUser
-                      ? 'bg-gradient-to-tr from-[#0A84FF] to-[#5E5CE6] text-white rounded-br-xs shadow-blue-500/20'
-                      : 'bg-white border border-black/[0.06] text-[#1A1B1F] rounded-bl-xs'
-                  }`}
-                >
-                  {msg.docName && (
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-white/90 mb-2 pb-1.5 border-b border-white/20">
-                      <span className="material-symbols-outlined text-[15px]">description</span>
-                      <span>Attached: {msg.docName}</span>
-                    </div>
-                  )}
-
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
-                </div>
-
-                {/* Structured Plan Blueprint Card */}
-                {msg.hasPlan && msg.plan && (
-                  <div className="mt-3 w-full max-w-[96%] sm:max-w-[90%] p-4 rounded-2xl bg-white border border-[#0A84FF]/30 shadow-lg space-y-3.5 animate-fadeIn text-[#1A1B1F]">
-                    <div className="flex items-center justify-between border-b border-black/[0.06] pb-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#0A84FF] animate-pulse" />
-                        <h4 className="font-bold text-xs uppercase tracking-wider text-[#0A84FF]">
-                          Proposed Blueprint
-                        </h4>
+                {/* User Message */}
+                {isUser ? (
+                  <div className="p-3 px-4 rounded-2xl max-w-[85%] text-[13px] leading-relaxed bg-[#1A1B1F] text-white shadow-xs">
+                    {msg.docName && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-white/70 mb-1 font-mono">
+                        <span className="material-symbols-outlined text-[13px]">attach_file</span>
+                        <span>{msg.docName}</span>
                       </div>
-                      <span className="text-[11px] font-semibold text-[#64748B]">
-                        {msg.plan.summary}
-                      </span>
-                    </div>
+                    )}
+                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                  </div>
+                ) : (
+                  /* Assistant Message */
+                  <div className="max-w-[92%] sm:max-w-[90%] text-[13px] leading-relaxed text-[#1A1B1F] space-y-2">
+                    <div className="whitespace-pre-wrap font-normal text-[#2C2C2E]">{msg.content}</div>
 
-                    {/* Goals detected */}
-                    {Array.isArray(msg.plan.goals) && msg.plan.goals.length > 0 && (
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px] text-amber-500">flag</span>
-                          <span>Strategic Horizons ({msg.plan.goals.length})</span>
+                    {/* Linear-Style Proposed Schedule Card */}
+                    {msg.hasPlan && msg.plan && (
+                      <div className="mt-3 p-4 rounded-xl bg-black/[0.02] border border-black/[0.08] space-y-3.5">
+                        <div className="flex items-center justify-between border-b border-black/[0.06] pb-2">
+                          <span className="font-semibold text-xs text-[#1A1B1F]">
+                            Proposed Schedule
+                          </span>
+                          <span className="text-[11px] text-[#8E8E93] font-mono">
+                            {[
+                              msg.plan.goals?.length ? `${msg.plan.goals.length} goals` : null,
+                              msg.plan.habits?.length ? `${msg.plan.habits.length} habits` : null,
+                              msg.plan.tasks?.length ? `${msg.plan.tasks.length} tasks` : null,
+                            ].filter(Boolean).join(' • ')}
+                          </span>
                         </div>
-                        <div className="space-y-1.5">
-                          {msg.plan.goals.map((g, idx) => (
-                            <div key={idx} className="p-2.5 rounded-xl bg-[#F8F8FB] border border-black/[0.04] text-xs">
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-[#1A1B1F]">{g.title}</span>
-                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200/60 uppercase">
-                                  {g.category || 'career'}
-                                </span>
+
+                        {/* Goals */}
+                        {Array.isArray(msg.plan.goals) && msg.plan.goals.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E8E93]">Horizons</span>
+                            {msg.plan.goals.map((g, idx) => (
+                              <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between">
+                                <span className="font-medium text-[#1A1B1F]">{g.title}</span>
+                                <span className="text-[10px] text-[#8E8E93] uppercase font-mono">{g.category || 'career'}</span>
                               </div>
-                              {g.why && <p className="text-[11px] text-[#64748B] mt-0.5">{g.why}</p>}
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Habits */}
+                        {Array.isArray(msg.plan.habits) && msg.plan.habits.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E8E93]">Daily Rituals</span>
+                            {msg.plan.habits.map((h, idx) => (
+                              <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between">
+                                <span className="font-medium text-[#1A1B1F]">{h.title}</span>
+                                <span className="text-[10px] text-[#8E8E93]">{h.frequency || h.cadence}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Tasks Timeline */}
+                        {Array.isArray(msg.plan.tasks) && msg.plan.tasks.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E8E93]">Execution Timeline</span>
+                            <div className="space-y-1 max-h-44 overflow-y-auto">
+                              {msg.plan.tasks.map((t, idx) => (
+                                <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between">
+                                  <span className="truncate pr-2 font-medium text-[#1A1B1F]">{t.title}</span>
+                                  <span className="text-[10px] text-[#8E8E93] font-mono shrink-0">
+                                    {t.plannedDate} {t.startTime ? `• ${t.startTime}` : ''}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          </div>
+                        )}
+
+                        {/* Approve Button */}
+                        <div className="pt-2">
+                          {isPlanApplied ? (
+                            <div className="w-full py-2 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs flex items-center justify-center gap-1.5">
+                              <span className="material-symbols-outlined text-[16px]">check</span>
+                              <span>Added to Schedule</span>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleApprovePlan(msg.id, msg.plan)}
+                              className="w-full py-2.5 rounded-lg bg-[#1A1B1F] hover:bg-black text-white text-xs font-semibold shadow-xs transition active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <span>Add to Schedule</span>
+                              <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
-
-                    {/* Habits detected */}
-                    {Array.isArray(msg.plan.habits) && msg.plan.habits.length > 0 && (
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px] text-purple-500">cached</span>
-                          <span>Daily Driving Habits ({msg.plan.habits.length})</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {msg.plan.habits.map((h, idx) => (
-                            <div key={idx} className="p-2 rounded-xl bg-[#F8F8FB] border border-black/[0.04] flex items-center justify-between text-xs">
-                              <span className="font-semibold text-[#1A1B1F] truncate">{h.title}</span>
-                              <span className="text-[10px] text-purple-600 font-bold ml-2 shrink-0">{h.frequency || h.cadence}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Tasks timeline */}
-                    {Array.isArray(msg.plan.tasks) && msg.plan.tasks.length > 0 && (
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px] text-blue-500">schedule</span>
-                          <span>Execution Deliverables ({msg.plan.tasks.length} Scheduled)</span>
-                        </div>
-                        <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-                          {msg.plan.tasks.map((t, idx) => (
-                            <div key={idx} className="p-2 rounded-xl bg-[#F8F8FB] border border-black/[0.04] flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-2 truncate">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#0A84FF]" />
-                                <span className="font-medium text-[#1A1B1F] truncate">{t.title}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 shrink-0 text-[10px] text-[#64748B] font-mono">
-                                {t.plannedDate && <span>{t.plannedDate}</span>}
-                                {t.startTime && <span>{t.startTime}</span>}
-                                <span>({t.durationMinutes || 45}m)</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Approval Action */}
-                    <div className="pt-2 border-t border-black/[0.06]">
-                      {isPlanApplied ? (
-                        <div className="w-full py-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-bold text-xs flex items-center justify-center gap-1.5">
-                          <span className="material-symbols-outlined text-[18px]">verified</span>
-                          <span>Plan Scheduled &amp; Active in Momentum!</span>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleApprovePlan(msg.id, msg.plan)}
-                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0A84FF] to-[#5E5CE6] hover:opacity-95 text-white font-bold text-xs shadow-md shadow-blue-500/25 active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                          <span>Approve &amp; Schedule Blueprint (1-Click)</span>
-                        </button>
-                      )}
-                    </div>
                   </div>
                 )}
               </div>
             );
           })}
 
-          {/* Starter Quick Chips */}
-          {messages.length === 1 && !isGenerating && !isParsingDoc && (
-            <div className="pt-2 space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B] px-1">
-                Suggested Actions
-              </span>
-              <div className="flex flex-col gap-2">
-                {STARTER_PROMPTS.map((item, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSendMessage(item.prompt)}
-                    className="p-3 rounded-xl bg-white border border-black/[0.06] hover:border-[#0A84FF] hover:bg-blue-50/40 text-left transition text-xs font-semibold text-[#1A1B1F] flex items-center justify-between group cursor-pointer shadow-2xs"
-                  >
-                    <span>{item.label}</span>
-                    <span className="material-symbols-outlined text-[16px] text-[#64748B] group-hover:text-[#0A84FF] transition">arrow_forward</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {isParsingDoc && (
-            <div className="flex items-center gap-2 text-xs text-[#64748B] italic animate-pulse p-2">
-              <span className="material-symbols-outlined text-[18px] animate-spin text-[#0A84FF]">sync</span>
-              <span>Extracting document text with browser reader...</span>
+            <div className="flex items-center gap-2 text-xs text-[#8E8E93] animate-pulse">
+              <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
+              <span>Reading document...</span>
             </div>
           )}
 
           {isGenerating && (
-            <div className="flex items-center gap-2 text-xs text-[#0A84FF] font-medium animate-pulse p-2">
-              <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
-              <span>Formulating strategic execution plan...</span>
+            <div className="flex items-center gap-2 text-xs text-[#8E8E93] animate-pulse">
+              <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span>
+              <span>Formulating schedule...</span>
             </div>
           )}
 
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Document Attachment Pill (Preview above input) */}
+        {/* Document Pill (Clean Apple-Style Tag) */}
         {attachedDoc && (
-          <div className="px-4 py-2.5 bg-blue-50 border-t border-blue-100 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#0A84FF] truncate">
-              <span className="material-symbols-outlined text-[18px]">attach_file</span>
-              <span className="truncate">{attachedDoc.name}</span>
-              <span className="text-[10px] font-normal text-slate-500">({Math.round(attachedDoc.charCount / 5)} words)</span>
+          <div className="mx-4 mb-2 p-2 px-3 rounded-xl bg-black/[0.03] border border-black/[0.06] flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2 text-xs text-[#1A1B1F] truncate">
+              <span className="material-symbols-outlined text-[16px] text-[#8E8E93]">description</span>
+              <span className="font-medium truncate">{attachedDoc.name}</span>
+              <span className="text-[11px] text-[#8E8E93]">({Math.round(attachedDoc.charCount / 5)} words)</span>
             </div>
             <button
               type="button"
               onClick={() => setAttachedDoc(null)}
-              className="text-[#64748B] hover:text-red-500 p-1 transition cursor-pointer"
+              className="text-[#8E8E93] hover:text-[#1A1B1F] p-0.5 transition cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">close</span>
+              <span className="material-symbols-outlined text-[15px]">close</span>
             </button>
           </div>
         )}
 
-        {/* Input Bar */}
-        <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="p-3 sm:p-4 border-t border-black/[0.06] bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="flex items-end gap-2 bg-[#F8F8FC] p-2 rounded-2xl border border-black/[0.06] focus-within:border-[#0A84FF] focus-within:bg-white transition shadow-2xs">
-            
+        {/* Input Bar (Raycast / Linear style composer) */}
+        <footer className="p-3 sm:p-4 border-t border-black/[0.06] bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
+            className="flex items-center gap-2 bg-[#F5F5F7] p-1.5 px-2.5 rounded-xl border border-black/[0.04] focus-within:bg-white focus-within:border-black/[0.15] transition"
+          >
             {/* Hidden File Input */}
             <input
               ref={fileInputRef}
@@ -469,51 +438,40 @@ export default function AiCopilotModal({
               className="hidden"
             />
 
-            {/* Paperclip Button */}
+            {/* Attach Icon */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              title="Attach PDF, DOCX, TXT, or MD"
-              className="w-9 h-9 rounded-xl text-[#64748B] hover:text-[#0A84FF] hover:bg-black/5 flex items-center justify-center transition cursor-pointer shrink-0"
+              title="Attach document (PDF, DOCX, TXT)"
+              className="text-[#8E8E93] hover:text-[#1A1B1F] p-1 rounded-lg transition cursor-pointer shrink-0"
             >
-              <span className="material-symbols-outlined text-[20px]">attach_file</span>
+              <span className="material-symbols-outlined text-[19px]">attach_file</span>
             </button>
 
-            {/* Auto-expanding Input Area */}
-            <textarea
+            {/* Input */}
+            <input
               ref={textareaRef}
-              rows={1}
+              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              placeholder={attachedDoc ? "Add instruction or press Enter to analyze document..." : "Ask to plan a project, break down goals, or attach a document..."}
-              className="flex-1 max-h-32 min-h-[36px] py-1.5 px-2 bg-transparent text-xs sm:text-[13px] text-[#1A1B1F] placeholder-[#94A3B8] outline-none resize-none leading-relaxed"
+              placeholder={attachedDoc ? "Add instruction or press Enter..." : "Ask Copilot or attach a file..."}
+              className="flex-1 py-1.5 text-[13px] bg-transparent text-[#1A1B1F] placeholder-[#8E8E93] outline-none"
             />
 
-            {/* Send Button */}
+            {/* Send Arrow */}
             <button
               type="submit"
               disabled={(!input.trim() && !attachedDoc) || isGenerating}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition shrink-0 cursor-pointer ${
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition shrink-0 cursor-pointer ${
                 (input.trim() || attachedDoc) && !isGenerating
-                  ? 'bg-[#0A84FF] text-white shadow-xs active:scale-95'
-                  : 'bg-black/5 text-[#94A3B8] cursor-not-allowed'
+                  ? 'bg-[#1A1B1F] text-white shadow-2xs active:scale-95'
+                  : 'text-[#C7C7CC] cursor-not-allowed'
               }`}
             >
-              <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
             </button>
-          </div>
-
-          <div className="flex items-center justify-between mt-2 px-1 text-[10px] text-[#64748B]">
-            <span>Supports PDF, Word (.docx), TXT, Markdown</span>
-            <span>Press Enter to send</span>
-          </div>
-        </form>
+          </form>
+        </footer>
       </div>
     </div>
   );
