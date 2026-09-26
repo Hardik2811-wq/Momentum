@@ -560,16 +560,16 @@ const TodayView = React.memo(function TodayView({
   }, [viewDate, scope, columnDates]);
 
   return (
-    <main className="w-full pt-16 md:pt-12 px-2.5 sm:px-6 md:px-margin-desktop py-2 sm:py-4 min-h-screen bg-[#F6F7FA] text-[#1A1B1F] select-none">
-      <div className="flex flex-col w-full gap-3 sm:gap-4 pb-28 md:pb-16 max-w-[1560px] mx-auto">
+    <main className="w-full min-h-screen bg-[#F8F8FC] pt-16 md:pt-12 px-3 sm:px-6 md:px-margin-desktop py-3 sm:py-6 text-[#1A1B1F] select-none">
+      <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-3 sm:gap-4 min-w-0">
 
         {/* ── TOP HERO CONTROL BAR ── */}
-        <div className="flex flex-col gap-2.5 p-3 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs">
+        <div className="w-full min-w-0 flex flex-col gap-2.5 p-3 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs">
           {/* Top Row: Navigation, Date, Capacity, Actions */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center justify-between gap-2 flex-wrap min-w-0 w-full">
             {/* Left: Navigation & Date Range */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center gap-0.5 bg-[#F5F4FA] p-0.5 sm:p-1 rounded-xl border border-black/[0.04]">
+            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+              <div className="flex items-center gap-0.5 bg-[#F5F4FA] p-0.5 sm:p-1 rounded-xl border border-black/[0.04] shrink-0">
                 <button
                   type="button"
                   onClick={handlePrev}
@@ -599,13 +599,13 @@ const TodayView = React.memo(function TodayView({
                 </button>
               </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <h1 className="text-[14px] sm:text-[17px] font-bold tracking-tight text-[#1A1B1F]">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 truncate">
+                <h1 className="text-[13.5px] sm:text-[17px] font-bold tracking-tight text-[#1A1B1F] truncate">
                   <span className="hidden sm:inline">{viewRangeTitle.main}</span>
                   <span className="inline sm:hidden">{viewRangeTitle.short}</span>
                 </h1>
                 {viewRangeTitle.isToday && (
-                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-blue-50 text-[#0A84FF] border border-blue-200/80 uppercase tracking-wider">
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-blue-50 text-[#0A84FF] border border-blue-200/80 uppercase tracking-wider shrink-0">
                     Today
                   </span>
                 )}
@@ -627,7 +627,7 @@ const TodayView = React.memo(function TodayView({
             </div>
 
             {/* Right: Workload, Scope (Desktop), Editor & Quick Add */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Workload Capacity Meter */}
               <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#F5F4FA] border border-black/[0.04] text-[11px]">
                 <Timer className="w-3.5 h-3.5 text-[#0A84FF]" />
@@ -711,7 +711,7 @@ const TodayView = React.memo(function TodayView({
               <button
                 type="button"
                 onClick={() => onOpenQuickAdd?.()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[12px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-[0.98]"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[12px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-[0.98] shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">New Task</span>
@@ -721,34 +721,34 @@ const TodayView = React.memo(function TodayView({
           </div>
 
           {/* Bottom Row (Mobile only: lg:hidden) - Segmented Switcher & Mobile Scope */}
-          <div className="flex lg:hidden items-center justify-between gap-2 pt-2 border-t border-black/[0.04]">
+          <div className="flex lg:hidden items-center justify-between gap-2 pt-2 border-t border-black/[0.04] w-full min-w-0">
             {/* Mobile Tab Switcher */}
-            <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04] flex-1">
+            <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04] flex-1 min-w-0">
               <button
                 type="button"
                 onClick={() => setMobileTab('schedule')}
-                className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-1.5 rounded-lg text-[11.5px] font-bold transition flex items-center justify-center gap-1 min-w-0 truncate ${
                   mobileTab === 'schedule'
                     ? 'bg-white text-[#0A84FF] shadow-xs'
                     : 'text-[#64748B] hover:text-[#1A1B1F]'
                 }`}
               >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Schedule</span>
+                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Schedule</span>
               </button>
               <button
                 type="button"
                 onClick={() => setMobileTab('tray')}
-                className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-1.5 rounded-lg text-[11.5px] font-bold transition flex items-center justify-center gap-1 min-w-0 truncate ${
                   mobileTab === 'tray'
                     ? 'bg-white text-[#0A84FF] shadow-xs'
                     : 'text-[#64748B] hover:text-[#1A1B1F]'
                 }`}
               >
-                <Inbox className="w-3.5 h-3.5" />
-                <span>Task Tray</span>
+                <Inbox className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Tray</span>
                 {totalUnscheduledCount > 0 && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0 ${
                     mobileTab === 'tray' ? 'bg-[#0A84FF] text-white' : 'bg-black/[0.08] text-[#64748B]'
                   }`}>
                     {totalUnscheduledCount}
@@ -759,7 +759,7 @@ const TodayView = React.memo(function TodayView({
 
             {/* Mobile Scope Switcher (only when on Schedule) */}
             {mobileTab === 'schedule' && (
-              <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04]">
+              <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04] shrink-0">
                 {[
                   { id: 'day', label: 'Day' },
                   { id: '3day', label: '3D' },
@@ -771,7 +771,7 @@ const TodayView = React.memo(function TodayView({
                       key={s.id}
                       type="button"
                       onClick={() => setScope(s.id)}
-                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ${
+                      className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition ${
                         isSelected
                           ? 'bg-white text-[#0A84FF] shadow-xs'
                           : 'text-[#64748B]'
@@ -815,17 +815,17 @@ const TodayView = React.memo(function TodayView({
         )}
 
         {/* ── 2-COLUMN TIME-BLOCKING WORKSPACE ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
+        <div className="w-full min-w-0 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
 
           {/* ══════════════════════════════════════════════════════
               LEFT COLUMN: UNIFIED TASK TRAY (3.5 cols)
              ══════════════════════════════════════════════════════ */}
-          <div className={`lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3 ${
+          <div className={`w-full min-w-0 lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3 ${
             mobileTab === 'tray' ? 'flex' : 'hidden lg:flex'
           }`}>
-            <div data-block-id="today-task-tray" className="flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs min-h-[480px]">
+            <div data-block-id="today-task-tray" className="w-full min-w-0 flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs h-[calc(100dvh-230px)] sm:h-[calc(100vh-190px)] min-h-[500px] overflow-hidden">
               {/* Header */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0A84FF] flex items-center justify-center">
                     <Inbox className="w-4 h-4" />
@@ -938,7 +938,7 @@ const TodayView = React.memo(function TodayView({
               </div>
 
               {/* Task Cards Stream (Expanded to full column height) */}
-              <div className="space-y-2 flex-1 max-h-[620px] overflow-y-auto pr-0.5">
+              <div className="space-y-2 flex-1 overflow-y-auto pr-0.5 min-h-0">
                 {trayTasks.length === 0 ? (
                   <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-1.5 my-4">
                     <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
@@ -1069,10 +1069,10 @@ const TodayView = React.memo(function TodayView({
           {/* ══════════════════════════════════════════════════════
               RIGHT COLUMN: FULL-WIDTH CALENDAR CANVAS (8.5 cols)
              ══════════════════════════════════════════════════════ */}
-          <div data-block-id="today-calendar-card" className={`lg:col-span-8 xl:col-span-8.5 p-2.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden ${
-            mobileTab === 'schedule' ? 'block' : 'hidden lg:block'
+          <div data-block-id="today-calendar-card" className={`w-full min-w-0 lg:col-span-8 xl:col-span-8.5 p-2.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden flex flex-col ${
+            mobileTab === 'schedule' ? 'flex' : 'hidden lg:flex'
           }`}>
-            <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+            <div className="flex items-center justify-between mb-2.5 sm:mb-3 gap-2 flex-wrap shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0A84FF] flex items-center justify-center">
                   <Calendar className="w-4 h-4 text-[#0A84FF]" />
@@ -1117,35 +1117,38 @@ const TodayView = React.memo(function TodayView({
 
             <div
               ref={calendarScrollRef}
-              className="relative overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] sm:max-h-[calc(100vh-190px)] min-h-[460px] select-none border border-black/[0.06] rounded-xl bg-[#FAFAFC]"
+              className={`relative ${scope === 'day' ? 'overflow-x-hidden' : 'overflow-x-auto'} overflow-y-auto select-none border border-black/[0.06] rounded-xl bg-[#FAFAFC] h-[calc(100dvh-230px)] sm:h-[calc(100vh-190px)] min-h-[500px] w-full min-w-0 flex-1`}
             >
               <div
-                className="grid"
+                className="grid w-full min-w-0"
                 style={{
-                  gridTemplateColumns: `48px repeat(${columnDates.length}, minmax(${scope === 'week' ? '120px' : scope === '3day' ? '200px' : '0'}, 1fr))`,
-                  minWidth: scope === 'week' ? '880px' : scope === '3day' ? '600px' : '100%'
+                  gridTemplateColumns: scope === 'day'
+                    ? '44px minmax(0px, 1fr)'
+                    : `44px repeat(${columnDates.length}, minmax(${scope === 'week' ? '120px' : '180px'}, 1fr))`,
+                  minWidth: scope === 'day' ? '100%' : scope === '3day' ? '560px' : '840px',
+                  width: '100%'
                 }}
               >
                 {/* Corner Spacer */}
-                <div className="sticky top-0 z-30 h-10 border-b border-r border-black/[0.06] bg-[#F5F4FA]" />
+                <div className="sticky top-0 z-30 h-10 border-b border-r border-black/[0.06] bg-[#F5F4FA] shrink-0" />
 
                 {/* Column Headers */}
                 {columnsData.map(col => (
                   <div
                     key={col.colDate}
-                    className={`sticky top-0 z-30 h-10 px-3 flex items-center justify-between border-b border-r border-black/[0.06] backdrop-blur-md ${
+                    className={`sticky top-0 z-30 h-10 px-2 sm:px-3 flex items-center justify-between border-b border-r border-black/[0.06] backdrop-blur-md min-w-0 overflow-hidden ${
                       col.isToday ? 'bg-blue-50/95 text-[#0A84FF]' : 'bg-[#F5F4FA]/95 text-[#64748B]'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 font-bold text-[12px]">
-                      <span>{col.headerInfo.weekday}</span>
-                      <span className={`px-1.5 py-0.2 rounded-md ${col.isToday ? 'bg-[#0A84FF] text-white shadow-2xs' : 'text-[#1A1B1F]'}`}>
+                    <div className="flex items-center gap-1.5 font-bold text-[12px] min-w-0 truncate">
+                      <span className="truncate">{col.headerInfo.weekday}</span>
+                      <span className={`px-1.5 py-0.2 rounded-md shrink-0 ${col.isToday ? 'bg-[#0A84FF] text-white shadow-2xs' : 'text-[#1A1B1F]'}`}>
                         {col.headerInfo.dayNum}
                       </span>
                     </div>
 
                     {col.colMins > 0 && (
-                      <span className="text-[10px] font-semibold text-[#8E8E93]">
+                      <span className="text-[10px] font-semibold text-[#8E8E93] shrink-0">
                         {(col.colMins / 60).toFixed(1)}h
                       </span>
                     )}
@@ -1153,7 +1156,7 @@ const TodayView = React.memo(function TodayView({
                 ))}
 
                 {/* Left Hour Axis */}
-                <div className="relative border-r border-black/[0.06] bg-[#F5F4FA]" style={{ height: `${TOTAL_HEIGHT}px` }}>
+                <div className="relative border-r border-black/[0.06] bg-[#F5F4FA] shrink-0" style={{ height: `${TOTAL_HEIGHT}px` }}>
                   {Array.from({ length: TOTAL_HOURS }).map((_, i) => {
                     const hourNum = START_HOUR + i;
                     const hourLabel = `${String(hourNum).padStart(2, '0')}:00`;
@@ -1184,7 +1187,7 @@ const TodayView = React.memo(function TodayView({
                           setSelectedTransformTaskId(null);
                         }
                       }}
-                      className="relative border-r border-black/[0.06] bg-white transition-colors"
+                      className="relative border-r border-black/[0.06] bg-white transition-colors min-w-0 overflow-hidden"
                       style={{ height: `${TOTAL_HEIGHT}px` }}
                     >
                       {/* Hour Slots with Drop Targets & Half-Hour Grid lines */}
@@ -1245,15 +1248,15 @@ const TodayView = React.memo(function TodayView({
                       {isToday && currentTimeTop !== null && (
                         <div
                           style={{ top: `${currentTimeTop}px` }}
-                          className="absolute left-0 right-0 z-30 pointer-events-none flex items-center transition-all duration-500"
+                          className="absolute left-0 right-0 z-30 pointer-events-none flex items-center transition-all duration-500 min-w-0 overflow-hidden"
                         >
-                          <div className="flex items-center -ml-1">
-                            <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] ring-2 ring-white" />
-                            <span className="px-1 py-0.2 rounded bg-red-500 text-white font-mono text-[9px] font-bold shadow-xs -ml-0.5">
+                          <div className="flex items-center -ml-0.5 shrink-0">
+                            <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] ring-2 ring-white shrink-0" />
+                            <span className="px-1 py-0.2 rounded bg-red-500 text-white font-mono text-[9px] font-bold shadow-xs -ml-0.5 shrink-0">
                               {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                             </span>
                           </div>
-                          <div className="flex-1 h-[2px] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
+                          <div className="flex-1 min-w-0 h-[2px] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
                         </div>
                       )}
 
