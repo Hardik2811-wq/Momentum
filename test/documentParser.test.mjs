@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseDocumentFile } from '../src/lib/documentParser.js';
+import { parseDocumentFile, extractExecutiveOutline } from '../src/lib/documentParser.js';
 
 test('parseDocumentFile extracts text from plain text file', async () => {
   const mockFile = {
@@ -27,4 +27,31 @@ test('parseDocumentFile extracts text from markdown file', async () => {
   assert.equal(parsed.name, 'roadmap.md');
   assert.equal(parsed.ext, 'md');
   assert.ok(parsed.text.includes('Product Roadmap'));
+  assert.ok(Boolean(parsed.outline));
+});
+
+test('extractExecutiveOutline filters fluff and extracts structural deliverables', () => {
+  const longDoc = `
+  Terms and conditions: confidential copyright 2026.
+  All rights reserved. Page 1 of 50.
+  
+  # Phase 1: Core Engine Launch
+  Here is some long narrative paragraph explaining historical motivation that uses many tokens but has no action.
+  
+  DELIVERABLE: Deploy WebSocket sync service
+  - Step 1: Run load test benchmark for 10k users
+  - Step 2: Configure Redis pub/sub queue
+  
+  Random narrative discussion about team culture and office seating arrangements that consumes tokens.
+  
+  # Phase 2: iOS Native Bridge
+  - Milestone: Complete Swift package target
+  `;
+
+  const outline = extractExecutiveOutline(longDoc, 500);
+  assert.ok(outline.includes('Core Engine Launch'));
+  assert.ok(outline.includes('DELIVERABLE: Deploy WebSocket sync service'));
+  assert.ok(outline.includes('Step 1: Run load test benchmark'));
+  assert.ok(!outline.includes('office seating arrangements'));
+  assert.ok(!outline.includes('copyright 2026'));
 });

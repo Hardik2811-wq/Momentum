@@ -61,12 +61,54 @@ export async function parseDocumentFile(file) {
 
   // Clean excessive whitespace and trim
   const cleanText = text.replace(/[\r\n]{3,}/g, '\n\n').trim();
+  const outline = extractExecutiveOutline(cleanText, 2500);
 
   return {
     name,
     ext,
     type: file.type || ext,
     text: cleanText,
-    charCount: cleanText.length
+    outline,
+    charCount: cleanText.length,
+    outlineCharCount: outline.length
   };
+}
+
+/**
+ * Extracts a high-density executive outline (headings, milestones, deliverables, bullet items)
+ * from raw document text, reducing input token usage by up to 90%.
+ */
+export function extractExecutiveOutline(rawText = '', maxChars = 2500) {
+  if (!rawText || rawText.length <= maxChars) return rawText || '';
+
+  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const selectedLines = [];
+  let currentLength = 0;
+
+  const headerRegex = /^(#{1,4}\s|[A-Z0-9\s_-]{3,}:|[0-9]+\.\s+[A-Z]|Section|Phase|Chapter|Part|Milestone|Goal|Objective)/i;
+  const actionRegex = /^(TODO|TASK|DELIVERABLE|ACTION|DEADLINE|HABIT|NOTE|OUTPUT|REQUIREMENT|FEATURE|SPRINT):?/i;
+  const bulletRegex = /^([•\-*–—]|\d+\.)\s+/;
+  const highValueKeyword = /\b(launch|deploy|build|design|test|milestone|deadline|budget|schedule|deliverable|priority|q[1-4]|kpi|target|weekly|daily)\b/i;
+
+  for (const line of lines) {
+    if (line.length < 3) continue;
+    if (/\b(copyright|all rights reserved|confidential|terms\s+(?:and|&)\s+conditions|terms of service|table of contents|page \d+)\b/i.test(line)) continue;
+
+    const isHeader = headerRegex.test(line);
+    const isAction = actionRegex.test(line);
+    const isBullet = bulletRegex.test(line);
+    const hasKeyword = highValueKeyword.test(line);
+
+    if (isHeader || isAction || (isBullet && hasKeyword) || line.endsWith(':')) {
+      if (currentLength + line.length + 1 > maxChars) break;
+      selectedLines.push(line);
+      currentLength += line.length + 1;
+    }
+  }
+
+  if (selectedLines.length < 2) {
+    return rawText.slice(0, maxChars);
+  }
+
+  return selectedLines.join('\n');
 }

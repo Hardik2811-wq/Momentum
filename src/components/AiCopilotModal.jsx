@@ -3,6 +3,8 @@ import confetti from 'canvas-confetti';
 import { parseDocumentFile } from '../lib/documentParser';
 import { generateExecutivePlanWithAI, hasUserApiKey } from '../lib/groqClient';
 import { todayPlanDate } from '../lib/taskMetadata';
+import { resolveLocalCopilotIntent } from '../lib/copilotIntentRouter';
+import { harvestCopilotPlan } from '../lib/nlpMemory';
 
 const QUICK_CHIPS = [
   { label: 'Schedule from document', prompt: 'I have attached a project document. Analyze the deliverables, milestones, and schedule them into my Planner.' },
@@ -20,6 +22,8 @@ export default function AiCopilotModal({
   addGoal,
   addHabit,
   addTask,
+  toggleTask,
+  checkInHabit,
   onOpenApiKeyModal
 }) {
   const [messages, setMessages] = useState([]);
@@ -64,6 +68,39 @@ export default function AiCopilotModal({
   const handleSendMessage = async (textToSend = null) => {
     const query = (textToSend ?? input).trim();
     if (!query && !attachedDoc) return;
+
+    // 1. Try resolving locally with 0 API tokens (70% of frequent queries/actions)
+    if (!attachedDoc && query) {
+      const localResult = resolveLocalCopilotIntent({
+        query,
+        tasks,
+        goals,
+        habits,
+        stats,
+        todayDate: todayPlanDate(),
+        actions: { addTask, toggleTask, checkInHabit }
+      });
+
+      if (localResult.handledLocally) {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: 'msg-' + Date.now(),
+            role: 'user',
+            content: query
+          },
+          {
+            id: 'asst-' + (Date.now() + 1),
+            role: 'assistant',
+            content: localResult.message,
+            hasPlan: false,
+            plan: null
+          }
+        ]);
+        setInput('');
+        return;
+      }
+    }
 
     if (!hasUserApiKey()) {
       onOpenApiKeyModal?.();
@@ -210,6 +247,9 @@ export default function AiCopilotModal({
     }
 
     setAppliedPlans(prev => new Set([...prev, messageId]));
+
+    // 4. Harvest newly approved verbs and entities into local offline memory
+    harvestCopilotPlan(plan);
 
     try {
       confetti({

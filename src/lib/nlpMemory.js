@@ -358,3 +358,41 @@ export function resetNlpMemory() {
   inMemoryFallback = null;
   return DEFAULT_MEMORY;
 }
+
+/**
+ * Harvests tasks and habits from an approved Copilot plan into local nlpMemory
+ * so future interactions recognize vocabulary offline without calling the API.
+ */
+export function harvestCopilotPlan(plan) {
+  if (!plan) return { learnedCount: 0 };
+  let learnedCount = 0;
+
+  if (Array.isArray(plan.tasks)) {
+    for (const t of plan.tasks) {
+      if (t && t.title) {
+        const harvestRes = harvestApiResult(t.title, {
+          areas: Array.isArray(t.areas) ? t.areas : ['Career & Craft'],
+          energy: t.impact === 'high' ? 'High' : 'Normal',
+          durationMinutes: t.durationMinutes || 45,
+          urgency: t.priority === 'high' ? 'today' : 'week'
+        });
+        if (harvestRes.newlyLearned) learnedCount++;
+      }
+    }
+  }
+
+  if (Array.isArray(plan.habits)) {
+    for (const h of plan.habits) {
+      if (h && h.title) {
+        const harvestRes = harvestApiResult(h.title, {
+          areas: ['Habit Consistency'],
+          energy: 'Normal',
+          durationMinutes: 30
+        });
+        if (harvestRes.newlyLearned) learnedCount++;
+      }
+    }
+  }
+
+  return { learnedCount };
+}

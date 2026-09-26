@@ -239,8 +239,13 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
     if (raw.includes('afternoon')) return '14:00';
     if (raw.includes('evening')) return '18:00';
 
-    const m = raw.match(/(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*(am|pm)?/i) ||
-              raw.match(/([01]?[0-9]|2[0-3]):([0-5][0-9])/);
+    const m24 = raw.match(/\b([01]?[0-9]|2[0-3]):([0-5][0-9])\b/);
+    if (m24) {
+      return `${String(parseInt(m24[1], 10)).padStart(2, '0')}:${m24[2]}`;
+    }
+
+    const m = raw.match(/(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*(am|pm)/i) ||
+              raw.match(/^(1[0-2]|0?[1-9])(?::([0-5][0-9]))?$/);
     if (!m) return null;
     let hour = parseInt(m[1], 10);
     const minute = m[2] ? parseInt(m[2], 10) : 0;

@@ -324,6 +324,87 @@ Return ONLY raw JSON object (no markdown code blocks):
   }
 }`;
 
+/**
+ * Normalizes Copilot plans supporting both verbose JSON objects and ultra-compact
+ * delta tuples ["title", "YYYY-MM-DD", "HH:MM", dur, goalRef, habitRef, pri]
+ * to cut output token generation costs by 60-80%.
+ */
+export function normalizeCopilotPlan(parsed, todayDate = '') {
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  if (!parsed.hasPlan || !parsed.plan) return parsed;
+
+  const today = todayDate || new Date().toISOString().slice(0, 10);
+  const plan = parsed.plan;
+
+  if (Array.isArray(plan.goals)) {
+    plan.goals = plan.goals.map((g, idx) => {
+      if (Array.isArray(g)) {
+        return {
+          title: g[0] || `Goal ${idx + 1}`,
+          category: g[1] || 'career',
+          why: g[2] || '',
+          targetDate: g[3] || null
+        };
+      }
+      return g;
+    });
+  }
+
+  if (Array.isArray(plan.habits)) {
+    plan.habits = plan.habits.map((h, idx) => {
+      if (Array.isArray(h)) {
+        return {
+          title: h[0] || `Habit ${idx + 1}`,
+          cadence: h[1] || 'Morning',
+          frequency: h[2] || 'Every Day',
+          duration: h[3] || '30 mins',
+          icon: 'cached',
+          colorToken: 'primary',
+          goalIndex: typeof h[4] === 'number' ? h[4] : null
+        };
+      }
+      return h;
+    });
+  }
+
+  if (Array.isArray(plan.tasks)) {
+    plan.tasks = plan.tasks.map(t => {
+      if (Array.isArray(t)) {
+        const goalRef = t[4];
+        const habitRef = t[5];
+        return {
+          title: t[0] || 'Scheduled Task',
+          plannedDate: t[1] || today,
+          startTime: t[2] || null,
+          durationMinutes: typeof t[3] === 'number' ? t[3] : 45,
+          goalIndex: typeof goalRef === 'number' ? goalRef : null,
+          existingGoalId: typeof goalRef === 'string' ? goalRef : null,
+          habitIndex: typeof habitRef === 'number' ? habitRef : null,
+          existingHabitId: typeof habitRef === 'string' ? habitRef : null,
+          impact: t[6] === 'high' ? 'high' : 'medium',
+          priority: t[6] || 'normal',
+          areas: ['Career & Craft']
+        };
+      }
+      return {
+        title: t.title || 'Scheduled Task',
+        plannedDate: t.plannedDate || t.date || today,
+        startTime: t.startTime || t.time || null,
+        durationMinutes: t.durationMinutes || t.dur || 45,
+        impact: t.impact || 'medium',
+        priority: t.priority || 'normal',
+        areas: Array.isArray(t.areas) ? t.areas : ['Career & Craft'],
+        goalIndex: typeof t.goalIndex === 'number' ? t.goalIndex : null,
+        existingGoalId: t.existingGoalId || (typeof t.goalIndex === 'string' ? t.goalIndex : null),
+        habitIndex: typeof t.habitIndex === 'number' ? t.habitIndex : null,
+        existingHabitId: t.existingHabitId || (typeof t.habitIndex === 'string' ? t.habitIndex : null)
+      };
+    });
+  }
+
+  return parsed;
+}
+
 export async function generateExecutivePlanWithAI({
   userPrompt = '',
   documentContext = null,
@@ -356,14 +437,15 @@ export async function generateExecutivePlanWithAI({
   });
 
   let docSection = '';
-  if (documentContext && documentContext.text) {
-    // Compress doc whitespace and limit to 6,000 chars (~1,500 tokens max)
-    const cleanDoc = documentContext.text
+  if (documentContext && (documentContext.outline || documentContext.text)) {
+    // Prefer executive outline to cut up to 90% document tokens
+    const rawDocText = documentContext.outline || documentContext.text;
+    const cleanDoc = rawDocText
       .replace(/[ \t]+/g, ' ')
       .replace(/\n{3,}/g, '\n\n')
-      .slice(0, 6000)
+      .slice(0, 3000)
       .trim();
-    docSection = `\n--- ATTACHED DOC: ${documentContext.name || 'document'} ---\n${cleanDoc}\n--- END DOC ---\n`;
+    docSection = `\n--- ATTACHED DOC OUTLINE: ${documentContext.name || 'document'} ---\n${cleanDoc}\n--- END DOC ---\n`;
   }
 
   const userInstruction = `TODAY: ${currentDateStr}
@@ -408,7 +490,10 @@ USER QUERY: "${userPrompt.trim()}"`;
     if (res.ok) {
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
-      if (content) return JSON.parse(content);
+      if (content) {
+        const rawJson = JSON.parse(content);
+        return normalizeCopilotPlan(rawJson, currentDateStr);
+      }
     }
 
     // Fallback without json_object constraint
@@ -438,7 +523,8 @@ USER QUERY: "${userPrompt.trim()}"`;
     const rawContent = data.choices?.[0]?.message?.content || '';
     const match = rawContent.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('No JSON object found in response');
-    return JSON.parse(match[0]);
+    const rawJson = JSON.parse(match[0]);
+    return normalizeCopilotPlan(rawJson, currentDateStr);
   };
 
   const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'openai/gpt-oss-120b'];

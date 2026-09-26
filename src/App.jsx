@@ -224,6 +224,8 @@ export default function App() {
         addGoal={store.addGoal}
         addHabit={store.addHabit}
         addTask={store.addTask}
+        toggleTask={store.toggleTask}
+        checkInHabit={store.checkInHabit}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
       />
 
