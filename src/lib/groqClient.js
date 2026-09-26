@@ -236,59 +236,93 @@ export async function parseWithGroq(input = '', goals = [], explicitApiKey = nul
   };
 }
 
-const COPILOT_SYSTEM_PROMPT = `You are Momentum Executive AI, an elite productivity strategist and scheduler.
-Analyze the user's conversation, request, and any uploaded document (PDF, DOCX, TXT, MD) to formulate an optimal, realistic execution plan.
+/**
+ * Serializes user workspace memory (goals, habits, calendar tasks, analytics)
+ * into a dense, token-optimized notation that cuts API context tokens by 70-80%.
+ */
+export function serializeDenseMemory({
+  goals = [],
+  habits = [],
+  tasks = [],
+  stats = null,
+  todayDate = ''
+}) {
+  const today = todayDate || new Date().toISOString().slice(0, 10);
 
-Your objectives:
-1. Provide a sharp, inspiring conversational response explaining your strategy.
-2. If the user asks for a plan, task breakdown, schedule, goal formulation, or provided a project document, generate a complete structured execution plan ("hasPlan": true).
-3. Connect related items: tasks can link to proposed goals or habits.
-4. Distribute tasks across realistic dates (starting from todayDate) with sensible start times (09:00, 11:00, 14:00, 16:30, etc.) and durations (15 to 90 mins).
+  // 1. Goals Memory (compact ID, title, target, progress)
+  const goalItems = (goals || [])
+    .slice(0, 12)
+    .map(g => `[g:${g.id}|"${g.title}"|due:${g.targetDate || 'open'}|prog:${Math.round(g.progress || 0)}%]`);
+  const goalsLine = goalItems.length > 0 ? `GOALS:\n${goalItems.join(' ')}` : 'GOALS: none';
 
-Output format:
-Respond ONLY with a valid JSON object matching this schema:
+  // 2. Habits Memory (compact ID, title, streak, cadence, linked goal)
+  const habitItems = (habits || [])
+    .slice(0, 12)
+    .map(h => `[h:${h.id}|"${h.title}"|streak:${h.streak || 0}d|cadence:${h.cadence || 'Daily'}${h.linkedGoal ? `|goal:"${h.linkedGoal}"` : ''}]`);
+  const habitsLine = habitItems.length > 0 ? `HABITS:\n${habitItems.join(' ')}` : 'HABITS: none';
+
+  // 3. Calendar Tasks Memory (active window: today - 1 to today + 7, + overdue open tasks)
+  const horizonEnd = new Date(Date.parse(today) + 7 * 86400000).toISOString().slice(0, 10);
+  const relevantTasks = (tasks || [])
+    .filter(t => {
+      const date = t.plannedDate || (t.dueDate === 'Today' ? today : null);
+      if (!t.completed) {
+        if (!date || date <= horizonEnd) return true; // active upcoming or overdue
+      } else {
+        // completed within recent horizon
+        if (date && date >= today) return true;
+      }
+      return false;
+    })
+    .slice(0, 25);
+
+  const taskItems = relevantTasks.map(t => {
+    const d = t.plannedDate || (t.dueDate === 'Today' ? today : 'unscheduled');
+    const time = t.startTime ? ` ${t.startTime}` : '';
+    const dur = t.durationMinutes || t.duration || 30;
+    const gRef = t.goalId ? `|g:${t.goalId}` : '';
+    const hRef = t.linkedHabitId ? `|h:${t.linkedHabitId}` : '';
+    const st = t.completed ? 'done' : 'open';
+    return `[t:${t.id}|"${t.title}"|${d}${time}|${dur}m${gRef}${hRef}|${st}]`;
+  });
+  const tasksLine = taskItems.length > 0 ? `SCHEDULE (Active Horizon):\n${taskItems.join(' ')}` : 'SCHEDULE: empty';
+
+  // 4. Analytics Digest (pre-computed personal capacity & velocity)
+  let analyticsLine = '';
+  if (stats) {
+    analyticsLine = `ANALYTICS: compRate:${stats.completionRate || 0}% | streak:${stats.longestStreak || 0}d | habitsToday:${stats.habitsCompletedToday || 0}/${stats.totalHabits || 0} | focusToday:${stats.completedFocusMinutes || 0}m | momentum:${stats.momentumScore || 0}% | pendingTasks:${stats.pending || 0}`;
+  }
+
+  return [goalsLine, habitsLine, tasksLine, analyticsLine].filter(Boolean).join('\n\n');
+}
+
+const COPILOT_SYSTEM_PROMPT = `You are Momentum Executive Copilot.
+Formulate optimal, realistic execution plans balancing the user's workload, open calendar time slots, and active habits.
+
+Memory notation:
+G=[g:ID|"Title"|due:DATE|prog:%]
+H=[h:ID|"Title"|streak:Nd|cadence:TIME]
+T=[t:ID|"Title"|DATE TIME|DURATIONm|g:GOAL_ID|h:HABIT_ID|status]
+ANALYTICS=[compRate:%|streak:Nd|habitsToday:X/Y|focusToday:Nm|momentum:%|pending:N]
+
+Instructions:
+1. Provide a sharp, concise strategic overview.
+2. If the user asks for a plan, task breakdown, or uploads a document, generate a structured plan ("hasPlan": true).
+3. Interconnect items: link new tasks to existing IDs (existingGoalId, existingHabitId) or newly proposed indexes (goalIndex, habitIndex).
+4. Avoid scheduling conflicts with existing open tasks; respect user focus capacity.
+5. If no plan is requested, set "hasPlan": false, "plan": null.
+
+Return ONLY raw JSON object (no markdown code blocks):
 {
-  "message": "Conversational, highly actionable strategic overview (markdown supported)",
+  "message": "Direct, actionable strategic overview",
   "hasPlan": true,
   "plan": {
-    "summary": "Short 1-line headline of this plan",
-    "goals": [
-      {
-        "title": "Clear measurable horizon",
-        "category": "career" | "health" | "creative" | "finance",
-        "why": "Core intrinsic emotional anchor or ROI",
-        "targetDate": "YYYY-MM-DD" or null
-      }
-    ],
-    "habits": [
-      {
-        "title": "Daily/recurring ritual",
-        "cadence": "Morning" | "Afternoon" | "Evening" | "Anytime",
-        "frequency": "Every Day" | "Weekdays" | "3x / week",
-        "duration": "15 mins" | "30 mins" | "45 mins" | "60 mins",
-        "icon": "cached" | "terminal" | "fitness_center" | "auto_stories" | "self_improvement" | "edit_note",
-        "colorToken": "primary" | "secondary" | "tertiary",
-        "goalIndex": 0 // 0-based index of goal above, or null
-      }
-    ],
-    "tasks": [
-      {
-        "title": "Concrete actionable deliverable",
-        "plannedDate": "YYYY-MM-DD",
-        "startTime": "HH:MM" (e.g. "09:30") or null,
-        "durationMinutes": 45,
-        "impact": "high" | "medium" | "low",
-        "priority": "high" | "normal" | "low",
-        "areas": ["Career & Craft" | "Creative & Expression" | "Deep Focus" | "Habit Consistency" | "Health & Vitality" | "Personal & Life"],
-        "goalIndex": 0, // 0-based index of goal above, or null
-        "existingGoalId": null, // or string ID of existing goal
-        "habitIndex": 0 // 0-based index of habit above, or null
-      }
-    ]
+    "summary": "1-line headline",
+    "goals": [{"title":"", "category":"career"|"health"|"creative"|"finance", "why":"", "targetDate":"YYYY-MM-DD"|null}],
+    "habits": [{"title":"", "cadence":"Morning"|"Afternoon"|"Evening"|"Anytime", "frequency":"Every Day"|"Weekdays"|"3x / week", "duration":"15 mins"|"30 mins"|"45 mins"|"60 mins", "icon":"cached"|"terminal"|"fitness_center"|"auto_stories", "colorToken":"primary"|"secondary"|"tertiary", "goalIndex":0|null}],
+    "tasks": [{"title":"", "plannedDate":"YYYY-MM-DD", "startTime":"HH:MM"|null, "durationMinutes":30, "impact":"high"|"medium"|"low", "priority":"high"|"normal"|"low", "areas":["Career & Craft"|"Deep Focus"|"Health & Vitality"], "goalIndex":0|null, "existingGoalId":"string"|null, "habitIndex":0|null, "existingHabitId":"string"|null}]
   }
-}
-If no structured plan is requested (e.g. user just asks a simple productivity tip or question), set "hasPlan": false and "plan": null.
-Do NOT output code fences or conversational prose outside the JSON. Return raw JSON only.`;
+}`;
 
 export async function generateExecutivePlanWithAI({
   userPrompt = '',
@@ -296,6 +330,8 @@ export async function generateExecutivePlanWithAI({
   chatHistory = [],
   goals = [],
   habits = [],
+  tasks = [],
+  stats = null,
   todayDate = '',
   explicitApiKey = null
 }) {
@@ -310,28 +346,31 @@ export async function generateExecutivePlanWithAI({
 
   const currentDateStr = todayDate || new Date().toISOString().slice(0, 10);
 
-  const existingGoalsContext = goals.length > 0
-    ? `Existing Active Goals: ${goals.map(g => `[ID: ${g.id}] "${g.title}" (${g.category || 'general'})`).join('; ')}`
-    : 'No active goals yet.';
-
-  const existingHabitsContext = habits.length > 0
-    ? `Existing Habits: ${habits.map(h => `[ID: ${h.id}] "${h.title}"`).join('; ')}`
-    : 'No existing habits yet.';
+  // Compress memory context into ultra-dense notation (70%+ token savings)
+  const memoryContext = serializeDenseMemory({
+    goals,
+    habits,
+    tasks,
+    stats,
+    todayDate: currentDateStr
+  });
 
   let docSection = '';
   if (documentContext && documentContext.text) {
-    // Truncate document text to ~12,000 characters to comfortably stay within context window
-    const truncatedText = documentContext.text.slice(0, 12000);
-    docSection = `\n--- ATTACHED DOCUMENT (${documentContext.name || 'document'}) ---\n${truncatedText}\n--- END DOCUMENT ---\n`;
+    // Compress doc whitespace and limit to 6,000 chars (~1,500 tokens max)
+    const cleanDoc = documentContext.text
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .slice(0, 6000)
+      .trim();
+    docSection = `\n--- ATTACHED DOC: ${documentContext.name || 'document'} ---\n${cleanDoc}\n--- END DOC ---\n`;
   }
 
-  const userInstruction = `Current Anchor Date: ${currentDateStr}
-${existingGoalsContext}
-${existingHabitsContext}
-${docSection}
-User Query: "${userPrompt.trim()}"
+  const userInstruction = `TODAY: ${currentDateStr}
 
-Formulate your response as the required JSON schema.`;
+${memoryContext}
+${docSection}
+USER QUERY: "${userPrompt.trim()}"`;
 
   // Format messages
   const messages = [

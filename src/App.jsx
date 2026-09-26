@@ -220,6 +220,7 @@ export default function App() {
         goals={store.goals}
         habits={store.habits}
         tasks={store.tasks}
+        stats={store.stats}
         addGoal={store.addGoal}
         addHabit={store.addHabit}
         addTask={store.addTask}

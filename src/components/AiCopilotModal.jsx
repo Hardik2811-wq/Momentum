@@ -16,6 +16,7 @@ export default function AiCopilotModal({
   goals = [],
   habits = [],
   tasks = [],
+  stats = null,
   addGoal,
   addHabit,
   addTask,
@@ -91,6 +92,8 @@ export default function AiCopilotModal({
         chatHistory: messages.slice(-5),
         goals,
         habits,
+        tasks,
+        stats,
         todayDate: todayPlanDate()
       });
 
@@ -187,7 +190,7 @@ export default function AiCopilotModal({
 
         const linkedHabitId = t.habitIndex !== undefined && habitIdMap.has(t.habitIndex)
           ? habitIdMap.get(t.habitIndex)
-          : null;
+          : t.existingHabitId || null;
 
         addTask({
           id,
