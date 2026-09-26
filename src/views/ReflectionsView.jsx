@@ -266,51 +266,53 @@ export default function ReflectionsView({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant font-caption text-[11px] font-semibold tracking-wide uppercase">
+              <span className="px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant font-caption text-[10px] sm:text-[11px] font-semibold tracking-wide uppercase">
                 Continuous Calibration
               </span>
               <span className="text-on-surface-variant font-caption text-xs">
                 {currentWeek} • Active Cycle
               </span>
             </div>
-            <h1 className="font-headline-lg text-[24px] sm:text-headline-lg text-on-surface tracking-tight">
+            <h1 className="font-headline-lg text-[20px] sm:text-[24px] md:text-headline-lg text-on-surface tracking-tight font-bold">
               Weekly Review &amp; Reflections
             </h1>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">
+            <p className="font-body-sm text-xs sm:text-body-sm text-on-surface-variant max-w-xl">
               Honest audits drive compounding momentum. Review wins, calibrate friction, set intentional trajectories.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+          <div className="flex items-center justify-between sm:justify-start gap-2 self-stretch md:self-auto flex-wrap">
             {/* Weekly / Monthly Toggle (#30) */}
-            <div className="inline-flex p-1 rounded-full bg-surface-container shadow-inner">
+            <div className="inline-flex p-0.5 sm:p-1 rounded-full bg-surface-container shadow-inner">
               <button
                 onClick={() => setViewScope('weekly')}
-                className={`px-3.5 py-1 rounded-full text-label-sm font-label-sm transition-all ${
+                className={`px-3 sm:px-3.5 py-1 rounded-full text-xs sm:text-label-sm font-label-sm transition-all ${
                   viewScope === 'weekly'
                     ? 'bg-surface-container-lowest text-primary shadow-sm font-semibold'
                     : 'text-on-surface-variant hover:text-on-surface'
                 }`}
               >
-                Weekly Retrospective
+                <span className="sm:hidden">Weekly</span>
+                <span className="hidden sm:inline">Weekly Retrospective</span>
               </button>
               <button
                 onClick={() => setViewScope('monthly')}
-                className={`px-3.5 py-1 rounded-full text-label-sm font-label-sm transition-all ${
+                className={`px-3 sm:px-3.5 py-1 rounded-full text-xs sm:text-label-sm font-label-sm transition-all ${
                   viewScope === 'monthly'
                     ? 'bg-surface-container-lowest text-primary shadow-sm font-semibold'
                     : 'text-on-surface-variant hover:text-on-surface'
                 }`}
               >
-                Monthly Retrospective
+                <span className="sm:hidden">Monthly</span>
+                <span className="hidden sm:inline">Monthly Retrospective</span>
               </button>
             </div>
 
             {/* Export Dropdown / Button */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
               <button
                 onClick={() => handleExport('markdown')}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container-lowest border border-black/[0.08] hover:bg-surface-container text-on-surface text-label-sm font-label-sm shadow-sm transition-all"
+                className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full bg-surface-container-lowest border border-black/[0.08] hover:bg-surface-container text-on-surface text-xs sm:text-label-sm font-label-sm shadow-sm transition-all"
                 title="Export as Markdown"
               >
                 <span className="material-symbols-outlined text-[16px] text-primary">download</span>
@@ -318,10 +320,11 @@ export default function ReflectionsView({
               </button>
               <button
                 onClick={handleFinalizeWeek}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary-container text-on-primary-container text-label-sm font-label-sm shadow-sm hover:brightness-105 active:scale-95 transition-all"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary-container text-on-primary-container text-xs sm:text-label-sm font-label-sm font-bold shadow-sm hover:brightness-105 active:scale-95 transition-all"
               >
                 <span className="material-symbols-outlined text-[16px]">task_alt</span>
-                <span>Finalize Week</span>
+                <span className="hidden sm:inline">Finalize Week</span>
+                <span className="sm:hidden">Finalize</span>
               </button>
             </div>
           </div>
@@ -340,19 +343,19 @@ export default function ReflectionsView({
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
             {/* Momentum Score Gauge (Left/Top on Mobile, 4 cols md) */}
-            <div className="md:col-span-4 flex flex-row md:flex-col items-center justify-around md:justify-center p-3 sm:p-4 rounded-xl bg-surface-container-low/70 border border-black/[0.03]">
-              <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center shrink-0">
-                <svg className="w-24 h-24 sm:w-28 sm:h-28 -rotate-90" viewBox="0 0 36 36">
+            <div className="md:col-span-4 flex flex-row md:flex-col items-center justify-between sm:justify-around md:justify-center p-3 sm:p-4 rounded-xl bg-surface-container-low/70 border border-black/[0.03] gap-3">
+              <div className="relative w-20 h-20 sm:w-28 sm:h-28 flex items-center justify-center shrink-0">
+                <svg className="w-20 h-20 sm:w-28 sm:h-28 -rotate-90" viewBox="0 0 36 36">
                   <path className="text-surface-container-high" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3.2" />
                   <path className="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${momentumScore}, 100`} strokeLinecap="round" strokeWidth="3.2" />
                 </svg>
                 <div className="absolute flex flex-col items-center justify-center">
-                  <span className="text-2xl sm:text-3xl font-bold tracking-tight text-on-surface">{momentumScore}</span>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-on-surface-variant">Momentum</span>
+                  <span className="text-xl sm:text-3xl font-bold tracking-tight text-on-surface">{momentumScore}</span>
+                  <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-on-surface-variant">Momentum</span>
                 </div>
               </div>
 
-              <div className="flex flex-col items-start md:items-center text-left md:text-center mt-0 md:mt-2">
+              <div className="flex flex-col items-start md:items-center text-left md:text-center mt-0 md:mt-2 flex-1 min-w-0">
                 <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
                   scoreDelta >= 0
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -363,7 +366,7 @@ export default function ReflectionsView({
                   </span>
                   <span>{scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} pts</span>
                 </div>
-                <p className="font-caption text-[11px] text-on-surface-variant mt-1 max-w-[180px]">
+                <p className="font-caption text-[11px] text-on-surface-variant mt-1 leading-snug line-clamp-2 md:line-clamp-none max-w-[200px]">
                   {momentumPercentileNote}
                 </p>
               </div>
@@ -470,7 +473,7 @@ export default function ReflectionsView({
             </div>
           </div>
 
-          <div className="flex sm:grid sm:grid-cols-7 gap-2 sm:gap-2.5 text-center mt-3 overflow-x-auto pb-2 sm:pb-0 scrollbar-none snap-x">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2.5 text-center mt-3">
             {DAYS.map((day, idx) => {
               const rating = Number(moodRatings[idx]) || 4;
               const config = MOOD_LEVELS[rating] || MOOD_LEVELS[3];
@@ -505,7 +508,7 @@ export default function ReflectionsView({
                       handleStep(1, e);
                     }
                   }}
-                  className={`group relative flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-2xl border transition-all duration-150 cursor-pointer select-none active:scale-[0.97] min-w-[76px] sm:min-w-0 flex-1 snap-center ${
+                  className={`group relative flex flex-col items-center justify-between p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border transition-all duration-150 cursor-pointer select-none active:scale-[0.97] min-w-0 flex-1 ${
                     isToday
                       ? 'ring-2 ring-primary/60 shadow-sm ' + config.activeClass
                       : config.activeClass
@@ -514,39 +517,40 @@ export default function ReflectionsView({
                 >
                   {/* Day Header & Today Marker */}
                   <div className="flex flex-col items-center gap-0.5 w-full">
-                    <span className="font-caption text-[11px] font-bold tracking-wider uppercase opacity-85">
-                      {day}
+                    <span className="font-caption text-[10px] sm:text-[11px] font-bold tracking-wider uppercase opacity-85">
+                      <span className="sm:hidden">{day.slice(0, 1)}</span>
+                      <span className="hidden sm:inline">{day}</span>
                     </span>
                     {isToday ? (
-                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-primary text-on-primary tracking-tight leading-none scale-95 shadow-xs">
-                        Today
+                      <span className="text-[8px] sm:text-[9px] font-black uppercase px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full bg-primary text-on-primary tracking-tight leading-none scale-90 shadow-xs">
+                        Now
                       </span>
                     ) : (
-                      <span className="text-[9px] text-transparent select-none leading-none py-0.5">·</span>
+                      <span className="text-[8px] text-transparent select-none leading-none py-0.2 sm:py-0.5">·</span>
                     )}
                   </div>
 
                   {/* Rating Icon & State */}
-                  <div className="my-1.5 flex flex-col items-center">
-                    <span className="text-xl sm:text-2xl transform transition-transform group-hover:scale-110">
+                  <div className="my-1 sm:my-1.5 flex flex-col items-center">
+                    <span className="text-lg sm:text-2xl transform transition-transform group-hover:scale-110">
                       {config.emoji}
                     </span>
-                    <span className="text-xs sm:text-sm font-extrabold tracking-tight mt-0.5">
-                      {rating}<span className="text-[10px] font-normal opacity-60">/5</span>
+                    <span className="text-[11px] sm:text-sm font-extrabold tracking-tight mt-0.5">
+                      {rating}<span className="hidden sm:inline text-[10px] font-normal opacity-60">/5</span>
                     </span>
-                    <span className="text-[10px] font-semibold tracking-tight opacity-90 truncate max-w-full">
+                    <span className="text-[9px] sm:text-[10px] font-semibold tracking-tight opacity-90 truncate max-w-full hidden sm:block">
                       {config.short}
                     </span>
                   </div>
 
                   {/* 5-segment Mini Energy Gauge */}
-                  <div className="w-full flex items-center justify-center gap-1 my-1 px-0.5">
+                  <div className="w-full flex items-center justify-center gap-0.5 sm:gap-1 my-0.5 sm:my-1 px-0.5">
                     {[1, 2, 3, 4, 5].map((lvl) => (
                       <button
                         key={lvl}
                         type="button"
                         onClick={(e) => handleSetRating(lvl, e)}
-                        className={`h-1.5 flex-1 rounded-full transition-all ${
+                        className={`h-1 sm:h-1.5 flex-1 rounded-full transition-all ${
                           lvl <= rating ? config.barColor : 'bg-black/10 dark:bg-white/10'
                         } hover:h-2`}
                         title={`Set ${day} to ${lvl}`}
@@ -554,8 +558,8 @@ export default function ReflectionsView({
                     ))}
                   </div>
 
-                  {/* Stepper buttons */}
-                  <div className="flex items-center justify-between w-full mt-1 pt-1 border-t border-black/[0.05] dark:border-white/[0.05]">
+                  {/* Stepper buttons (Desktop only, mobile taps card) */}
+                  <div className="hidden sm:flex items-center justify-between w-full mt-1 pt-1 border-t border-black/[0.05] dark:border-white/[0.05]">
                     <button
                       type="button"
                       onClick={(e) => handleStep(-1, e)}
@@ -922,11 +926,50 @@ export default function ReflectionsView({
           )}
         </div>
 
+        {/* Mobile In-Flow Review Completion & Finalize Card (Never overlaps bottom navigation) */}
+        <div className="md:hidden p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.06] flex flex-col gap-3.5 my-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[22px]">assignment_turned_in</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-sm text-on-surface">Weekly Review Complete</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-surface-container-high text-primary">
+                  {retrospectiveProgress}/3 Prompts
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant">
+                <span className={workedWell.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+                  {workedWell.trim() ? '✓ Wins' : '○ Wins'}
+                </span>
+                <span>•</span>
+                <span className={pushedBack.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+                  {pushedBack.trim() ? '✓ Slipped' : '○ Slipped'}
+                </span>
+                <span>•</span>
+                <span className={onePriority.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+                  {onePriority.trim() ? '✓ Priority' : '○ Priority'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowFinalizeConfirm(true)}
+            className="w-full py-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary text-xs font-bold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>Finalize &amp; Archive Week</span>
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </button>
+        </div>
+
       </div>
 
-      {/* ── STICKY REVIEW COMPLETION BAR (Thumb-Zone Ergonomics & Goal Gradient) ── */}
-      <aside aria-label="Review completion bar" className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 md:right-8 sm:w-[500px] z-30 bg-surface-container-lowest/95 backdrop-blur-md shadow-2xl border border-black/10 dark:border-white/10 rounded-2xl p-3 px-4 flex flex-col sm:flex-row items-center justify-between gap-3 transition-all animate-fadeIn">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+      {/* ── DESKTOP ONLY STICKY REVIEW COMPLETION BAR ── */}
+      <aside aria-label="Review completion bar" className="hidden md:flex fixed bottom-6 right-8 w-[480px] z-30 bg-surface-container-lowest/95 backdrop-blur-md shadow-2xl border border-black/10 dark:border-white/10 rounded-2xl p-3 px-4 items-center justify-between gap-3 transition-all animate-fadeIn">
+        <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[20px]">assignment_turned_in</span>
           </div>
@@ -956,7 +999,7 @@ export default function ReflectionsView({
         <button
           type="button"
           onClick={() => setShowFinalizeConfirm(true)}
-          className="w-full sm:w-auto px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-label-md text-xs font-bold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+          className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-label-md text-xs font-bold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
         >
           <span>Finalize Week</span>
           <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
