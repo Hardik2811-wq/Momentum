@@ -776,101 +776,78 @@ const TodayView = React.memo(function TodayView({
                 <span>{isEditorMode ? 'Save & Done' : 'Editor'}</span>
               </button>
 
-              {/* Quick Add Button */}
+              {/* Quick Add Button (Desktop only, mobile uses bottom nav circular CTA) */}
               <button
                 type="button"
                 onClick={() => onOpenQuickAdd?.()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[12px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-[0.98] shrink-0"
+                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[12px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-[0.98] shrink-0"
               >
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">New Task</span>
-                <span className="sm:hidden">Task</span>
+                <span>New Task</span>
               </button>
             </div>
           </div>
 
-          {/* Bottom Row (Mobile only: lg:hidden) - Segmented Switcher & Mobile Scope */}
+          {/* Bottom Row (Mobile only: lg:hidden) - Scope (on timeline) & Tray */}
           <div className="flex lg:hidden items-center justify-between gap-2 pt-2 border-t border-black/[0.04] w-full min-w-0">
-            {/* Mobile Tab Switcher: Agenda | Timeline | Tray */}
-            <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04] flex-1 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[12px] font-bold text-[#1A1B1F] truncate">
+                {mobileTab === 'tray' ? 'Unscheduled Tray' : mobileTab === 'timeline' ? 'Calendar Timeline' : viewRangeTitle.short}
+              </span>
+              {mobileTab === 'agenda' && (
+                <span className="text-[10px] text-[#8E8E93] shrink-0 font-medium">
+                  {(totalScheduledMinutesInView / 60).toFixed(1)}h • {todayAgendaData.activeCount} active
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Mobile Scope Switcher (only when on Timeline) */}
+              {mobileTab === 'timeline' && (
+                <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04]">
+                  {[
+                    { id: 'day', label: 'Day' },
+                    { id: '3day', label: '3D' },
+                    { id: 'week', label: 'Wk' }
+                  ].map(s => {
+                    const isSelected = scope === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setScope(s.id)}
+                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
+                          isSelected
+                            ? 'bg-white text-[#0A84FF] shadow-xs'
+                            : 'text-[#64748B]'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Mobile Tray Toggle Button */}
               <button
                 type="button"
-                onClick={() => setMobileTab('agenda')}
-                className={`flex-1 py-1.5 rounded-lg text-[11.5px] font-bold transition flex items-center justify-center gap-1 min-w-0 truncate ${
-                  mobileTab === 'agenda'
-                    ? 'bg-white text-[#0A84FF] shadow-xs'
-                    : 'text-[#64748B] hover:text-[#1A1B1F]'
-                }`}
-              >
-                <ListChecks className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Agenda</span>
-                {todayAgendaData.activeCount > 0 && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold shrink-0 ${
-                    mobileTab === 'agenda' ? 'bg-[#0A84FF] text-white' : 'bg-black/[0.08] text-[#64748B]'
-                  }`}>
-                    {todayAgendaData.activeCount}
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMobileTab('timeline')}
-                className={`flex-1 py-1.5 rounded-lg text-[11.5px] font-bold transition flex items-center justify-center gap-1 min-w-0 truncate ${
-                  mobileTab === 'timeline'
-                    ? 'bg-white text-[#0A84FF] shadow-xs'
-                    : 'text-[#64748B] hover:text-[#1A1B1F]'
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Timeline</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMobileTab('tray')}
-                className={`flex-1 py-1.5 rounded-lg text-[11.5px] font-bold transition flex items-center justify-center gap-1 min-w-0 truncate ${
+                onClick={() => setMobileTab(prev => prev === 'tray' ? 'agenda' : 'tray')}
+                className={`px-3 py-1.5 rounded-xl text-[11.5px] font-bold transition flex items-center gap-1.5 shadow-2xs ${
                   mobileTab === 'tray'
-                    ? 'bg-white text-[#0A84FF] shadow-xs'
-                    : 'text-[#64748B] hover:text-[#1A1B1F]'
+                    ? 'bg-[#0A84FF] text-white shadow-blue-500/20'
+                    : 'bg-[#F5F4FA] text-[#1A1B1F] border border-black/[0.06] hover:bg-slate-200/60'
                 }`}
               >
                 <Inbox className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Tray</span>
-                {totalUnscheduledCount > 0 && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold shrink-0 ${
-                    mobileTab === 'tray' ? 'bg-[#0A84FF] text-white' : 'bg-black/[0.08] text-[#64748B]'
-                  }`}>
+                <span>{mobileTab === 'tray' ? 'Back to Schedule' : 'Tray'}</span>
+                {totalUnscheduledCount > 0 && mobileTab !== 'tray' && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#0A84FF] text-white">
                     {totalUnscheduledCount}
                   </span>
                 )}
               </button>
             </div>
-
-            {/* Mobile Scope Switcher (only when on Timeline) */}
-            {mobileTab === 'timeline' && (
-              <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04] shrink-0">
-                {[
-                  { id: 'day', label: 'Day' },
-                  { id: '3day', label: '3D' },
-                  { id: 'week', label: 'Wk' }
-                ].map(s => {
-                  const isSelected = scope === s.id;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setScope(s.id)}
-                      className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition ${
-                        isSelected
-                          ? 'bg-white text-[#0A84FF] shadow-xs'
-                          : 'text-[#64748B]'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </div>
 
@@ -1186,7 +1163,7 @@ const TodayView = React.memo(function TodayView({
                     onClick={() => setMobileTab('agenda')}
                     className="lg:hidden px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-blue-50 text-[#0A84FF] hover:bg-blue-100 transition"
                   >
-                    View Agenda
+                    Back to Schedule
                   </button>
                 </div>
               </div>
@@ -2097,6 +2074,26 @@ const TodayView = React.memo(function TodayView({
           }}
         />
       )}
+      {/* ══════════════════════════════════════════════════════
+          MOBILE ONLY: FLOATING CIRCULAR CALENDAR BUTTON (BOTTOM RIGHT)
+         ══════════════════════════════════════════════════════ */}
+      <button
+        type="button"
+        onClick={() => setMobileTab(prev => prev === 'timeline' ? 'agenda' : 'timeline')}
+        className={`lg:hidden fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-30 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${
+          mobileTab === 'timeline'
+            ? 'bg-[#1A1B1F] text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)] ring-2 ring-white/60'
+            : 'bg-[#0A84FF] text-white shadow-[0_8px_24px_rgba(10,132,255,0.4)] hover:bg-[#0071E3]'
+        }`}
+        aria-label={mobileTab === 'timeline' ? 'Back to Task Schedule' : 'View Calendar Timeline'}
+        title={mobileTab === 'timeline' ? 'Back to Task Schedule' : 'View Calendar Timeline'}
+      >
+        {mobileTab === 'timeline' ? (
+          <ListChecks className="w-5 h-5 transition-transform" />
+        ) : (
+          <Calendar className="w-5 h-5 transition-transform" />
+        )}
+      </button>
     </main>
   );
 });
