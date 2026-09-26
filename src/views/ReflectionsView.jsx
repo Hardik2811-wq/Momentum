@@ -70,6 +70,7 @@ export default function ReflectionsView({
   const [habitTuneNotice, setHabitTuneNotice] = useState(false);
   const [goalTunedNotice, setGoalTunedNotice] = useState(false);
   const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
 
   const {
     total = 0,
@@ -157,39 +158,21 @@ export default function ReflectionsView({
   }, [completionRate, momentumScore]);
 
   const coachNarrative = useMemo(() => {
-    let taskSentence = '';
-    if (total === 0) {
-      taskSentence = 'No tasks queued for this active cycle.';
-    } else if (completionRate >= 80) {
-      taskSentence = `You maintained exceptional delivery velocity with ${completed} of ${total} tasks finalized (${completionRate}%), cleanly surpassing the weekly 80% baseline.`;
-    } else if (completionRate >= 50) {
-      taskSentence = `You maintained steady execution with ${completed} of ${total} tasks completed (${completionRate}%). Focus was directed towards high-leverage outcomes with moderate rollover.`;
-    } else if (completed > 0) {
-      taskSentence = `Execution velocity slowed this cycle with ${completed} of ${total} tasks finalized (${completionRate}%). High-friction bottlenecks or scope spillover created rollover pressure.`;
-    } else {
-      taskSentence = `No tasks finalized yet across this cycle (0 of ${total} tasks completed). Let's diagnose friction points and secure a quick 15-minute starter win to restart forward momentum.`;
+    if (total === 0) return 'No tasks active this cycle. Queue high-leverage outcomes below to ignite momentum.';
+    if (completionRate >= 80 && habitsCompletedToday === totalHabits && totalHabits > 0) {
+      return 'Peak operational execution: exceptional task delivery velocity and all daily anchors locked.';
     }
-
-    let habitSentence = '';
-    if (totalHabits === 0) {
-      habitSentence = 'No recurring habit sequences are currently active.';
-    } else if (habitsCompletedToday === totalHabits) {
-      habitSentence = `Your habit engine is firing at peak consistency with all ${habitsCompletedToday} of ${totalHabits} daily anchors completed today.`;
-    } else if (habitsCompletedToday > 0) {
-      habitSentence = `Your habit engine has locked in ${habitsCompletedToday} of ${totalHabits} daily anchors today.`;
-    } else {
-      habitSentence = `Daily habit anchors are currently pending (${habitsCompletedToday} of ${totalHabits} locked today). Tap your primary sequence to protect your active streaks.`;
+    if (completionRate >= 80) {
+      return 'Strong task completion velocity; protect pending daily habit anchors to preserve streaks.';
     }
-
-    let goalSentence = '';
     if (stalledGoal) {
-      goalSentence = ` Notice: "${stalledGoal.title}" is pacing behind its milestone timeline; consider simplifying the next physical step to lower friction.`;
-    } else if (goals.length > 0) {
-      goalSentence = ` All ${goalsOnTrack} active horizon goals are currently holding strong trajectories.`;
+      return `Velocity slowed with rollover pressure. Unblock milestone "${stalledGoal.title}" below to regain forward momentum.`;
     }
-
-    return `${taskSentence} ${habitSentence}${goalSentence}`;
-  }, [total, completed, completionRate, totalHabits, habitsCompletedToday, goals, goalsOnTrack, stalledGoal]);
+    if (completionRate >= 50) {
+      return 'Balanced mid-tier pacing. Clear 1 rolled-over priority to close this sprint with high confidence.';
+    }
+    return 'Velocity dipped below target. Log 1 rolled task below to diagnose bottlenecks and restart momentum.';
+  }, [total, completionRate, habitsCompletedToday, totalHabits, stalledGoal]);
 
   const momentumPercentileNote = useMemo(() => {
     if (momentumScore >= 80) return 'Top 10% percentile of focused cognitive output this cycle.';
@@ -832,41 +815,39 @@ export default function ReflectionsView({
                 />
               </div>
 
-              {/* 1-Tap Recognition: Actual Completed Tasks first, then starter presets */}
-              <div className="space-y-1.5 mt-2.5">
-                {completedTasks.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold uppercase flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px]">verified</span>
-                      Completed Wins:
-                    </span>
-                    {completedTasks.slice(0, 4).map(t => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • Finished "${t.title}"` : `Finished "${t.title}"` })}
-                        className="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
-                        title={`Add "${t.title}" to wins`}
-                      >
-                        <span>+</span>
-                        <span className="truncate max-w-[150px]">{t.title}</span>
-                      </button>
-                    ))}
-                  </div>
+              {/* 1-Tap Recognition: Curated Clean Single Row (Max 3 items) */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+                  Quick Log:
+                </span>
+                {completedTasks.slice(0, 2).map(t => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • Finished "${t.title}"` : `Finished "${t.title}"` })}
+                    className="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
+                    title={`Add "${t.title}" to wins`}
+                  >
+                    <span>+</span>
+                    <span className="truncate max-w-[130px]">{t.title}</span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • Deep Focus sprint` : 'Deep Focus sprint' })}
+                  className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                >
+                  + Deep Focus sprint
+                </button>
+                {completedTasks.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • Morning routine locked` : 'Morning routine locked' })}
+                    className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                  >
+                    + Morning routine locked
+                  </button>
                 )}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] text-on-surface-variant font-bold uppercase">Quick Add:</span>
-                  {['Morning 90m block', 'Zero Slack before 11AM', 'Streak consistency', 'Deep Focus sprint'].map(chip => (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • ${chip}` : chip })}
-                      className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
-                    >
-                      + {chip}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
 
@@ -895,41 +876,39 @@ export default function ReflectionsView({
                 />
               </div>
 
-              {/* 1-Tap Recognition: Actual Rolled/Incomplete Tasks first, then starter presets */}
-              <div className="space-y-1.5 mt-2.5">
-                {incompleteTasks.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold uppercase flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px]">update</span>
-                      Rolled Over:
-                    </span>
-                    {incompleteTasks.slice(0, 4).map(t => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • Rolled "${t.title}"` : `Rolled "${t.title}"` })}
-                        className="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
-                        title={`Mark "${t.title}" as pushed back`}
-                      >
-                        <span>+</span>
-                        <span className="truncate max-w-[150px]">{t.title}</span>
-                      </button>
-                    ))}
-                  </div>
+              {/* 1-Tap Recognition: Curated Clean Single Row (Max 3 items) */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+                  Quick Log:
+                </span>
+                {incompleteTasks.slice(0, 2).map(t => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • Rolled "${t.title}"` : `Rolled "${t.title}"` })}
+                    className="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
+                    title={`Mark "${t.title}" as pushed back`}
+                  >
+                    <span>+</span>
+                    <span className="truncate max-w-[130px]">{t.title}</span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • Context switching` : 'Context switching' })}
+                  className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                >
+                  + Context switching
+                </button>
+                {incompleteTasks.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • Energy dip` : 'Energy dip' })}
+                    className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                  >
+                    + Energy dip
+                  </button>
                 )}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] text-on-surface-variant font-bold uppercase">Quick Add:</span>
-                  {['Evening workout', 'Architecture RFC', 'Backlog triage', 'Book reading'].map(chip => (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • ${chip}` : chip })}
-                      className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
-                    >
-                      + {chip}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
 
@@ -963,40 +942,29 @@ export default function ReflectionsView({
                 />
               </div>
 
-              {/* 1-Tap Recognition: Link active goals directly */}
-              <div className="space-y-1.5 mt-2.5">
-                {goals.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] text-primary font-bold uppercase flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px]">flag</span>
-                      Active Horizon:
-                    </span>
-                    {goals.slice(0, 3).map(g => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => updateReflection?.({ onePriority: `Advance "${g.title}" milestone`, targetGoalId: g.id })}
-                        className="px-2 py-0.5 rounded-lg bg-primary-fixed/60 hover:bg-primary-fixed text-primary text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
-                      >
-                        <span>+</span>
-                        <span className="truncate max-w-[140px]">{g.title}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] text-on-surface-variant font-bold uppercase">Preset:</span>
-                  {['Ship Portfolio v3', 'Close API migration', 'Tempo Half Marathon', 'Knowledge Hub v1'].map(chip => (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => updateReflection?.({ onePriority: chip })}
-                      className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
+              {/* 1-Tap Recognition: Curated Clean Single Row (Max 3 items) */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+                  Quick Goal:
+                </span>
+                {goals.slice(0, 2).map(g => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => updateReflection?.({ onePriority: `Advance "${g.title}" milestone`, targetGoalId: g.id })}
+                    className="px-2 py-0.5 rounded-lg bg-primary-fixed/60 hover:bg-primary-fixed text-primary text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
+                  >
+                    <span>+</span>
+                    <span className="truncate max-w-[130px]">{g.title}</span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => updateReflection?.({ onePriority: 'Close sprint backlog' })}
+                  className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                >
+                  + Close sprint backlog
+                </button>
               </div>
             </div>
 
@@ -1018,16 +986,18 @@ export default function ReflectionsView({
                   className="w-full p-3 rounded-xl bg-surface-container-low border border-black/[0.06] text-on-surface text-body-sm placeholder:text-on-surface-variant/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase">Suggest:</span>
-                {['Split into 15m kickoff', 'Automate schema export', 'Delegate triage'].map(chip => (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+                  Remedy:
+                </span>
+                {['Split into 15m kickoff', 'Automate schema workflow'].map(chip => (
                   <button
                     key={chip}
                     type="button"
                     onClick={() => updateReflection?.({ frictionTask: chip })}
-                    className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors"
+                    className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
                   >
-                    {chip}
+                    + {chip}
                   </button>
                 ))}
               </div>
@@ -1117,62 +1087,84 @@ export default function ReflectionsView({
           </div>
         </div>
 
-        {/* ── Review History Drawer ── */}
-        <div className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04]">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="font-title text-title text-on-surface">Archived Weekly Reviews</h3>
-              <p className="font-caption text-caption text-on-surface-variant">Past retrospectives and milestone snapshots</p>
+        {/* ── Review History Drawer (Progressive Disclosure) ── */}
+        <div className="p-3 sm:p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04]">
+          <div
+            onClick={() => setShowArchive(!showArchive)}
+            className="flex items-center justify-between cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-primary">
+                {showArchive ? 'expand_less' : 'history'}
+              </span>
+              <div>
+                <h3 className="font-title text-title text-on-surface text-xs sm:text-sm font-semibold">
+                  Archived Weekly Reviews
+                </h3>
+                <p className="font-caption text-caption text-on-surface-variant text-[11px]">
+                  {history.length} past cycle snapshot{history.length !== 1 ? 's' : ''} • {showArchive ? 'Tap to collapse' : 'Tap to expand history'}
+                </p>
+              </div>
             </div>
-            <span className="font-caption text-xs text-on-surface-variant">{history.length} archived reviews</span>
+            <button
+              type="button"
+              className="px-2.5 py-1 rounded-lg bg-surface-container text-xs font-semibold text-on-surface flex items-center gap-1 hover:bg-surface-container-high transition-colors"
+            >
+              <span>{showArchive ? 'Hide' : 'View'} ({history.length})</span>
+              <span className="material-symbols-outlined text-[14px]">
+                {showArchive ? 'expand_less' : 'expand_more'}
+              </span>
+            </button>
           </div>
 
-          <div className="space-y-2">
-            {history.map((rev) => {
-              const isOpen = activeHistoryId === rev.id;
-              return (
-                <div key={rev.id} className="rounded-xl bg-surface-container-low border border-black/[0.04] overflow-hidden transition-all">
-                  <div
-                    onClick={() => setActiveHistoryId(isOpen ? null : rev.id)}
-                    className="flex items-center justify-between p-3 cursor-pointer hover:bg-surface-container transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[16px] text-primary">
-                        {isOpen ? 'expand_less' : 'expand_more'}
-                      </span>
-                      <span className="font-semibold text-xs sm:text-sm text-on-surface">{rev.title}</span>
-                      <span className="hidden sm:inline-block font-caption text-[11px] text-on-surface-variant">• {rev.dateRange}</span>
+          {showArchive && (
+            <div className="space-y-2 mt-3 pt-3 border-t border-surface-container animate-fadeIn">
+              {history.map((rev) => {
+                const isOpen = activeHistoryId === rev.id;
+                return (
+                  <div key={rev.id} className="rounded-xl bg-surface-container-low border border-black/[0.04] overflow-hidden transition-all">
+                    <div
+                      onClick={() => setActiveHistoryId(isOpen ? null : rev.id)}
+                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-surface-container transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px] text-primary">
+                          {isOpen ? 'expand_less' : 'expand_more'}
+                        </span>
+                        <span className="font-semibold text-xs sm:text-sm text-on-surface">{rev.title}</span>
+                        <span className="hidden sm:inline-block font-caption text-[11px] text-on-surface-variant">• {rev.dateRange}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface text-[10px] font-semibold">
+                          Score: {rev.momentumScore}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant text-[10px] font-semibold">
+                          {rev.completedRate}% done
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface text-[10px] font-semibold">
-                        Score: {rev.momentumScore}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant text-[10px] font-semibold">
-                        {rev.completedRate}% done
-                      </span>
-                    </div>
+
+                    {isOpen && (
+                      <div className="p-4 border-t border-surface-container bg-surface-container-lowest/60 text-xs text-on-surface-variant space-y-2 animate-fadeIn">
+                        <div>
+                          <strong className="text-on-surface block mb-0.5">What Worked Well:</strong>
+                          <p>{rev.workedWell}</p>
+                        </div>
+                        <div>
+                          <strong className="text-on-surface block mb-0.5">Pushed Back:</strong>
+                          <p>{rev.pushedBack}</p>
+                        </div>
+                        <div>
+                          <strong className="text-on-surface block mb-0.5">Target Priority:</strong>
+                          <p>{rev.onePriority} ({rev.targetGoal})</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-
-                  {isOpen && (
-                    <div className="p-4 border-t border-surface-container bg-surface-container-lowest/60 text-xs text-on-surface-variant space-y-2 animate-fadeIn">
-                      <div>
-                        <strong className="text-on-surface block mb-0.5">What Worked Well:</strong>
-                        <p>{rev.workedWell}</p>
-                      </div>
-                      <div>
-                        <strong className="text-on-surface block mb-0.5">Pushed Back:</strong>
-                        <p>{rev.pushedBack}</p>
-                      </div>
-                      <div>
-                        <strong className="text-on-surface block mb-0.5">Target Priority:</strong>
-                        <p>{rev.onePriority} ({rev.targetGoal})</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
       </div>
