@@ -47,6 +47,7 @@ export default function App() {
       onToggleTask: store.toggleTask,
       onDeleteTask: store.deleteTask,
       onToggleSubtask: store.toggleSubtask,
+      onReorderTasks: store.reorderTasks,
       onOpenQuickAdd: openQuickAdd,
       stats: store.stats,
     };

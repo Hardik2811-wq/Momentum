@@ -730,6 +730,22 @@ export default function useStore() {
     }));
   }, [setTasks]);
 
+  const reorderTasks = useCallback((orderedIds) => {
+    setTasks(prev => {
+      const taskMap = new Map(prev.map(t => [t.id, t]));
+      const reordered = [];
+      orderedIds.forEach(id => {
+        const t = taskMap.get(id);
+        if (t) {
+          reordered.push(t);
+          taskMap.delete(id);
+        }
+      });
+      taskMap.forEach(t => reordered.push(t));
+      return reordered;
+    });
+  }, [setTasks]);
+
   /* Goals Actions */
   const addGoal = useCallback((goalData) => {
     const newId = 'g' + Date.now();
@@ -1178,7 +1194,7 @@ export default function useStore() {
   }, [tasks, reactiveGoals, habits, focusSessions]);
 
   return {
-    tasks, addTask, updateTask, toggleTask, deleteTask, toggleSubtask,
+    tasks, addTask, updateTask, toggleTask, deleteTask, toggleSubtask, reorderTasks,
     goals: reactiveGoals, addGoal, updateGoal, updateGoalProgress, deleteGoal,
     habits, checkInHabit, addHabit, updateHabit, deleteHabit, useGraceDay,
     reflections, updateReflection, saveWeeklyReview,

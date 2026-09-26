@@ -1,8 +1,40 @@
 import React, { useMemo, useState } from 'react';
+import {
+  Calendar,
+  Plus,
+  Play,
+  CheckCircle2,
+  Clock,
+  Timer,
+  ListChecks,
+  Repeat,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Flame,
+  Check
+} from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { triggerCelebration } from '../lib/celebrate';
 import { todayKey } from '../store/useStore';
 import TaskCard from '../components/TaskCard';
 import TaskDetailModal from '../components/TaskDetailModal';
-import { deadlineStatus, effortLabel, IMPACT_LABELS, planDateLabel, taskImpact, taskPlanDate, todayPlanDate, isTaskScheduledForDate } from '../lib/taskMetadata';
+import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanDate, todayPlanDate, isTaskScheduledForDate } from '../lib/taskMetadata';
 
 const IMPACT_ORDER = { high: 1, medium: 2, low: 3 };
 
@@ -12,8 +44,32 @@ function formatTime(time) {
   return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
 }
 
+function SortableTaskItem({ id, children }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    zIndex: isDragging ? 30 : 'auto',
+    opacity: isDragging ? 0.9 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-manipulation">
+      {children}
+    </div>
+  );
+}
+
 const DashboardView = React.memo(function DashboardView({
-  tasks = [], onToggleTask, onDeleteTask, onUpdateTask, onToggleSubtask,
+  tasks = [], onToggleTask, onDeleteTask, onUpdateTask, onToggleSubtask, onReorderTasks,
   onOpenQuickAdd, onStartFocus, onCheckInHabit, stats = {}, setActiveTab,
   settings = {}, onUpdateSettings, goals = [], habits = [],
 }) {
@@ -25,6 +81,18 @@ const DashboardView = React.memo(function DashboardView({
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const today = todayKey();
   const quickWinMinutes = settings.quickWinMinutes || 30;
+
+  // dnd-kit sensors: 8px threshold so regular clicks/taps don't trigger drag
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Single-pass filter + O(N log N) primitive comparison via Schwartzian transform
   const todayTasks = useMemo(() => {
@@ -107,13 +175,49 @@ const DashboardView = React.memo(function DashboardView({
   const checkedHabits = useMemo(() => habits.filter(habit => habit.completedDays?.includes(today)).length, [habits, today]);
   const activeGoals = useMemo(() => goals.filter(goal => goal.velocity !== 'complete').slice(0, 3), [goals]);
 
+  // Micro-reward Celebration triggers
+  const handleToggleTask = (taskId) => {
+    const task = todayTasks.find(t => t.id === taskId);
+    if (task && !task.completed) {
+      const remainingUncompleted = todayTasks.filter(t => !t.completed && t.id !== taskId).length;
+      if (remainingUncompleted === 0) {
+        triggerCelebration({ count: 90, spread: 80 });
+      }
+    }
+    onToggleTask?.(taskId);
+  };
+
+  const handleHabitCheck = (habitId) => {
+    const habit = habits.find(h => h.id === habitId);
+    const wasDone = habit?.completedDays?.includes(today);
+    if (!wasDone) {
+      const remainingHabits = habits.filter(h => h.id !== habitId && !(h.completedDays || []).includes(today)).length;
+      if (remainingHabits === 0) {
+        triggerCelebration({ count: 70, spread: 60 });
+      }
+    }
+    onCheckInHabit?.(habitId);
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = activeQueueTasks.findIndex(t => t.id === active.id);
+      const newIndex = activeQueueTasks.findIndex(t => t.id === over.id);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reordered = arrayMove(activeQueueTasks, oldIndex, newIndex);
+        onReorderTasks?.(reordered.map(t => t.id));
+      }
+    }
+  };
+
   return (
     <main className="w-full min-h-screen bg-surface pt-16 md:pt-14 px-4 sm:px-6 md:px-8 py-4 sm:py-8">
       <div className="mx-auto w-full max-w-[1440px] space-y-6 sm:space-y-8">
         <header data-block-id="dashboard-header" className="flex items-center justify-between gap-3 pt-1">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-3 py-1 text-[11px] font-semibold text-on-surface-variant border border-black/[0.04] mb-2">
-              <span className="material-symbols-outlined text-[13px] text-primary">calendar_today</span>
+              <Calendar className="w-3.5 h-3.5 text-primary" />
               <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight text-on-surface truncate">
@@ -161,7 +265,7 @@ const DashboardView = React.memo(function DashboardView({
               onClick={onOpenQuickAdd}
               className="hidden md:inline-flex items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">add</span>
+              <Plus className="w-4 h-4" />
               <span>Add task</span>
             </button>
           </div>
@@ -193,19 +297,19 @@ const DashboardView = React.memo(function DashboardView({
                   <h2 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-on-surface truncate">{nextTask.title}</h2>
                   <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-on-surface-variant">
                     <span className="inline-flex items-center gap-1 font-mono tabular-nums font-medium text-primary">
-                      <span className="material-symbols-outlined text-[15px]">schedule</span>
+                      <Clock className="w-3.5 h-3.5" />
                       {nextTask.startTime ? formatTime(nextTask.startTime) : 'Planned today'}
                     </span>
                     <span className="text-outline-variant/60">•</span>
                     <span className="inline-flex items-center gap-1 font-mono tabular-nums text-on-surface-variant">
-                      <span className="material-symbols-outlined text-[15px] text-amber-600">timer</span>
+                      <Timer className="w-3.5 h-3.5 text-amber-600" />
                       {effortLabel(nextTask.durationMinutes)} effort
                     </span>
                     {nextTask.subtasks && nextTask.subtasks.length > 0 && (
                       <>
                         <span className="text-outline-variant/60">•</span>
                         <span className="inline-flex items-center gap-1 font-mono tabular-nums font-medium text-on-surface-variant">
-                          <span className="material-symbols-outlined text-[15px]">checklist</span>
+                          <ListChecks className="w-3.5 h-3.5" />
                           {nextTask.subtasks.filter(s => s.completed).length}/{nextTask.subtasks.length} subtasks
                         </span>
                       </>
@@ -232,7 +336,7 @@ const DashboardView = React.memo(function DashboardView({
                   onClick={() => onStartFocus?.(nextTask.id)}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-on-primary text-sm font-semibold shadow-xs hover:shadow-sm active:scale-95 transition-all cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[17px]">play_arrow</span>
+                  <Play className="w-4 h-4 fill-current" />
                   <span>Start Focus</span>
                 </button>
               </div>
@@ -290,53 +394,16 @@ const DashboardView = React.memo(function DashboardView({
               </div>
             </div>
 
-            <div className="space-y-3 sm:space-y-3.5">
-              {activeQueueTasks.length ? (
-                activeQueueTasks.map(task => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onToggleTask={onToggleTask}
-                    onDeleteTask={onDeleteTask}
-                    onUpdateTask={onUpdateTask}
-                    onToggleSubtask={onToggleSubtask}
-                    onEditTask={setEditingTask}
-                    goals={goals}
-                    habits={habits}
-                  />
-                ))
-              ) : (
-                <div className="rounded-3xl border border-dashed border-outline-variant/30 bg-surface-container-lowest p-8 text-center">
-                  <span className="material-symbols-outlined text-[32px] text-emerald-500 mb-1.5 block">task_alt</span>
-                  <p className="text-sm font-semibold text-on-surface">
-                    {nextTask ? 'All queue tasks complete!' : 'All today tasks completed!'}
-                  </p>
-                  <p className="text-xs text-on-surface-variant mt-1">
-                    {nextTask ? 'Focus on your active target above.' : 'Add new tasks or plan tomorrow.'}
-                  </p>
-                </div>
-              )}
-
-              {/* Completed Tasks Accordion — Keeps canvas spacious and clutter-free */}
-              {completedQueueTasks.length > 0 && (
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowCompleted(!showCompleted)}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface py-2 px-1 cursor-pointer transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      {showCompleted ? 'expand_less' : 'expand_more'}
-                    </span>
-                    <span>Completed ({completedQueueTasks.length})</span>
-                  </button>
-                  {showCompleted && (
-                    <div className="space-y-2.5 mt-2 animate-fadeIn">
-                      {completedQueueTasks.map(task => (
+            {/* Drag and drop sortable queue */}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={activeQueueTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3 sm:space-y-3.5">
+                  {activeQueueTasks.length ? (
+                    activeQueueTasks.map(task => (
+                      <SortableTaskItem key={task.id} id={task.id}>
                         <TaskCard
-                          key={task.id}
                           task={task}
-                          onToggleTask={onToggleTask}
+                          onToggleTask={handleToggleTask}
                           onDeleteTask={onDeleteTask}
                           onUpdateTask={onUpdateTask}
                           onToggleSubtask={onToggleSubtask}
@@ -344,20 +411,61 @@ const DashboardView = React.memo(function DashboardView({
                           goals={goals}
                           habits={habits}
                         />
-                      ))}
+                      </SortableTaskItem>
+                    ))
+                  ) : (
+                    <div className="rounded-3xl border border-dashed border-outline-variant/30 bg-surface-container-lowest p-8 text-center">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2 mx-auto" />
+                      <p className="text-sm font-semibold text-on-surface">
+                        {nextTask ? 'All queue tasks complete!' : 'All today tasks completed!'}
+                      </p>
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        {nextTask ? 'Focus on your active target above.' : 'Add new tasks or plan tomorrow.'}
+                      </p>
                     </div>
                   )}
                 </div>
-              )}
+              </SortableContext>
+            </DndContext>
 
-              <button
-                onClick={onOpenQuickAdd}
-                className="hidden sm:flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/50 bg-primary/[0.02] hover:bg-primary/[0.05] p-3 text-sm font-semibold text-primary transition-all active:scale-[0.99] cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                <span>Add task for today</span>
-              </button>
-            </div>
+            {/* Completed Tasks Accordion — Keeps canvas spacious and clutter-free */}
+            {completedQueueTasks.length > 0 && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface py-2 px-1 cursor-pointer transition-colors"
+                >
+                  {showCompleted ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <span>Completed ({completedQueueTasks.length})</span>
+                </button>
+                {showCompleted && (
+                  <div className="space-y-2.5 mt-2 animate-fadeIn">
+                    {completedQueueTasks.map(task => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onToggleTask={handleToggleTask}
+                        onDeleteTask={onDeleteTask}
+                        onUpdateTask={onUpdateTask}
+                        onToggleSubtask={onToggleSubtask}
+                        onEditTask={setEditingTask}
+                        goals={goals}
+                        habits={habits}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={onOpenQuickAdd}
+              className="hidden sm:flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/50 bg-primary/[0.02] hover:bg-primary/[0.05] p-3 text-sm font-semibold text-primary transition-all active:scale-[0.99] cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add task for today</span>
+            </button>
           </div>
 
           {/* Right Column: Habits (4 cols) */}
@@ -367,7 +475,7 @@ const DashboardView = React.memo(function DashboardView({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
-                    <span className="material-symbols-outlined text-[18px]">repeat</span>
+                    <Repeat className="w-4 h-4" />
                   </div>
                   <div>
                     <h2 className="text-base font-display font-bold text-on-surface">Daily Habits</h2>
@@ -378,10 +486,10 @@ const DashboardView = React.memo(function DashboardView({
                 </div>
                 <button
                   onClick={() => setActiveTab('habits')}
-                  className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5"
+                  className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
                 >
                   <span>All habits</span>
-                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
 
@@ -400,7 +508,7 @@ const DashboardView = React.memo(function DashboardView({
                   return (
                     <button
                       key={habit.id}
-                      onClick={() => onCheckInHabit?.(habit.id)}
+                      onClick={() => handleHabitCheck(habit.id)}
                       className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-3 text-left transition-all active:scale-[0.99] ${
                         done
                           ? 'bg-emerald-500/[0.05] text-on-surface-variant'
@@ -411,7 +519,7 @@ const DashboardView = React.memo(function DashboardView({
                         <span className={`flex h-5 w-5 items-center justify-center rounded-full border transition-all ${
                           done ? 'border-primary bg-primary text-white shadow-2xs' : 'border-outline/40 bg-surface'
                         }`}>
-                          <span className="material-symbols-outlined text-[13px]">done</span>
+                          <Check className="w-3 h-3 stroke-[3]" />
                         </span>
                         <span className={`text-xs font-medium truncate ${
                           done ? 'text-on-surface-variant/70 line-through' : 'text-on-surface'
@@ -420,8 +528,8 @@ const DashboardView = React.memo(function DashboardView({
                         </span>
                       </div>
                       {streak > 0 && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold tabular-nums text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200/50 shrink-0">
-                          <span>🔥</span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold tabular-nums text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200/50 shrink-0">
+                          <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
                           <span>{streak}d</span>
                         </span>
                       )}
@@ -445,10 +553,10 @@ const DashboardView = React.memo(function DashboardView({
             </div>
             <button
               onClick={() => setActiveTab('goals')}
-              className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5"
+              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
             >
               <span>View all goals</span>
-              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -478,7 +586,8 @@ const DashboardView = React.memo(function DashboardView({
                       onClick={() => onOpenQuickAdd?.({ initialGoalId: goal.id })}
                       className="mt-3.5 text-xs font-semibold text-primary hover:underline text-left inline-flex items-center gap-1"
                     >
-                      <span>+ Add next task</span>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add next task</span>
                     </button>
                   </div>
                 );
