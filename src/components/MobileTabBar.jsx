@@ -34,12 +34,42 @@ export default function MobileTabBar({
     setActiveTab(tabId);
   };
 
+  const speedDialItems = [
+    {
+      id: 'goal',
+      label: 'New Goal',
+      icon: 'flag',
+      gradient: 'from-[#F59E0B] to-[#EA580C]',
+      shadow: 'shadow-[0_4px_14px_rgba(245,158,11,0.4)]',
+      animClass: 'animate-in fade-in slide-in-from-bottom-5 duration-200 delay-100',
+      action: onOpenNewGoal
+    },
+    {
+      id: 'habit',
+      label: 'New Habit',
+      icon: 'cached',
+      gradient: 'from-[#8B5CF6] to-[#6366F1]',
+      shadow: 'shadow-[0_4px_14px_rgba(139,92,246,0.4)]',
+      animClass: 'animate-in fade-in slide-in-from-bottom-4 duration-200 delay-75',
+      action: onOpenNewHabit
+    },
+    {
+      id: 'task',
+      label: 'New Task',
+      icon: 'task_alt',
+      gradient: 'from-[#0A84FF] to-[#5E5CE6]',
+      shadow: 'shadow-[0_4px_14px_rgba(10,132,255,0.4)]',
+      animClass: 'animate-in fade-in slide-in-from-bottom-3 duration-150',
+      action: onOpenQuickAdd
+    }
+  ];
+
   return (
     <>
       {/* Background backdrop dismissal */}
       {isOpen && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/35 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200"
+          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />
@@ -48,69 +78,37 @@ export default function MobileTabBar({
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl border-t border-black/[0.08] dark:border-white/[0.08] px-3 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-between max-w-md mx-auto relative">
           
-          {/* Speed Dial Popup with 3 Small Circular Buttons */}
+          {/* Vertical Staggered Speed Dial (Material 3 / Notion style) */}
           {isOpen && (
             <div
               role="menu"
               aria-label="Create new item"
-              className="absolute bottom-[66px] left-1/2 -translate-x-1/2 z-50 bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.08] px-5 py-3 rounded-3xl shadow-[0_16px_40px_rgba(0,0,0,0.22)] flex items-center gap-5 animate-in fade-in zoom-in-95 duration-200 select-none"
+              className="absolute bottom-[72px] left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3.5 select-none"
             >
-              {/* Button 1: New Task */}
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setIsOpen(false);
-                  onOpenQuickAdd?.();
-                }}
-                className="flex flex-col items-center gap-1 group cursor-pointer focus:outline-none"
-              >
-                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#0A84FF] to-[#5E5CE6] text-white flex items-center justify-center shadow-[0_4px_14px_rgba(10,132,255,0.4)] group-active:scale-90 group-hover:scale-105 transition-all">
-                  <span className="material-symbols-outlined text-[21px]">task_alt</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#1A1B1F] dark:text-white tracking-tight">
-                  Task
-                </span>
-              </button>
+              {speedDialItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsOpen(false);
+                    item.action?.();
+                  }}
+                  className={`relative flex items-center justify-center group cursor-pointer focus:outline-none ${item.animClass}`}
+                >
+                  {/* Floating Pill Label on the left */}
+                  <div className="absolute right-[56px] whitespace-nowrap">
+                    <span className="px-3 py-1.5 rounded-xl bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-xl border border-black/[0.08] dark:border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.14)] text-[12px] font-bold text-[#1A1B1F] dark:text-white tracking-tight group-hover:scale-105 group-active:scale-95 transition-all">
+                      {item.label}
+                    </span>
+                  </div>
 
-              {/* Button 2: New Habit */}
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setIsOpen(false);
-                  onOpenNewHabit?.();
-                }}
-                className="flex flex-col items-center gap-1 group cursor-pointer focus:outline-none"
-              >
-                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#8B5CF6] to-[#6366F1] text-white flex items-center justify-center shadow-[0_4px_14px_rgba(139,92,246,0.4)] group-active:scale-90 group-hover:scale-105 transition-all">
-                  <span className="material-symbols-outlined text-[21px]">cached</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#1A1B1F] dark:text-white tracking-tight">
-                  Habit
-                </span>
-              </button>
-
-              {/* Button 3: New Goal */}
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setIsOpen(false);
-                  onOpenNewGoal?.();
-                }}
-                className="flex flex-col items-center gap-1 group cursor-pointer focus:outline-none"
-              >
-                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#F59E0B] to-[#EA580C] text-white flex items-center justify-center shadow-[0_4px_14px_rgba(245,158,11,0.4)] group-active:scale-90 group-hover:scale-105 transition-all">
-                  <span className="material-symbols-outlined text-[21px]">flag</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#1A1B1F] dark:text-white tracking-tight">
-                  Goal
-                </span>
-              </button>
-
-              {/* Bottom Caret Pointer */}
-              <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-[#1C1C1E] rotate-45 border-r border-b border-black/[0.08] dark:border-white/[0.08]" />
+                  {/* Circular Button aligned vertically with center FAB */}
+                  <div className={`w-11 h-11 rounded-full bg-gradient-to-tr ${item.gradient} text-white flex items-center justify-center ${item.shadow} group-hover:scale-110 group-active:scale-90 transition-all`}>
+                    <span className="material-symbols-outlined text-[21px]">{item.icon}</span>
+                  </div>
+                </button>
+              ))}
             </div>
           )}
 
