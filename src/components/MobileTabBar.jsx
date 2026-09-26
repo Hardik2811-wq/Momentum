@@ -33,7 +33,7 @@ export default function MobileTabBar({ activeTab, setActiveTab, onOpenQuickAdd }
               >
                 {item.icon}
               </span>
-              <span className={`text-[11px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
+              <span className={`text-[11px] font-display tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
                 {item.label}
               </span>
               {isActive && (
@@ -74,7 +74,7 @@ export default function MobileTabBar({ activeTab, setActiveTab, onOpenQuickAdd }
               >
                 {item.icon}
               </span>
-              <span className={`text-[11px] tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
+              <span className={`text-[11px] font-display tracking-tight mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>
                 {item.label}
               </span>
               {isActive && (

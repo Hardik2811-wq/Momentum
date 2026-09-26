@@ -84,7 +84,7 @@ export default function Header({
         <div className="flex items-center gap-1.5 text-[13px] md:text-[12px]">
           <span className="hidden sm:inline text-[#BBBBC0]">Momentum</span>
           <span className="hidden sm:inline text-[#DEDEE3]">/</span>
-          <span className="font-semibold tracking-tight text-[#1A1B1F]">
+          <span className="font-display font-bold tracking-tight text-[#1A1B1F]">
             {TITLE_MAP[activeTab] || 'Workspace'}
           </span>
         </div>

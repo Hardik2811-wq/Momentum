@@ -137,7 +137,7 @@ const TaskCard = React.memo(function TaskCard({
 
       {/* Plan, deadline, effort, linked goal/habit, and subtask count — Typography-driven negative space */}
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 mt-2.5 text-xs text-on-surface-variant">
-        <span className="inline-flex items-center gap-1 font-medium text-on-surface-variant">
+        <span className="inline-flex items-center gap-1 font-mono tabular-nums font-medium text-on-surface-variant">
           <span className="material-symbols-outlined text-[13px] text-primary/80">schedule</span>
           <span>{task.startTime ? formatDueTime() : plannedLabel}</span>
         </span>
@@ -155,7 +155,7 @@ const TaskCard = React.memo(function TaskCard({
         )}
 
         <span className="text-outline-variant/50">•</span>
-        <span className="inline-flex items-center gap-1 text-on-surface-variant/80">
+        <span className="inline-flex items-center gap-1 font-mono tabular-nums text-on-surface-variant/80">
           <span className="material-symbols-outlined text-[13px] text-on-surface-variant/60">
             {isFlexible ? 'all_inclusive' : 'timer'}
           </span>
@@ -194,7 +194,7 @@ const TaskCard = React.memo(function TaskCard({
                 e.stopPropagation();
                 setSubtasksOpen(!subtasksOpen);
               }}
-              className="inline-flex items-center gap-1 font-semibold text-primary hover:text-primary-hover transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 font-mono tabular-nums font-semibold text-primary hover:text-primary-hover transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[14px]">checklist</span>
               <span>{completedSubtasksCount}/{task.subtasks.length}</span>
