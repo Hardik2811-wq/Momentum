@@ -91,7 +91,7 @@ export default function Header({
       </div>
 
       {/* ── Search ── */}
-      <div className="flex-1 max-w-[220px] sm:max-w-[280px] md:max-w-[320px] mx-2 sm:mx-4 md:mx-6 relative">
+      <div className="flex-1 max-w-[160px] sm:max-w-[280px] md:max-w-[320px] mx-1.5 sm:mx-4 md:mx-6 relative">
         <span className={`material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[15px] pointer-events-none transition-colors ${
           searchFocused ? 'text-[#0A84FF]' : 'text-[#BBBBC0]'
         }`}>search</span>
@@ -139,11 +139,11 @@ export default function Header({
       {/* ── Right controls ── */}
       <div className="flex items-center gap-2">
 
-        {/* Universal UI Editor Mode Toggle */}
+        {/* Universal UI Editor Mode Toggle (desktop only) */}
         <button
           onClick={onToggleUniversalEditor}
           title="Universal UI Editor Mode — Hold Ctrl/⌘ and click any block to resize"
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border ${
+          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border ${
             isUniversalEditorMode
               ? 'bg-[#0A84FF] text-white border-[#0A84FF] shadow-[0_2px_8px_rgba(10,132,255,0.35)]'
               : 'bg-black/[0.03] text-[#555] border-black/[0.06] hover:text-[#1A1B1F] hover:bg-black/[0.06]'

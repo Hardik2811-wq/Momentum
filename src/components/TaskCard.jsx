@@ -67,9 +67,9 @@ const TaskCard = React.memo(function TaskCard({
   return (
     <div
       onClick={() => onEditTask?.(task)}
-      className={`group relative flex flex-col p-3.5 sm:p-4 rounded-2xl bg-surface-container-lowest shadow-sm hover:shadow-md border border-black/[0.05] dark:border-white/[0.06] transition-all cursor-pointer ${
-        task.completed ? 'opacity-60 bg-surface-container-low/40' : ''
-      } ${impact === 'high' && !task.completed ? 'border-l-4 border-l-rose-500' : ''}`}
+      className={`group relative flex flex-col p-4 sm:p-5 rounded-2xl bg-surface-container-lowest border border-black/[0.04] shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:border-black/[0.08] hover:shadow-xs transition-all cursor-pointer ${
+        task.completed ? 'opacity-55 hover:opacity-80 py-3 sm:py-3.5' : ''
+      } ${impact === 'high' && !task.completed ? 'border-l-[3.5px] border-l-rose-500' : ''}`}
     >
       {/* Top Row: Checkbox, Title, Actions */}
       <div className="flex items-start justify-between gap-3">
@@ -82,16 +82,16 @@ const TaskCard = React.memo(function TaskCard({
             }}
             className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
               task.completed
-                ? 'bg-primary text-white'
-                : 'bg-surface-container-low text-transparent hover:text-primary border border-black/10'
+                ? 'bg-primary text-white shadow-2xs'
+                : 'bg-transparent text-transparent hover:text-primary border border-black/20 hover:border-primary'
             }`}
             title={task.completed ? 'Mark incomplete' : 'Mark complete'}
           >
-            <span className="material-symbols-outlined text-[14px]">done</span>
+            <span className="material-symbols-outlined text-[13px] font-bold">done</span>
           </button>
           <div className="flex flex-col min-w-0 flex-1">
             <span
-              className={`font-semibold text-sm sm:text-base text-on-surface tracking-tight group-hover:text-primary transition-colors ${
+              className={`font-semibold text-[14px] sm:text-[15px] leading-snug text-on-surface tracking-tight group-hover:text-primary transition-colors ${
                 task.completed ? 'line-through text-on-surface-variant' : ''
               }`}
             >
@@ -103,11 +103,15 @@ const TaskCard = React.memo(function TaskCard({
         {/* Priority Badge & Delete */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span
-            className={`px-2 py-0.5 rounded-full border font-caption text-[11px] font-semibold ${
-              PRIORITY_BADGES[impact] || PRIORITY_BADGES.medium
+            className={`px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
+              impact === 'high'
+                ? 'bg-rose-50 text-rose-700 border-rose-200/60 font-bold'
+                : impact === 'medium'
+                ? 'bg-amber-50/80 text-amber-800 border-amber-200/50'
+                : 'hidden sm:inline-block bg-surface-container-high/60 text-on-surface-variant border-transparent'
             }`}
           >
-            {IMPACT_LABELS[impact]} impact
+            {IMPACT_LABELS[impact]}
           </span>
           {onDeleteTask && (
             <button
@@ -131,56 +135,75 @@ const TaskCard = React.memo(function TaskCard({
         </div>
       </div>
 
-      {/* Plan, deadline, effort, and linked goal */}
-      <div className="flex flex-wrap items-center gap-1.5 mt-2.5 text-xs text-on-surface-variant">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-container text-[11px] font-medium text-on-surface-variant">
-          <span className="material-symbols-outlined text-[13px] text-primary">schedule</span>
+      {/* Plan, deadline, effort, linked goal/habit, and subtask count — Typography-driven negative space */}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 mt-2.5 text-xs text-on-surface-variant">
+        <span className="inline-flex items-center gap-1 font-medium text-on-surface-variant">
+          <span className="material-symbols-outlined text-[13px] text-primary/80">schedule</span>
           <span>{task.startTime ? formatDueTime() : plannedLabel}</span>
         </span>
 
         {deadline && (
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${
-            deadline.tone === 'overdue'
-              ? 'bg-rose-50 text-rose-700 border border-rose-200/60'
-              : deadline.tone === 'today'
-              ? 'bg-amber-50 text-amber-800 border border-amber-200/60'
-              : 'bg-surface-container text-on-surface-variant'
-          }`}>
-            <span className="material-symbols-outlined text-[13px]">flag</span>
-            <span>{deadline.label}</span>
-          </span>
+          <>
+            <span className="text-outline-variant/50">•</span>
+            <span className={`inline-flex items-center gap-1 font-semibold ${
+              deadline.tone === 'overdue' ? 'text-rose-600' : deadline.tone === 'today' ? 'text-amber-700' : 'text-on-surface-variant'
+            }`}>
+              <span className="material-symbols-outlined text-[13px]">flag</span>
+              <span>{deadline.label}</span>
+            </span>
+          </>
         )}
 
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-container text-[11px] font-medium text-on-surface-variant">
-          <span className="material-symbols-outlined text-[13px] text-amber-600">
+        <span className="text-outline-variant/50">•</span>
+        <span className="inline-flex items-center gap-1 text-on-surface-variant/80">
+          <span className="material-symbols-outlined text-[13px] text-on-surface-variant/60">
             {isFlexible ? 'all_inclusive' : 'timer'}
           </span>
-          <span>{isFlexible ? '~ Flexible' : workDuration}</span>
+          <span>{isFlexible ? 'Flexible' : workDuration}</span>
         </span>
 
         {/* Linked Goal */}
         {linkedGoal && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-fixed/60 text-[11px] font-semibold text-primary">
-            <span className="material-symbols-outlined text-[13px]">flag</span>
-            <span className="truncate max-w-[140px] sm:max-w-[180px]">{linkedGoal.title}</span>
-          </span>
+          <>
+            <span className="text-outline-variant/50 hidden sm:inline">•</span>
+            <span className="inline-flex items-center gap-1 text-primary/90 font-medium max-w-[130px] sm:max-w-[170px] truncate">
+              <span className="material-symbols-outlined text-[13px]">flag</span>
+              <span className="truncate">{linkedGoal.title}</span>
+            </span>
+          </>
         )}
 
         {/* Linked Habit */}
         {linkedHabit && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-50 text-[11px] font-semibold text-rose-700 border border-rose-200/60">
-            <span className="material-symbols-outlined text-[13px]">{linkedHabit.icon || 'repeat'}</span>
-            <span className="truncate max-w-[140px] sm:max-w-[180px]">{linkedHabit.title}</span>
-          </span>
+          <>
+            <span className="text-outline-variant/50 hidden sm:inline">•</span>
+            <span className="inline-flex items-center gap-1 text-rose-600 font-medium max-w-[130px] sm:max-w-[170px] truncate">
+              <span className="material-symbols-outlined text-[13px]">{linkedHabit.icon || 'repeat'}</span>
+              <span className="truncate">{linkedHabit.title}</span>
+            </span>
+          </>
         )}
 
-        {/* Life Areas (show up to 1 to avoid clutter, hide on mobile) */}
-        {Array.isArray(task.areas) && task.areas.slice(0, 1).map(area => (
-          <span key={area} className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-container text-[11px] font-medium text-on-surface-variant">
-            <span className="material-symbols-outlined text-[12px] opacity-70">category</span>
-            <span>{area}</span>
-          </span>
-        ))}
+        {/* Subtask inline indicator */}
+        {task.subtasks && task.subtasks.length > 0 && (
+          <>
+            <span className="text-outline-variant/50">•</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSubtasksOpen(!subtasksOpen);
+              }}
+              className="inline-flex items-center gap-1 font-semibold text-primary hover:text-primary-hover transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[14px]">checklist</span>
+              <span>{completedSubtasksCount}/{task.subtasks.length}</span>
+              <span className="material-symbols-outlined text-[13px] opacity-70">
+                {subtasksOpen ? 'expand_less' : 'expand_more'}
+              </span>
+            </button>
+          </>
+        )}
       </div>
 
       {uniqueReasons.length > 0 && (
@@ -190,68 +213,36 @@ const TaskCard = React.memo(function TaskCard({
         </div>
       )}
 
-      {/* Small Checklist (Subtasks with toggle) */}
-      {task.subtasks && task.subtasks.length > 0 && (
-        <div className="mt-2.5 pt-2 border-t border-black/[0.04]">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
+      {/* Expandable Subtask Checklist */}
+      {task.subtasks && task.subtasks.length > 0 && subtasksOpen && (
+        <div className="mt-3 pt-3 border-t border-black/[0.04] space-y-1.5 animate-fadeIn">
+          {task.subtasks.map(st => (
+            <div
+              key={st.id}
               onClick={(e) => {
                 e.stopPropagation();
-                setSubtasksOpen(!subtasksOpen);
+                handleSubtaskCheck(st.id);
               }}
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-[11px] font-semibold text-on-surface-variant transition-colors"
+              className="flex items-center gap-2.5 py-1.5 px-2 rounded-xl hover:bg-surface-container-low transition-colors cursor-pointer select-none"
             >
-              <span className="material-symbols-outlined text-[14px] text-primary">checklist</span>
-              <span>{completedSubtasksCount}/{task.subtasks.length} subtasks</span>
-              <span className="material-symbols-outlined text-[13px] opacity-70">
-                {subtasksOpen ? 'expand_less' : 'expand_more'}
-              </span>
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-on-surface-variant">
-                {Math.round((completedSubtasksCount / task.subtasks.length) * 100)}%
-              </span>
-              <div className="w-14 h-1.5 rounded-full bg-surface-container-high overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all"
-                  style={{ width: `${Math.round((completedSubtasksCount / task.subtasks.length) * 100)}%` }}
-                />
+              <div
+                className={`w-4 h-4 rounded-md flex items-center justify-center transition-colors border ${
+                  st.completed
+                    ? 'bg-primary border-primary text-white'
+                    : 'border-black/25 bg-surface hover:border-primary'
+                }`}
+              >
+                {st.completed && <span className="material-symbols-outlined text-[12px]">done</span>}
               </div>
+              <span
+                className={`text-xs ${
+                  st.completed ? 'line-through text-on-surface-variant/60' : 'text-on-surface font-medium'
+                }`}
+              >
+                {st.title}
+              </span>
             </div>
-          </div>
-
-          {subtasksOpen && (
-            <div className="space-y-1 mt-2 animate-fadeIn">
-              {task.subtasks.map(st => (
-                <div
-                  key={st.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSubtaskCheck(st.id);
-                  }}
-                  className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer select-none"
-                >
-                  <div
-                    className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${
-                      st.completed
-                        ? 'bg-primary border-primary text-white'
-                        : 'border-black/25 bg-surface hover:border-primary'
-                    }`}
-                  >
-                    {st.completed && <span className="material-symbols-outlined text-[12px]">done</span>}
-                  </div>
-                  <span
-                    className={`text-xs ${
-                      st.completed ? 'line-through text-on-surface-variant/60' : 'text-on-surface font-medium'
-                    }`}
-                  >
-                    {st.title}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          ))}
         </div>
       )}
 

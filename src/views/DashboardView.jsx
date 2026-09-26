@@ -19,6 +19,7 @@ const DashboardView = React.memo(function DashboardView({
 }) {
   const [filter, setFilter] = useState('all');
   const [editingTask, setEditingTask] = useState(null);
+  const [showCompleted, setShowCompleted] = useState(false);
   const userName = settings?.profile?.name || 'Friend';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -100,29 +101,32 @@ const DashboardView = React.memo(function DashboardView({
     return visibleTasks.filter(t => t.id !== nextTask.id || t.completed);
   }, [visibleTasks, nextTask]);
 
+  const activeQueueTasks = useMemo(() => queueTasks.filter(t => !t.completed), [queueTasks]);
+  const completedQueueTasks = useMemo(() => queueTasks.filter(t => t.completed), [queueTasks]);
+
   const checkedHabits = useMemo(() => habits.filter(habit => habit.completedDays?.includes(today)).length, [habits, today]);
   const activeGoals = useMemo(() => goals.filter(goal => goal.velocity !== 'complete').slice(0, 3), [goals]);
 
   return (
-    <main className="w-full min-h-screen bg-surface pt-16 md:pt-12 px-3 sm:px-6 md:px-margin-desktop py-3 sm:py-gutter-xl">
-      <div className="mx-auto w-full max-w-[1440px] space-y-4 sm:space-y-6">
-        <header data-block-id="dashboard-header" className="flex items-center justify-between gap-3">
+    <main className="w-full min-h-screen bg-surface pt-16 md:pt-14 px-4 sm:px-6 md:px-8 py-4 sm:py-8">
+      <div className="mx-auto w-full max-w-[1440px] space-y-6 sm:space-y-8">
+        <header data-block-id="dashboard-header" className="flex items-center justify-between gap-3 pt-1">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-2.5 py-0.5 text-[11px] font-semibold text-on-surface-variant border border-black/[0.04] mb-1">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-3 py-1 text-[11px] font-semibold text-on-surface-variant border border-black/[0.04] mb-2">
               <span className="material-symbols-outlined text-[13px] text-primary">calendar_today</span>
               <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
             </div>
-            <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-on-surface truncate">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-on-surface truncate">
               {greeting}, {userName}
             </h1>
-            <p className="hidden sm:block text-xs sm:text-sm text-on-surface-variant mt-0.5">
+            <p className="hidden sm:block text-xs sm:text-sm text-on-surface-variant mt-1">
               Plan today. Do next task. Review week.
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Live Progress Ring Widget */}
-            <div className="flex items-center gap-2 bg-surface-container-lowest border border-black/[0.05] rounded-2xl p-1.5 sm:px-3 sm:py-1.5 shadow-2xs">
+            <div className="flex items-center gap-2.5 bg-surface-container-lowest border border-black/[0.04] rounded-2xl p-2 sm:px-3.5 sm:py-2 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
               <div className="relative w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center shrink-0">
                 <svg className="w-8 h-8 sm:w-9 sm:h-9 -rotate-90" viewBox="0 0 36 36">
                   <path
@@ -155,7 +159,7 @@ const DashboardView = React.memo(function DashboardView({
             {/* Desktop Add Task Button */}
             <button
               onClick={onOpenQuickAdd}
-              className="hidden md:inline-flex items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+              className="hidden md:inline-flex items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
               <span>Add task</span>
@@ -163,21 +167,21 @@ const DashboardView = React.memo(function DashboardView({
           </div>
         </header>
 
-        {/* ── NOW FOCUS HERO CARD ── */}
-        <section data-block-id="dashboard-now-hero" className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/[0.08] via-surface-container-lowest to-surface-container-lowest p-5 sm:p-6 shadow-sm relative overflow-hidden">
-          <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        {/* ── NOW FOCUS HERO CARD (Spacious Negative-Spacing Architecture) ── */}
+        <section data-block-id="dashboard-now-hero" className="rounded-3xl border border-black/[0.04] bg-surface-container-lowest p-6 sm:p-7 md:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden">
+          <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-primary/[0.04] blur-3xl pointer-events-none" />
 
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between relative z-10">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between relative z-10">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                 </span>
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-primary">Now Focus Target</span>
                 {nextTask && (
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    taskImpact(nextTask) === 'high' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-800 border-amber-200'
+                    taskImpact(nextTask) === 'high' ? 'bg-rose-50 text-rose-700 border-rose-200/60' : 'bg-amber-50 text-amber-800 border-amber-200/50'
                   }`}>
                     {IMPACT_LABELS[taskImpact(nextTask)]} Impact
                   </span>
@@ -187,20 +191,20 @@ const DashboardView = React.memo(function DashboardView({
               {nextTask ? (
                 <>
                   <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-on-surface truncate">{nextTask.title}</h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
-                    <span className="inline-flex items-center gap-1 font-semibold text-primary">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-on-surface-variant">
+                    <span className="inline-flex items-center gap-1 font-medium text-primary">
                       <span className="material-symbols-outlined text-[15px]">schedule</span>
                       {nextTask.startTime ? formatTime(nextTask.startTime) : 'Planned today'}
                     </span>
-                    <span>•</span>
-                    <span className="inline-flex items-center gap-1">
+                    <span className="text-outline-variant/60">•</span>
+                    <span className="inline-flex items-center gap-1 text-on-surface-variant">
                       <span className="material-symbols-outlined text-[15px] text-amber-600">timer</span>
                       {effortLabel(nextTask.durationMinutes)} effort
                     </span>
                     {nextTask.subtasks && nextTask.subtasks.length > 0 && (
                       <>
-                        <span>•</span>
-                        <span className="inline-flex items-center gap-1 font-medium">
+                        <span className="text-outline-variant/60">•</span>
+                        <span className="inline-flex items-center gap-1 font-medium text-on-surface-variant">
                           <span className="material-symbols-outlined text-[15px]">checklist</span>
                           {nextTask.subtasks.filter(s => s.completed).length}/{nextTask.subtasks.length} subtasks
                         </span>
@@ -217,23 +221,23 @@ const DashboardView = React.memo(function DashboardView({
             </div>
 
             {nextTask ? (
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <div className="flex items-center gap-3 shrink-0 pt-2 sm:pt-0">
                 <button
                   onClick={() => setEditingTask(nextTask)}
-                  className="px-4 py-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-black/[0.06] text-sm font-semibold text-on-surface shadow-xs transition-all active:scale-95"
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-all"
                 >
                   View task
                 </button>
                 <button
                   onClick={() => onStartFocus?.(nextTask.id)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-on-primary text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-on-primary text-sm font-semibold shadow-xs hover:shadow-sm active:scale-95 transition-all cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                  <span className="material-symbols-outlined text-[17px]">play_arrow</span>
                   <span>Start Focus</span>
                 </button>
               </div>
             ) : (
-              <button onClick={onOpenQuickAdd} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary shadow-sm hover:shadow-md transition-all">
+              <button onClick={onOpenQuickAdd} className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary shadow-xs hover:shadow-sm transition-all">
                 Add first task
               </button>
             )}
@@ -241,17 +245,17 @@ const DashboardView = React.memo(function DashboardView({
         </section>
 
         {/* ── MAIN WORKSPACE GRID ── */}
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <section className="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-12">
           {/* Left Column: Today Tasks (8 cols) */}
           <div data-block-id="dashboard-today-tasks" className="space-y-4 lg:col-span-8">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-1">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold tracking-tight text-on-surface">
                     {nextTask ? 'Upcoming Queue' : 'Today'}
                   </h2>
                   <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
-                    {queueTasks.length} {queueTasks.length === 1 ? 'task' : 'tasks'}
+                    {activeQueueTasks.length} {activeQueueTasks.length === 1 ? 'task' : 'tasks'}
                   </span>
                 </div>
                 <p className="text-xs text-on-surface-variant mt-0.5">
@@ -260,7 +264,7 @@ const DashboardView = React.memo(function DashboardView({
               </div>
 
               {/* Filter Pills with Live Count Badges */}
-              <div className="inline-flex rounded-full bg-surface-container p-1 gap-1">
+              <div className="inline-flex rounded-full bg-surface-container/60 p-1 gap-1 self-start sm:self-auto">
                 {[
                   ['all', 'All', filterCounts.all],
                   ['high', 'High impact', filterCounts.high],
@@ -286,9 +290,9 @@ const DashboardView = React.memo(function DashboardView({
               </div>
             </div>
 
-            <div className="space-y-3">
-              {queueTasks.length ? (
-                queueTasks.map(task => (
+            <div className="space-y-3 sm:space-y-3.5">
+              {activeQueueTasks.length ? (
+                activeQueueTasks.map(task => (
                   <TaskCard
                     key={task.id}
                     task={task}
@@ -302,14 +306,47 @@ const DashboardView = React.memo(function DashboardView({
                   />
                 ))
               ) : (
-                <div className="rounded-2xl border border-dashed border-outline-variant/30 bg-surface-container-lowest p-6 text-center">
-                  <span className="material-symbols-outlined text-[28px] text-emerald-500 mb-1 block">task_alt</span>
+                <div className="rounded-3xl border border-dashed border-outline-variant/30 bg-surface-container-lowest p-8 text-center">
+                  <span className="material-symbols-outlined text-[32px] text-emerald-500 mb-1.5 block">task_alt</span>
                   <p className="text-sm font-semibold text-on-surface">
                     {nextTask ? 'All queue tasks complete!' : 'All today tasks completed!'}
                   </p>
-                  <p className="text-xs text-on-surface-variant mt-0.5">
+                  <p className="text-xs text-on-surface-variant mt-1">
                     {nextTask ? 'Focus on your active target above.' : 'Add new tasks or plan tomorrow.'}
                   </p>
+                </div>
+              )}
+
+              {/* Completed Tasks Accordion — Keeps canvas spacious and clutter-free */}
+              {completedQueueTasks.length > 0 && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCompleted(!showCompleted)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface py-2 px-1 cursor-pointer transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {showCompleted ? 'expand_less' : 'expand_more'}
+                    </span>
+                    <span>Completed ({completedQueueTasks.length})</span>
+                  </button>
+                  {showCompleted && (
+                    <div className="space-y-2.5 mt-2 animate-fadeIn">
+                      {completedQueueTasks.map(task => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          onToggleTask={onToggleTask}
+                          onDeleteTask={onDeleteTask}
+                          onUpdateTask={onUpdateTask}
+                          onToggleSubtask={onToggleSubtask}
+                          onEditTask={setEditingTask}
+                          goals={goals}
+                          habits={habits}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -325,11 +362,13 @@ const DashboardView = React.memo(function DashboardView({
 
           {/* Right Column: Habits (4 cols) */}
           <aside data-block-id="dashboard-sidebar-column" className="space-y-6 lg:col-span-4">
-            {/* Habits Widget */}
-            <div data-block-id="dashboard-habits-card" className="rounded-2xl bg-surface-container-lowest p-5 shadow-sm border border-black/[0.04]">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-secondary">repeat</span>
+            {/* Habits Widget (Spacious Negative-Spacing Architecture) */}
+            <div data-block-id="dashboard-habits-card" className="rounded-3xl bg-surface-container-lowest p-6 shadow-[0_2px_16px_rgba(0,0,0,0.02)] border border-black/[0.04]">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
+                    <span className="material-symbols-outlined text-[18px]">repeat</span>
+                  </div>
                   <div>
                     <h2 className="text-base font-bold text-on-surface">Daily Habits</h2>
                     <p className="text-[11px] text-on-surface-variant">
@@ -347,14 +386,14 @@ const DashboardView = React.memo(function DashboardView({
               </div>
 
               {/* Habit Completion Progress Bar */}
-              <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden my-3">
+              <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden my-3.5">
                 <div
                   className="h-full bg-secondary rounded-full transition-all duration-500"
                   style={{ width: `${habits.length > 0 ? Math.round((checkedHabits / habits.length) * 100) : 0}%` }}
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {habits.slice(0, 4).map(habit => {
                   const done = habit.completedDays?.includes(today);
                   const streak = (habit.completedDays || []).length;
@@ -362,26 +401,26 @@ const DashboardView = React.memo(function DashboardView({
                     <button
                       key={habit.id}
                       onClick={() => onCheckInHabit?.(habit.id)}
-                      className={`flex w-full items-center justify-between gap-3 rounded-xl p-2.5 text-left border transition-all active:scale-[0.98] ${
+                      className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-3 text-left transition-all active:scale-[0.99] ${
                         done
-                          ? 'bg-emerald-500/[0.06] border-emerald-500/20'
-                          : 'hover:bg-surface-container-low border-transparent'
+                          ? 'bg-emerald-500/[0.05] text-on-surface-variant'
+                          : 'bg-surface-container-low/50 hover:bg-surface-container-low text-on-surface'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span className={`flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${
-                          done ? 'border-primary bg-primary text-white shadow-2xs' : 'border-outline-variant bg-surface'
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span className={`flex h-5 w-5 items-center justify-center rounded-full border transition-all ${
+                          done ? 'border-primary bg-primary text-white shadow-2xs' : 'border-outline/40 bg-surface'
                         }`}>
-                          <span className="material-symbols-outlined text-[14px]">done</span>
+                          <span className="material-symbols-outlined text-[13px]">done</span>
                         </span>
                         <span className={`text-xs font-medium truncate ${
-                          done ? 'text-on-surface-variant line-through' : 'text-on-surface'
+                          done ? 'text-on-surface-variant/70 line-through' : 'text-on-surface'
                         }`}>
                           {habit.title}
                         </span>
                       </div>
                       {streak > 0 && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-full border border-amber-200/60 shrink-0">
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200/50 shrink-0">
                           <span>🔥</span>
                           <span>{streak}d</span>
                         </span>
@@ -390,16 +429,16 @@ const DashboardView = React.memo(function DashboardView({
                   );
                 })}
                 {!habits.length && (
-                  <p className="text-xs text-on-surface-variant text-center py-2">No habits configured yet.</p>
+                  <p className="text-xs text-on-surface-variant text-center py-4">No habits configured yet.</p>
                 )}
               </div>
             </div>
           </aside>
         </section>
 
-        {/* ── GOALS CAROUSEL SECTION ── */}
-        <section data-block-id="dashboard-goals-card" className="rounded-2xl bg-surface-container-lowest p-5 sm:p-6 shadow-sm border border-black/[0.04]">
-          <div className="flex items-center justify-between mb-4">
+        {/* ── GOALS CAROUSEL SECTION (Spacious Negative-Spacing Architecture) ── */}
+        <section data-block-id="dashboard-goals-card" className="rounded-3xl bg-surface-container-lowest p-6 sm:p-7 shadow-[0_2px_16px_rgba(0,0,0,0.02)] border border-black/[0.04]">
+          <div className="flex items-center justify-between mb-5">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wider text-secondary">Active Horizons</p>
               <h2 className="mt-0.5 text-lg sm:text-xl font-bold text-on-surface">Goals Moving Forward</h2>
@@ -413,13 +452,13 @@ const DashboardView = React.memo(function DashboardView({
             </button>
           </div>
 
-          <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-none snap-x md:grid md:grid-cols-3">
+          <div className="flex overflow-x-auto gap-4 pb-3 scrollbar-none snap-x md:grid md:grid-cols-3">
             {activeGoals.length ? (
               activeGoals.map(goal => {
                 const progress = goal.workProgress ?? goal.progress ?? 0;
                 const next = goal.nextTask?.title;
                 return (
-                  <div key={goal.id} className="min-w-[270px] sm:min-w-0 flex-1 snap-start rounded-xl bg-surface-container-low border border-black/[0.03] p-4 flex flex-col justify-between hover:shadow-xs transition-shadow">
+                  <div key={goal.id} className="min-w-[280px] sm:min-w-0 flex-1 snap-start rounded-2xl bg-surface-container-low/50 hover:bg-surface-container-low border border-black/[0.03] p-5 flex flex-col justify-between transition-all">
                     <button onClick={() => setActiveTab('goals')} className="w-full text-left">
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-bold text-on-surface">{goal.title}</span>
@@ -437,7 +476,7 @@ const DashboardView = React.memo(function DashboardView({
                     </button>
                     <button
                       onClick={() => onOpenQuickAdd?.({ initialGoalId: goal.id })}
-                      className="mt-3 text-xs font-semibold text-primary hover:underline text-left inline-flex items-center gap-1"
+                      className="mt-3.5 text-xs font-semibold text-primary hover:underline text-left inline-flex items-center gap-1"
                     >
                       <span>+ Add next task</span>
                     </button>
@@ -445,7 +484,7 @@ const DashboardView = React.memo(function DashboardView({
                 );
               })
             ) : (
-              <button onClick={() => setActiveTab('goals')} className="rounded-xl bg-surface-container-low p-4 text-left text-sm font-semibold text-primary">
+              <button onClick={() => setActiveTab('goals')} className="rounded-2xl bg-surface-container-low/60 p-5 text-left text-sm font-semibold text-primary">
                 Create first goal
               </button>
             )}
