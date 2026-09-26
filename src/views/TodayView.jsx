@@ -110,6 +110,7 @@ const TodayView = React.memo(function TodayView({
   onStartFocus
 }) {
   const [viewDate, setViewDate] = useState(() => todayPlanDate());
+  const [scope, setScope] = useState('day'); // 'day' | '3day' | 'week'
   const [mobileTab, setMobileTab] = useState('agenda'); // 'agenda' | 'timeline' | 'tray'
   const [showCompletedAgenda, setShowCompletedAgenda] = useState(false);
   const [trayFilterMode, setTrayFilterMode] = useState('unscheduled'); // Default to unscheduled to eliminate duplicates
