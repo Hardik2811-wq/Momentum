@@ -56,8 +56,10 @@ export default function UniversalLayoutApplier({ customUiLayout = {} }) {
       }
 
       return `
-        ${selectors.join(', ')} {
-          ${declarations.join('\n          ')}
+        @media (min-width: 1024px) {
+          ${selectors.join(', ')} {
+            ${declarations.join('\n            ')}
+          }
         }
       `;
     }).filter(Boolean);

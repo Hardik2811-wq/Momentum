@@ -23,7 +23,9 @@ import {
   Flag,
   ListChecks,
   Move,
-  Maximize2
+  Maximize2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import DeleteRecurringModal from '../components/DeleteRecurringModal';
@@ -108,8 +110,8 @@ const TodayView = React.memo(function TodayView({
   onStartFocus
 }) {
   const [viewDate, setViewDate] = useState(() => todayPlanDate());
-  const [scope, setScope] = useState('day'); // 'day' | '3day' | 'week'
-  const [mobileTab, setMobileTab] = useState('schedule'); // 'schedule' | 'tray'
+  const [mobileTab, setMobileTab] = useState('agenda'); // 'agenda' | 'timeline' | 'tray'
+  const [showCompletedAgenda, setShowCompletedAgenda] = useState(false);
   const [trayFilterMode, setTrayFilterMode] = useState('unscheduled'); // Default to unscheduled to eliminate duplicates
   const [trayAreaFilter, setTrayAreaFilter] = useState('all');
   const [traySearch, setTraySearch] = useState('');
@@ -177,9 +179,9 @@ const TodayView = React.memo(function TodayView({
     };
   }, [viewDate, scope, scrollToNow]);
 
-  // When switching mobile tab back to schedule, ensure scroll position is aligned
+  // When switching mobile tab back to timeline, ensure scroll position is aligned
   useEffect(() => {
-    if (mobileTab === 'schedule') {
+    if (mobileTab === 'timeline') {
       const isToday = viewDate === todayPlanDate();
       const timer = setTimeout(() => {
         if (isToday) scrollToNow(false);
@@ -559,6 +561,72 @@ const TodayView = React.memo(function TodayView({
     return { main: formatted, short: shortFormatted, isToday: columnDates.includes(todayPlanDate()) };
   }, [viewDate, scope, columnDates]);
 
+  /* ── Agenda Blocks & Smart Buffer Gaps for Mobile Agenda Feed ── */
+  const todayAgendaData = useMemo(() => {
+    const rawActive = tasks
+      .filter(t => !t.completed && isTaskScheduledForDate(t, viewDate) && t.startTime)
+      .map(t => {
+        const sm = minutesFromStartOfDay(t.startTime) || 0;
+        const dur = Number(t.durationMinutes) || 45;
+        const isLive = (currentMinutesToday >= sm && currentMinutesToday <= sm + dur) && viewDate === todayPlanDate();
+        return {
+          task: t,
+          startMin: sm,
+          endMin: sm + dur,
+          duration: dur,
+          isLive,
+          timeStr: `${format12Hour(sm)} – ${format12Hour((sm + dur) % 1440)}`
+        };
+      })
+      .sort((a, b) => a.startMin - b.startMin);
+
+    const rawCompleted = tasks
+      .filter(t => t.completed && isTaskScheduledForDate(t, viewDate) && t.startTime)
+      .map(t => {
+        const sm = minutesFromStartOfDay(t.startTime) || 0;
+        const dur = Number(t.durationMinutes) || 45;
+        return {
+          task: t,
+          startMin: sm,
+          endMin: sm + dur,
+          duration: dur,
+          isLive: false,
+          timeStr: `${format12Hour(sm)} – ${format12Hour((sm + dur) % 1440)}`
+        };
+      })
+      .sort((a, b) => a.startMin - b.startMin);
+
+    const feed = [];
+    for (let i = 0; i < rawActive.length; i++) {
+      const cur = rawActive[i];
+      if (i > 0) {
+        const prev = rawActive[i - 1];
+        const gap = cur.startMin - prev.endMin;
+        if (gap >= 15) {
+          const gapStartH = Math.floor(prev.endMin / 60);
+          const gapStartM = prev.endMin % 60;
+          const slotTime = `${String(gapStartH).padStart(2, '0')}:${String(gapStartM).padStart(2, '0')}`;
+          feed.push({
+            type: 'gap',
+            id: `gap-${prev.endMin}-${cur.startMin}`,
+            gapMins: gap,
+            fromTime: format12Hour(prev.endMin),
+            toTime: format12Hour(cur.startMin),
+            slotTime
+          });
+        }
+      }
+      feed.push({ type: 'task', id: cur.task.id, ...cur });
+    }
+
+    return {
+      activeList: feed,
+      completedList: rawCompleted,
+      activeCount: rawActive.length,
+      totalCount: rawActive.length + rawCompleted.length
+    };
+  }, [tasks, viewDate, currentMinutesToday]);
+
   return (
     <main className="w-full min-h-screen bg-[#F8F8FC] pt-16 md:pt-12 px-3 sm:px-6 md:px-margin-desktop py-3 sm:py-6 text-[#1A1B1F] select-none">
       <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-3 sm:gap-4 min-w-0">
@@ -722,19 +790,38 @@ const TodayView = React.memo(function TodayView({
 
           {/* Bottom Row (Mobile only: lg:hidden) - Segmented Switcher & Mobile Scope */}
           <div className="flex lg:hidden items-center justify-between gap-2 pt-2 border-t border-black/[0.04] w-full min-w-0">
-            {/* Mobile Tab Switcher */}
+            {/* Mobile Tab Switcher: Agenda | Timeline | Tray */}
             <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04] flex-1 min-w-0">
               <button
                 type="button"
-                onClick={() => setMobileTab('schedule')}
+                onClick={() => setMobileTab('agenda')}
                 className={`flex-1 py-1.5 rounded-lg text-[11.5px] font-bold transition flex items-center justify-center gap-1 min-w-0 truncate ${
-                  mobileTab === 'schedule'
+                  mobileTab === 'agenda'
+                    ? 'bg-white text-[#0A84FF] shadow-xs'
+                    : 'text-[#64748B] hover:text-[#1A1B1F]'
+                }`}
+              >
+                <ListChecks className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Agenda</span>
+                {todayAgendaData.activeCount > 0 && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold shrink-0 ${
+                    mobileTab === 'agenda' ? 'bg-[#0A84FF] text-white' : 'bg-black/[0.08] text-[#64748B]'
+                  }`}>
+                    {todayAgendaData.activeCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('timeline')}
+                className={`flex-1 py-1.5 rounded-lg text-[11.5px] font-bold transition flex items-center justify-center gap-1 min-w-0 truncate ${
+                  mobileTab === 'timeline'
                     ? 'bg-white text-[#0A84FF] shadow-xs'
                     : 'text-[#64748B] hover:text-[#1A1B1F]'
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Schedule</span>
+                <span className="truncate">Timeline</span>
               </button>
               <button
                 type="button"
@@ -748,7 +835,7 @@ const TodayView = React.memo(function TodayView({
                 <Inbox className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Tray</span>
                 {totalUnscheduledCount > 0 && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0 ${
+                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold shrink-0 ${
                     mobileTab === 'tray' ? 'bg-[#0A84FF] text-white' : 'bg-black/[0.08] text-[#64748B]'
                   }`}>
                     {totalUnscheduledCount}
@@ -757,8 +844,8 @@ const TodayView = React.memo(function TodayView({
               </button>
             </div>
 
-            {/* Mobile Scope Switcher (only when on Schedule) */}
-            {mobileTab === 'schedule' && (
+            {/* Mobile Scope Switcher (only when on Timeline) */}
+            {mobileTab === 'timeline' && (
               <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04] shrink-0">
                 {[
                   { id: 'day', label: 'Day' },
@@ -818,12 +905,266 @@ const TodayView = React.memo(function TodayView({
         <div className="w-full min-w-0 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
 
           {/* ══════════════════════════════════════════════════════
+              MOBILE ONLY: AGENDA SCHEDULE FEED (100% fluid, zero dead void)
+             ══════════════════════════════════════════════════════ */}
+          {mobileTab === 'agenda' && (
+            <div className="lg:hidden col-span-1 w-full flex flex-col gap-3 min-w-0">
+              {todayAgendaData.activeList.length === 0 && todayAgendaData.completedList.length === 0 ? (
+                /* High-Utility Empty State */
+                <div className="flex flex-col items-center justify-center p-8 sm:p-12 rounded-2xl bg-white border border-black/[0.06] shadow-2xs text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0A84FF] flex items-center justify-center shadow-xs">
+                    <Calendar className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[#1A1B1F]">
+                      Open Schedule for {viewRangeTitle.short}
+                    </h3>
+                    <p className="text-xs text-[#64748B] max-w-[280px] mt-1">
+                      No deliverables slotted for this day. You have {totalUnscheduledCount} item{totalUnscheduledCount === 1 ? '' : 's'} in your Task Tray ready to schedule.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setMobileTab('tray')}
+                      className="px-4 py-2 rounded-xl bg-[#0A84FF] text-white text-xs font-semibold hover:bg-[#0071E3] transition shadow-xs"
+                    >
+                      Open Task Tray ({totalUnscheduledCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenQuickAdd?.({ initialDate: viewDate })}
+                      className="px-4 py-2 rounded-xl bg-[#F5F4FA] text-[#1A1B1F] text-xs font-semibold hover:bg-black/[0.06] transition border border-black/[0.06]"
+                    >
+                      + New Task
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Summary Bar */}
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">
+                      Today's Execution Timeline
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#8E8E93]">
+                      {(totalScheduledMinutesInView / 60).toFixed(1)}h effort • {todayAgendaData.activeCount} active
+                    </span>
+                  </div>
+
+                  {/* Active Feed (Tasks & Buffer Gaps) */}
+                  <div className="flex flex-col gap-3">
+                    {todayAgendaData.activeList.map(item => {
+                      if (item.type === 'gap') {
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-50/60 border border-dashed border-blue-200/80 text-[11px] transition hover:bg-blue-50"
+                          >
+                            <div className="flex items-center gap-2 font-medium text-[#0A84FF]">
+                              <Clock className="w-3.5 h-3.5 shrink-0" />
+                              <span>{item.gapMins}m free buffer • Until {item.toTime}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => onOpenQuickAdd?.({ initialTime: item.slotTime, initialDate: viewDate })}
+                              className="px-2.5 py-1 rounded-lg bg-white border border-blue-200/80 text-[#0A84FF] font-semibold text-[10px] hover:bg-blue-100 transition shadow-3xs"
+                            >
+                              + Slot Task
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      const task = item.task;
+                      const areaInfo = LIFE_AREAS.find(a =>
+                        a.id === task.category ||
+                        a.shortLabel.toLowerCase() === (task.category || '').toLowerCase() ||
+                        (Array.isArray(task.areas) && task.areas.includes(a.id))
+                      );
+                      const matchedGoal = goals.find(g => g.id === task.goalId);
+                      const isHigh = task.priority === 'high' || task.impact === 'high';
+
+                      return (
+                        <div
+                          key={task.id}
+                          onClick={() => setEditingTask(task)}
+                          className={`group relative flex flex-col gap-2.5 p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs hover:shadow-md transition cursor-pointer ${
+                            item.isLive ? 'ring-2 ring-[#0A84FF] shadow-blue-500/10' : ''
+                          }`}
+                        >
+                          {/* Top Row: Time, Live badge, Priority, Area */}
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200/70">
+                                <Clock className="w-3.5 h-3.5 text-[#0A84FF]" />
+                                <span>{item.timeStr}</span>
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-[#64748B]">
+                                <Timer className="w-3 h-3 text-amber-600" />
+                                <span>{formatDurationLabel(item.duration)}</span>
+                              </span>
+                              {item.isLive && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-black uppercase tracking-wider animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                  LIVE NOW
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              {areaInfo && (
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${areaInfo.badgeClass}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${areaInfo.dotClass}`} />
+                                  {areaInfo.shortLabel}
+                                </span>
+                              )}
+                              {isHigh && (
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-red-50 text-red-700 border border-red-200/60">
+                                  High
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Task Main Content: Checkbox + Bold Title */}
+                          <div className="flex items-start gap-2.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleTask?.(task.id);
+                              }}
+                              className="mt-0.5 text-slate-400 hover:text-[#0A84FF] transition shrink-0"
+                            >
+                              <Square className="w-5 h-5" />
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-[15px] sm:text-[16px] font-bold text-[#1A1B1F] leading-snug">
+                                {task.title}
+                              </h4>
+                              {task.notes && (
+                                <p className="text-[12px] text-[#64748B] line-clamp-2 mt-1 leading-relaxed">
+                                  {task.notes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Subtasks Preview (Clickable) */}
+                          {Array.isArray(task.subtasks) && task.subtasks.length > 0 && (
+                            <div className="space-y-1 pt-1 border-t border-black/[0.04]">
+                              {task.subtasks.map(st => (
+                                <div
+                                  key={st.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleSubtask?.(task.id, st.id);
+                                  }}
+                                  className="flex items-center gap-2 text-[11px] text-[#475569] hover:text-[#1A1B1F] py-0.5 transition"
+                                >
+                                  {st.completed ? (
+                                    <CheckSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  ) : (
+                                    <Square className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  )}
+                                  <span className={st.completed ? 'line-through opacity-60' : ''}>{st.title}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Bottom Action Row: Start Focus + Goal */}
+                          <div className="flex items-center justify-between pt-1 border-t border-black/[0.04]">
+                            <div className="flex items-center gap-1.5">
+                              {matchedGoal && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#64748B] bg-[#F5F4FA] px-2 py-0.5 rounded-lg border border-black/[0.04] truncate max-w-[160px]">
+                                  <Flag className="w-3 h-3 text-[#0A84FF]" />
+                                  <span className="truncate">{matchedGoal.title}</span>
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              {onStartFocus && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onStartFocus(task.id);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-50 text-[#0A84FF] text-[11px] font-bold hover:bg-[#0A84FF] hover:text-white transition shadow-3xs"
+                                >
+                                  <Play className="w-3 h-3 fill-current" />
+                                  <span>Start Focus</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Completed Collapsible Section */}
+                  {todayAgendaData.completedList.length > 0 && (
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowCompletedAgenda(!showCompletedAgenda)}
+                        className="w-full flex items-center justify-between py-2 text-[12px] font-bold text-[#64748B] hover:text-[#1A1B1F] transition"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span>Completed Today ({todayAgendaData.completedList.length})</span>
+                        </div>
+                        {showCompletedAgenda ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+
+                      {showCompletedAgenda && (
+                        <div className="flex flex-col gap-2 mt-1">
+                          {todayAgendaData.completedList.map(item => (
+                            <div
+                              key={item.task.id}
+                              onClick={() => setEditingTask(item.task)}
+                              className="flex items-center justify-between p-3 rounded-xl bg-white border border-black/[0.04] opacity-60 hover:opacity-100 transition cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleTask?.(item.task.id);
+                                  }}
+                                  className="text-emerald-600 hover:text-slate-400 transition shrink-0"
+                                >
+                                  <CheckSquare className="w-4 h-4" />
+                                </button>
+                                <span className="text-[13px] font-medium text-slate-700 line-through truncate">
+                                  {item.task.title}
+                                </span>
+                              </div>
+                              <span className="font-mono text-[10px] text-slate-500 shrink-0">
+                                {item.timeStr}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════════════════
               LEFT COLUMN: UNIFIED TASK TRAY (3.5 cols)
              ══════════════════════════════════════════════════════ */}
           <div className={`w-full min-w-0 lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3 ${
             mobileTab === 'tray' ? 'flex' : 'hidden lg:flex'
           }`}>
-            <div data-block-id="today-task-tray" className="w-full min-w-0 flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs h-[calc(100dvh-230px)] sm:h-[calc(100vh-190px)] min-h-[500px] overflow-hidden">
+            <div className="w-full min-w-0 flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs h-[calc(100vh-210px)] min-h-[580px] overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
@@ -841,10 +1182,10 @@ const TodayView = React.memo(function TodayView({
                   </span>
                   <button
                     type="button"
-                    onClick={() => setMobileTab('schedule')}
+                    onClick={() => setMobileTab('agenda')}
                     className="lg:hidden px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-blue-50 text-[#0A84FF] hover:bg-blue-100 transition"
                   >
-                    View Schedule
+                    View Agenda
                   </button>
                 </div>
               </div>
@@ -1069,8 +1410,8 @@ const TodayView = React.memo(function TodayView({
           {/* ══════════════════════════════════════════════════════
               RIGHT COLUMN: FULL-WIDTH CALENDAR CANVAS (8.5 cols)
              ══════════════════════════════════════════════════════ */}
-          <div data-block-id="today-calendar-card" className={`w-full min-w-0 lg:col-span-8 xl:col-span-8.5 p-2.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden flex flex-col ${
-            mobileTab === 'schedule' ? 'flex' : 'hidden lg:flex'
+          <div className={`w-full min-w-0 lg:col-span-8 xl:col-span-8.5 p-2.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden flex flex-col ${
+            mobileTab === 'timeline' ? 'flex' : 'hidden lg:flex'
           }`}>
             <div className="flex items-center justify-between mb-2.5 sm:mb-3 gap-2 flex-wrap shrink-0">
               <div className="flex items-center gap-2">
@@ -1117,7 +1458,7 @@ const TodayView = React.memo(function TodayView({
 
             <div
               ref={calendarScrollRef}
-              className={`relative ${scope === 'day' ? 'overflow-x-hidden' : 'overflow-x-auto'} overflow-y-auto select-none border border-black/[0.06] rounded-xl bg-[#FAFAFC] h-[calc(100dvh-230px)] sm:h-[calc(100vh-190px)] min-h-[500px] w-full min-w-0 flex-1`}
+              className={`relative ${scope === 'day' ? 'overflow-x-hidden' : 'overflow-x-auto'} overflow-y-auto select-none border border-black/[0.06] rounded-xl bg-[#FAFAFC] h-[calc(100vh-210px)] min-h-[580px] w-full min-w-0 flex-1`}
             >
               <div
                 className="grid w-full min-w-0"
