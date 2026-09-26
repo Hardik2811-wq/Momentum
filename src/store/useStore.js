@@ -631,8 +631,10 @@ export default function useStore() {
 
   /* Tasks Actions */
   const addTask = useCallback((task) => {
-    setTasks(prev => [{ ...task, id: Date.now(), createdAt: Date.now() }, ...prev]);
+    const newId = task.id || Date.now();
+    setTasks(prev => [{ ...task, id: newId, createdAt: task.createdAt || Date.now() }, ...prev]);
     showToast(`Task added: "${task.title}"`);
+    return newId;
   }, [setTasks, showToast]);
 
   const toggleTask = useCallback((id) => {
@@ -831,14 +833,16 @@ export default function useStore() {
   }, [setHabits, settings.soundEffects]);
 
   const addHabit = useCallback((habit) => {
+    const newId = habit.id || ('h' + Date.now());
     setHabits(prev => [...prev, {
-      id: 'h' + Date.now(),
       completedDays: [],
       graceDays: habit.graceDays ?? 1,
       colorToken: habit.colorToken || 'primary',
       ...habit,
+      id: newId
     }]);
     showToast(`Habit added: "${habit.title}"`);
+    return newId;
   }, [setHabits, showToast]);
 
   const updateHabit = useCallback((id, patch) => {

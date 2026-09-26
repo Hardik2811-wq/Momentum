@@ -16,7 +16,8 @@ export default function Header({
   goals = [],
   setActiveTab,
   isUniversalEditorMode = false,
-  onToggleUniversalEditor
+  onToggleUniversalEditor,
+  onOpenAiCopilot
 }) {
   const searchRef = useRef(null);
   const notifRef = useRef(null);
@@ -139,6 +140,19 @@ export default function Header({
       {/* ── Right controls ── */}
       <div className="flex items-center gap-2">
 
+        {/* AI Executive Copilot */}
+        <button
+          type="button"
+          onClick={onOpenAiCopilot}
+          title="AI Executive Copilot — Upload docs & create intelligent schedules"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 text-primary border border-blue-200/60 dark:border-blue-800/60 hover:shadow-xs transition-all active:scale-95 cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[15px] text-[#0A84FF]">
+            auto_awesome
+          </span>
+          <span className="hidden sm:inline">AI Copilot</span>
+        </button>
+
         {/* Universal UI Editor Mode Toggle (desktop only) */}
         <button
           onClick={onToggleUniversalEditor}
@@ -211,6 +225,14 @@ export default function Header({
 
           {showMobileMenu && (
             <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-black/[0.08] rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-fadeIn">
+              <button
+                onClick={() => { onOpenAiCopilot?.(); setShowMobileMenu(false); }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-[#0A84FF] hover:bg-blue-50/50 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[17px] text-[#0A84FF]">auto_awesome</span>
+                <span>AI Copilot</span>
+              </button>
+              <div className="my-1 border-t border-black/[0.06]" />
               <button
                 onClick={() => { setActiveTab('reflections'); setShowMobileMenu(false); }}
                 className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold transition-colors ${

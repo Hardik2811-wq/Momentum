@@ -20,12 +20,16 @@ import UniversalBlockEditor from './components/UniversalBlockEditor';
 import UniversalLayoutApplier from './components/UniversalLayoutApplier';
 import GoalModal from './components/GoalModal';
 import HabitModal from './components/HabitModal';
+import AiCopilotModal from './components/AiCopilotModal';
+import ApiKeyModal from './components/ApiKeyModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
+  const [isAiCopilotOpen, setIsAiCopilotOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [quickAddProps, setQuickAddProps] = useState({});
   const [isUniversalEditorMode, setIsUniversalEditorMode] = useState(false);
   const store = useStore();
@@ -171,6 +175,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickAdd={openQuickAdd}
+        onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
         settings={store.settings}
       />
       <div className="pl-0 md:pl-[248px] min-h-screen flex flex-col pb-28 md:pb-16">
@@ -181,6 +186,7 @@ export default function App() {
           setActiveTab={setActiveTab}
           isUniversalEditorMode={isUniversalEditorMode}
           onToggleUniversalEditor={() => setIsUniversalEditorMode(v => !v)}
+          onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
         />
         <div className="flex-1 w-full">
           {renderView()}
@@ -204,6 +210,26 @@ export default function App() {
         onOpenQuickAdd={openQuickAdd}
         onOpenNewGoal={() => setIsGoalModalOpen(true)}
         onOpenNewHabit={() => setIsHabitModalOpen(true)}
+        onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
+      />
+
+      {/* AI Executive Copilot Modal */}
+      <AiCopilotModal
+        isOpen={isAiCopilotOpen}
+        onClose={() => setIsAiCopilotOpen(false)}
+        goals={store.goals}
+        habits={store.habits}
+        tasks={store.tasks}
+        addGoal={store.addGoal}
+        addHabit={store.addHabit}
+        addTask={store.addTask}
+        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+      />
+
+      {/* Groq API Key Configuration Modal */}
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
       />
 
       {/* Goal Creation Modal accessible globally */}

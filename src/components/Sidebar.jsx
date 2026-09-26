@@ -18,7 +18,7 @@ const NAV_ITEMS = [
   { id: 'settings',    label: 'Settings',    icon: 'tune' },
 ];
 
-export default function Sidebar({ activeTab, setActiveTab, onOpenQuickAdd, settings }) {
+export default function Sidebar({ activeTab, setActiveTab, onOpenQuickAdd, onOpenAiCopilot, settings }) {
   const bg         = 'bg-[#F5F4F9]';
   const border     = 'border-black/[0.06]';
   const activeCard = 'bg-white text-[#1A1B1F] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.08)]';
@@ -63,14 +63,23 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenQuickAdd, setti
         </span>
       </div>
 
-      {/* ── Quick Add ── */}
-      <div className="px-3 py-2.5">
+      {/* ── Quick Actions ── */}
+      <div className="px-3 py-2 space-y-1.5">
         <button
           onClick={onOpenQuickAdd}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold tracking-tight transition-all active:scale-[0.97] bg-[#0A84FF] text-white hover:bg-[#0071E3] shadow-[0_4px_16px_rgba(10,132,255,0.2)]"
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[13px] font-semibold tracking-tight transition-all active:scale-[0.97] bg-[#0A84FF] text-white hover:bg-[#0071E3] shadow-[0_4px_16px_rgba(10,132,255,0.2)] cursor-pointer"
         >
           <span className="material-symbols-outlined text-[17px]" style={{ fontVariationSettings: "'wght' 600" }}>add</span>
           Quick Add
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenAiCopilot}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[12px] font-bold tracking-tight transition-all active:scale-[0.97] bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 text-primary hover:bg-primary/10 border border-blue-200/60 dark:border-blue-800/60 cursor-pointer shadow-xs"
+        >
+          <span className="material-symbols-outlined text-[16px] text-[#0A84FF]">auto_awesome</span>
+          AI Executive Copilot
         </button>
       </div>
 

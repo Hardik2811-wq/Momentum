@@ -235,3 +235,195 @@ export async function parseWithGroq(input = '', goals = [], explicitApiKey = nul
     error: lastError || 'All Groq models failed'
   };
 }
+
+const COPILOT_SYSTEM_PROMPT = `You are Momentum Executive AI, an elite productivity strategist and scheduler.
+Analyze the user's conversation, request, and any uploaded document (PDF, DOCX, TXT, MD) to formulate an optimal, realistic execution plan.
+
+Your objectives:
+1. Provide a sharp, inspiring conversational response explaining your strategy.
+2. If the user asks for a plan, task breakdown, schedule, goal formulation, or provided a project document, generate a complete structured execution plan ("hasPlan": true).
+3. Connect related items: tasks can link to proposed goals or habits.
+4. Distribute tasks across realistic dates (starting from todayDate) with sensible start times (09:00, 11:00, 14:00, 16:30, etc.) and durations (15 to 90 mins).
+
+Output format:
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "message": "Conversational, highly actionable strategic overview (markdown supported)",
+  "hasPlan": true,
+  "plan": {
+    "summary": "Short 1-line headline of this plan",
+    "goals": [
+      {
+        "title": "Clear measurable horizon",
+        "category": "career" | "health" | "creative" | "finance",
+        "why": "Core intrinsic emotional anchor or ROI",
+        "targetDate": "YYYY-MM-DD" or null
+      }
+    ],
+    "habits": [
+      {
+        "title": "Daily/recurring ritual",
+        "cadence": "Morning" | "Afternoon" | "Evening" | "Anytime",
+        "frequency": "Every Day" | "Weekdays" | "3x / week",
+        "duration": "15 mins" | "30 mins" | "45 mins" | "60 mins",
+        "icon": "cached" | "terminal" | "fitness_center" | "auto_stories" | "self_improvement" | "edit_note",
+        "colorToken": "primary" | "secondary" | "tertiary",
+        "goalIndex": 0 // 0-based index of goal above, or null
+      }
+    ],
+    "tasks": [
+      {
+        "title": "Concrete actionable deliverable",
+        "plannedDate": "YYYY-MM-DD",
+        "startTime": "HH:MM" (e.g. "09:30") or null,
+        "durationMinutes": 45,
+        "impact": "high" | "medium" | "low",
+        "priority": "high" | "normal" | "low",
+        "areas": ["Career & Craft" | "Creative & Expression" | "Deep Focus" | "Habit Consistency" | "Health & Vitality" | "Personal & Life"],
+        "goalIndex": 0, // 0-based index of goal above, or null
+        "existingGoalId": null, // or string ID of existing goal
+        "habitIndex": 0 // 0-based index of habit above, or null
+      }
+    ]
+  }
+}
+If no structured plan is requested (e.g. user just asks a simple productivity tip or question), set "hasPlan": false and "plan": null.
+Do NOT output code fences or conversational prose outside the JSON. Return raw JSON only.`;
+
+export async function generateExecutivePlanWithAI({
+  userPrompt = '',
+  documentContext = null,
+  chatHistory = [],
+  goals = [],
+  habits = [],
+  todayDate = '',
+  explicitApiKey = null
+}) {
+  const passedKey = typeof explicitApiKey === 'string' ? explicitApiKey.trim() : '';
+  const apiKey = (passedKey || getGroqApiKey() || '').trim();
+  if (!apiKey) {
+    return {
+      success: false,
+      error: 'No Groq API key configured. Please add your free Groq API key in Settings.'
+    };
+  }
+
+  const currentDateStr = todayDate || new Date().toISOString().slice(0, 10);
+
+  const existingGoalsContext = goals.length > 0
+    ? `Existing Active Goals: ${goals.map(g => `[ID: ${g.id}] "${g.title}" (${g.category || 'general'})`).join('; ')}`
+    : 'No active goals yet.';
+
+  const existingHabitsContext = habits.length > 0
+    ? `Existing Habits: ${habits.map(h => `[ID: ${h.id}] "${h.title}"`).join('; ')}`
+    : 'No existing habits yet.';
+
+  let docSection = '';
+  if (documentContext && documentContext.text) {
+    // Truncate document text to ~12,000 characters to comfortably stay within context window
+    const truncatedText = documentContext.text.slice(0, 12000);
+    docSection = `\n--- ATTACHED DOCUMENT (${documentContext.name || 'document'}) ---\n${truncatedText}\n--- END DOCUMENT ---\n`;
+  }
+
+  const userInstruction = `Current Anchor Date: ${currentDateStr}
+${existingGoalsContext}
+${existingHabitsContext}
+${docSection}
+User Query: "${userPrompt.trim()}"
+
+Formulate your response as the required JSON schema.`;
+
+  // Format messages
+  const messages = [
+    { role: 'system', content: COPILOT_SYSTEM_PROMPT }
+  ];
+
+  // Append recent chat history (last 6 exchanges)
+  if (Array.isArray(chatHistory)) {
+    const recents = chatHistory.slice(-6);
+    for (const msg of recents) {
+      if (msg.role && msg.content) {
+        messages.push({ role: msg.role, content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content) });
+      }
+    }
+  }
+
+  messages.push({ role: 'user', content: userInstruction });
+
+  const callModel = async (modelName) => {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages,
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+        max_tokens: 2200
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) return JSON.parse(content);
+    }
+
+    // Fallback without json_object constraint
+    const fallbackRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [
+          ...messages,
+          { role: 'user', content: 'Return ONLY raw JSON object without markdown or code fences.' }
+        ],
+        temperature: 0.2,
+        max_tokens: 2200
+      })
+    });
+
+    if (!fallbackRes.ok) {
+      const err = await fallbackRes.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${fallbackRes.status}`);
+    }
+
+    const data = await fallbackRes.json();
+    const rawContent = data.choices?.[0]?.message?.content || '';
+    const match = rawContent.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON object found in response');
+    return JSON.parse(match[0]);
+  };
+
+  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'openai/gpt-oss-120b'];
+  let lastError = null;
+
+  for (const m of models) {
+    try {
+      const parsed = await callModel(m);
+      if (parsed) {
+        return {
+          success: true,
+          data: parsed,
+          model: m
+        };
+      }
+    } catch (err) {
+      console.warn(`Copilot model (${m}) failed:`, err.message);
+      lastError = err.message;
+    }
+  }
+
+  return {
+    success: false,
+    error: lastError || 'All models failed to process plan'
+  };
+}
+

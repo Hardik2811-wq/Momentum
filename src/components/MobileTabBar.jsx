@@ -15,7 +15,8 @@ export default function MobileTabBar({
   setActiveTab,
   onOpenQuickAdd,
   onOpenNewGoal,
-  onOpenNewHabit
+  onOpenNewHabit,
+  onOpenAiCopilot
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -35,6 +36,15 @@ export default function MobileTabBar({
   };
 
   const speedDialItems = [
+    {
+      id: 'ai-copilot',
+      label: 'AI Copilot',
+      icon: 'auto_awesome',
+      gradient: 'from-[#0A84FF] via-[#8B5CF6] to-[#EC4899]',
+      shadow: 'shadow-[0_4px_14px_rgba(139,92,246,0.45)]',
+      animClass: 'animate-in fade-in slide-in-from-bottom-6 duration-200 delay-150',
+      action: onOpenAiCopilot
+    },
     {
       id: 'goal',
       label: 'New Goal',
