@@ -22,6 +22,7 @@ import {
   X,
   Flag,
   ListChecks,
+  RotateCcw,
   Move,
   Maximize2,
   ChevronDown,
@@ -358,7 +359,8 @@ const TodayView = React.memo(function TodayView({
     if (e) e.preventDefault();
     if (!newTrayTaskTitle.trim()) return;
     onOpenQuickAdd?.({
-      initialTitle: newTrayTaskTitle.trim()
+      initialTitle: newTrayTaskTitle.trim(),
+      initialDate: viewDate
     });
     setNewTrayTaskTitle('');
   };
@@ -577,27 +579,16 @@ const TodayView = React.memo(function TodayView({
                 <button
                   type="button"
                   onClick={handlePrev}
-                  title="Previous"
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition"
+                  title="Previous Day"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition active:scale-95"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={handleToday}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition ${
-                    viewDate === todayPlanDate()
-                      ? 'bg-white text-[#0A84FF] shadow-xs'
-                      : 'text-[#64748B] hover:text-[#1A1B1F]'
-                  }`}
-                >
-                  Today
-                </button>
-                <button
-                  type="button"
                   onClick={handleNext}
-                  title="Next"
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition"
+                  title="Next Day"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition active:scale-95"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -608,10 +599,20 @@ const TodayView = React.memo(function TodayView({
                   <span className="hidden sm:inline">{viewRangeTitle.main}</span>
                   <span className="inline sm:hidden">{viewRangeTitle.short}</span>
                 </h1>
-                {viewRangeTitle.isToday && (
-                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-blue-50 text-[#0A84FF] border border-blue-200/80 uppercase tracking-wider shrink-0">
+                {viewRangeTitle.isToday ? (
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] sm:text-[10px] font-bold bg-blue-50 text-[#0A84FF] border border-blue-200/80 uppercase tracking-wider shrink-0">
                     Today
                   </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleToday}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-blue-50 text-[#0A84FF] hover:bg-blue-100 border border-blue-200/80 transition active:scale-95 shrink-0 shadow-3xs"
+                    title="Jump back to today"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Today</span>
+                  </button>
                 )}
               </div>
 
@@ -806,7 +807,9 @@ const TodayView = React.memo(function TodayView({
                   </div>
                   <div>
                     <h2 className="text-[13px] font-bold text-[#1A1B1F] tracking-tight">Task Tray</h2>
-                    <p className="text-[10px] text-[#64748B]">Drag into calendar or click Slot</p>
+                    <p className="text-[10px] text-[#64748B]">
+                      {viewRangeTitle.isToday ? 'Drag into calendar or click Slot' : `Slotting deliverables for ${viewRangeTitle.short}`}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -828,7 +831,7 @@ const TodayView = React.memo(function TodayView({
               <form onSubmit={handleCreateTrayTask} className="relative">
                 <input
                   type="text"
-                  placeholder="+ Add deliverable to slot..."
+                  placeholder={viewRangeTitle.isToday ? "+ Add deliverable to slot..." : `+ Add deliverable for ${viewRangeTitle.short}...`}
                   value={newTrayTaskTitle}
                   onChange={(e) => setNewTrayTaskTitle(e.target.value)}
                   className="w-full pl-3 pr-8 py-1.5 rounded-xl text-[11px] bg-[#F5F4FA] border border-black/[0.06] text-[#1A1B1F] placeholder:text-[#94A3B8] outline-none focus:bg-white focus:border-[#0A84FF] transition"
