@@ -12,7 +12,7 @@ function formatTime(time) {
   return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
 }
 
-export default function DashboardView({
+const DashboardView = React.memo(function DashboardView({
   tasks = [], onToggleTask, onDeleteTask, onUpdateTask, onToggleSubtask,
   onOpenQuickAdd, onStartFocus, onCheckInHabit, stats = {}, setActiveTab,
   settings = {}, onUpdateSettings, goals = [], habits = [],
@@ -25,36 +25,76 @@ export default function DashboardView({
   const today = todayKey();
   const quickWinMinutes = settings.quickWinMinutes || 30;
 
-  const todayTasks = useMemo(() => tasks
-    .filter(task => isTaskScheduledForDate(task, todayPlanDate()))
-    .slice()
-    .sort((a, b) => {
-      if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      const deadlineA = deadlineStatus(a);
-      const deadlineB = deadlineStatus(b);
-      const deadlineDelta = (deadlineA?.timestamp || Number.MAX_SAFE_INTEGER) - (deadlineB?.timestamp || Number.MAX_SAFE_INTEGER);
-      const impactDelta = (IMPACT_ORDER[taskImpact(a)] || 9) - (IMPACT_ORDER[taskImpact(b)] || 9);
-      const effortDelta = (a.durationMinutes || 60) - (b.durationMinutes || 60);
-      return deadlineDelta || impactDelta || (a.startTime || '99:99').localeCompare(b.startTime || '99:99') || effortDelta;
-    }), [tasks]);
+  // Single-pass filter + O(N log N) primitive comparison via Schwartzian transform
+  const todayTasks = useMemo(() => {
+    const todayPlan = todayPlanDate();
+    const filtered = [];
+    for (let i = 0; i < tasks.length; i++) {
+      if (isTaskScheduledForDate(tasks[i], todayPlan)) {
+        filtered.push(tasks[i]);
+      }
+    }
 
-  const filterCounts = useMemo(() => ({
-    all: todayTasks.length,
-    high: todayTasks.filter(t => taskImpact(t) === 'high').length,
-    quick: todayTasks.filter(t => (t.durationMinutes || 60) <= quickWinMinutes).length
-  }), [todayTasks, quickWinMinutes]);
+    const len = filtered.length;
+    const decorated = new Array(len);
+    for (let i = 0; i < len; i++) {
+      const t = filtered[i];
+      const deadline = deadlineStatus(t);
+      decorated[i] = {
+        task: t,
+        completed: t.completed ? 1 : 0,
+        deadlineTs: deadline ? deadline.timestamp : Number.MAX_SAFE_INTEGER,
+        impactRank: IMPACT_ORDER[taskImpact(t)] || 9,
+        startTime: t.startTime || '99:99',
+        effort: t.durationMinutes || 60
+      };
+    }
 
-  const completedTodayTasksCount = useMemo(() => {
-    return todayTasks.filter(t => t.completed).length;
-  }, [todayTasks]);
+    decorated.sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed - b.completed;
+      const dDelta = a.deadlineTs - b.deadlineTs;
+      if (dDelta !== 0) return dDelta;
+      const iDelta = a.impactRank - b.impactRank;
+      if (iDelta !== 0) return iDelta;
+      const tCmp = a.startTime.localeCompare(b.startTime);
+      if (tCmp !== 0) return tCmp;
+      return a.effort - b.effort;
+    });
 
-  const visibleTasks = todayTasks.filter(task => {
-    if (filter === 'high') return taskImpact(task) === 'high';
-    return filter !== 'quick' || (task.durationMinutes || 60) <= quickWinMinutes;
-  });
-  const nextTask = todayTasks.find(task => !task.completed);
-  const checkedHabits = habits.filter(habit => habit.completedDays?.includes(today)).length;
-  const activeGoals = goals.filter(goal => goal.velocity !== 'complete').slice(0, 3);
+    const result = new Array(len);
+    for (let i = 0; i < len; i++) {
+      result[i] = decorated[i].task;
+    }
+    return result;
+  }, [tasks]);
+
+  // Single-pass counters (O(N) time, O(1) space)
+  const { filterCounts, completedTodayTasksCount } = useMemo(() => {
+    let high = 0;
+    let quick = 0;
+    let completed = 0;
+    const len = todayTasks.length;
+    for (let i = 0; i < len; i++) {
+      const t = todayTasks[i];
+      if (t.completed) completed++;
+      if (taskImpact(t) === 'high') high++;
+      if ((t.durationMinutes || 60) <= quickWinMinutes) quick++;
+    }
+    return {
+      filterCounts: { all: len, high, quick },
+      completedTodayTasksCount: completed
+    };
+  }, [todayTasks, quickWinMinutes]);
+
+  const visibleTasks = useMemo(() => {
+    if (filter === 'all') return todayTasks;
+    if (filter === 'high') return todayTasks.filter(task => taskImpact(task) === 'high');
+    return todayTasks.filter(task => (task.durationMinutes || 60) <= quickWinMinutes);
+  }, [todayTasks, filter, quickWinMinutes]);
+
+  const nextTask = useMemo(() => todayTasks.find(task => !task.completed) || null, [todayTasks]);
+  const checkedHabits = useMemo(() => habits.filter(habit => habit.completedDays?.includes(today)).length, [habits, today]);
+  const activeGoals = useMemo(() => goals.filter(goal => goal.velocity !== 'complete').slice(0, 3), [goals]);
 
   return (
     <main className="w-full min-h-screen bg-surface pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl">
@@ -373,4 +413,6 @@ export default function DashboardView({
       <TaskDetailModal task={editingTask} isOpen={!!editingTask} onClose={() => setEditingTask(null)} onUpdateTask={onUpdateTask} onDeleteTask={onDeleteTask} goals={goals} habits={habits} onStartFocus={onStartFocus} />
     </main>
   );
-}
+});
+
+export default DashboardView;

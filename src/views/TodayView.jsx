@@ -70,7 +70,7 @@ const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT; // 1536px full day height
 
 
 
-export default function TodayView({
+const TodayView = React.memo(function TodayView({
   tasks = [],
   onToggleTask,
   onDeleteTask,
@@ -332,19 +332,117 @@ export default function TodayView({
     });
   }, [tasks, trayFilterMode, trayAreaFilter, traySearch]);
 
-  /* ── Workload Capacity Metrics ── */
-  const totalScheduledMinutesInView = useMemo(() => {
-    return tasks
-      .filter(t => !t.completed && t.startTime && columnDates.some(cd => isTaskScheduledForDate(t, cd)))
-      .reduce((acc, t) => {
-        let dur = Number(t.durationMinutes) || 45;
-        if (t.startTime && t.endTime) {
-          const diff = calculateDuration(t.startTime, t.endTime);
-          if (diff > 0) dur = diff;
+  /* ── Multi-Column Memoized Layout Generator (O(C * N^2) isolated to data changes) ── */
+  const columnsData = useMemo(() => {
+    const today = todayPlanDate();
+    return columnDates.map(colDate => {
+      const isToday = colDate === today;
+      const headerInfo = formatDateHeader(colDate);
+
+      // Separate raw scheduled tasks in single pass
+      const colTasks = [];
+      const rawScheduled = [];
+      let colMins = 0;
+
+      for (let i = 0; i < tasks.length; i++) {
+        const t = tasks[i];
+        if (isTaskScheduledForDate(t, colDate) && t.startTime) {
+          if (!t.completed) {
+            colTasks.push(t);
+            let dur = Number(t.durationMinutes) || 45;
+            if (t.startTime && t.endTime) {
+              const diff = calculateDuration(t.startTime, t.endTime);
+              if (diff > 0) dur = diff;
+            }
+            colMins += dur;
+          }
+          const sm = minutesFromStartOfDay(t.startTime);
+          if (sm !== null) {
+            const dur = Number(t.durationMinutes) || 45;
+            rawScheduled.push({ task: t, startMin: sm, endMin: sm + dur, duration: dur });
+          }
         }
-        return acc + dur;
-      }, 0);
+      }
+
+      rawScheduled.sort((a, b) => a.startMin - b.startMin || b.duration - a.duration);
+
+      // Detect nested containment
+      const scheduledWithNesting = rawScheduled.map(item => {
+        const containers = rawScheduled.filter(other =>
+          other.task.id !== item.task.id &&
+          other.duration >= item.duration + 20 &&
+          item.startMin >= other.startMin - 2 &&
+          item.endMin <= other.endMin + 5
+        );
+        containers.sort((a, b) => a.duration - b.duration);
+        const container = containers[0] || null;
+        return {
+          ...item,
+          containerId: container ? container.task.id : null,
+          containerTask: container ? container.task : null,
+          isNested: Boolean(container)
+        };
+      });
+
+      const parentContainerIds = new Set(
+        scheduledWithNesting.filter(it => it.isNested).map(it => it.containerId)
+      );
+
+      const topLevel = scheduledWithNesting
+        .filter(it => !it.isNested)
+        .map(it => ({ ...it, hasNestedChildren: parentContainerIds.has(it.task.id) }));
+
+      const topLevelWithLanes = topLevel.map(item => ({ ...item, lane: 0, totalLanes: 1 }));
+      for (let i = 0; i < topLevelWithLanes.length; i++) {
+        for (let j = 0; j < i; j++) {
+          if (topLevelWithLanes[i].startMin < topLevelWithLanes[j].endMin && topLevelWithLanes[i].endMin > topLevelWithLanes[j].startMin) {
+            if (topLevelWithLanes[i].lane === topLevelWithLanes[j].lane) {
+              topLevelWithLanes[i].lane = topLevelWithLanes[j].lane + 1;
+            }
+            const lanes = Math.max(topLevelWithLanes[i].lane, topLevelWithLanes[j].lane) + 1;
+            topLevelWithLanes[i].totalLanes = Math.max(topLevelWithLanes[i].totalLanes, lanes);
+            topLevelWithLanes[j].totalLanes = Math.max(topLevelWithLanes[j].totalLanes, lanes);
+          }
+        }
+      }
+
+      const nested = scheduledWithNesting.filter(it => it.isNested);
+      const nestedWithLanes = nested.map(item => ({ ...item, nestedLane: 0, nestedTotalLanes: 1 }));
+      for (let i = 0; i < nestedWithLanes.length; i++) {
+        for (let j = 0; j < i; j++) {
+          if (nestedWithLanes[i].containerId === nestedWithLanes[j].containerId) {
+            if (nestedWithLanes[i].startMin < nestedWithLanes[j].endMin && nestedWithLanes[i].endMin > nestedWithLanes[j].startMin) {
+              if (nestedWithLanes[i].nestedLane === nestedWithLanes[j].nestedLane) {
+                nestedWithLanes[i].nestedLane = nestedWithLanes[j].nestedLane + 1;
+              }
+              const lanes = Math.max(nestedWithLanes[i].nestedLane, nestedWithLanes[j].nestedLane) + 1;
+              nestedWithLanes[i].nestedTotalLanes = Math.max(nestedWithLanes[i].nestedTotalLanes, lanes);
+              nestedWithLanes[j].nestedTotalLanes = Math.max(nestedWithLanes[j].nestedTotalLanes, lanes);
+            }
+          }
+        }
+      }
+
+      const colScheduled = [...topLevelWithLanes, ...nestedWithLanes];
+
+      return {
+        colDate,
+        isToday,
+        headerInfo,
+        colMins,
+        colScheduled
+      };
+    });
   }, [tasks, columnDates]);
+
+  /* ── Workload Capacity Metrics (O(C) time, O(1) space) ── */
+  const totalScheduledMinutesInView = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i < columnsData.length; i++) {
+      sum += columnsData[i].colMins;
+    }
+    return sum;
+  }, [columnsData]);
 
   const targetMinutesInView = columnDates.length * 360; // 6h budget per day
   const capacityPercent = Math.min(100, Math.round((totalScheduledMinutesInView / (targetMinutesInView || 1)) * 100));
@@ -855,34 +953,27 @@ export default function TodayView({
                 <div className="sticky top-0 z-30 h-10 border-b border-r border-black/[0.06] bg-[#F5F4FA]" />
 
                 {/* Column Headers */}
-                {columnDates.map(colDate => {
-                  const isToday = colDate === todayPlanDate();
-                  const headerInfo = formatDateHeader(colDate);
-                  const colTasks = tasks.filter(t => !t.completed && isTaskScheduledForDate(t, colDate) && t.startTime);
-                  const colMins = colTasks.reduce((acc, t) => acc + (Number(t.durationMinutes) || 45), 0);
-
-                  return (
-                    <div
-                      key={colDate}
-                      className={`sticky top-0 z-30 h-10 px-3 flex items-center justify-between border-b border-r border-black/[0.06] backdrop-blur-md ${
-                        isToday ? 'bg-blue-50/95 text-[#0A84FF]' : 'bg-[#F5F4FA]/95 text-[#64748B]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 font-bold text-[12px]">
-                        <span>{headerInfo.weekday}</span>
-                        <span className={`px-1.5 py-0.2 rounded-md ${isToday ? 'bg-[#0A84FF] text-white shadow-2xs' : 'text-[#1A1B1F]'}`}>
-                          {headerInfo.dayNum}
-                        </span>
-                      </div>
-
-                      {colMins > 0 && (
-                        <span className="text-[10px] font-semibold text-[#8E8E93]">
-                          {(colMins / 60).toFixed(1)}h
-                        </span>
-                      )}
+                {columnsData.map(col => (
+                  <div
+                    key={col.colDate}
+                    className={`sticky top-0 z-30 h-10 px-3 flex items-center justify-between border-b border-r border-black/[0.06] backdrop-blur-md ${
+                      col.isToday ? 'bg-blue-50/95 text-[#0A84FF]' : 'bg-[#F5F4FA]/95 text-[#64748B]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-[12px]">
+                      <span>{col.headerInfo.weekday}</span>
+                      <span className={`px-1.5 py-0.2 rounded-md ${col.isToday ? 'bg-[#0A84FF] text-white shadow-2xs' : 'text-[#1A1B1F]'}`}>
+                        {col.headerInfo.dayNum}
+                      </span>
                     </div>
-                  );
-                })}
+
+                    {col.colMins > 0 && (
+                      <span className="text-[10px] font-semibold text-[#8E8E93]">
+                        {(col.colMins / 60).toFixed(1)}h
+                      </span>
+                    )}
+                  </div>
+                ))}
 
                 {/* Left Hour Axis */}
                 <div className="relative border-r border-black/[0.06] bg-[#F5F4FA]" style={{ height: `${TOTAL_HEIGHT}px` }}>
@@ -905,84 +996,8 @@ export default function TodayView({
                 </div>
 
                 {/* Multi-Column Canvas Bodies */}
-                {columnDates.map(colDate => {
-                  const isToday = colDate === todayPlanDate();
-
-                  // Separate raw scheduled tasks
-                  const rawScheduled = tasks
-                    .filter(t => isTaskScheduledForDate(t, colDate) && t.startTime)
-                    .map(t => {
-                      const sm = minutesFromStartOfDay(t.startTime);
-                      if (sm === null) return null;
-                      const dur = Number(t.durationMinutes) || 45;
-                      return { task: t, startMin: sm, endMin: sm + dur, duration: dur };
-                    })
-                    .filter(Boolean)
-                    .sort((a, b) => a.startMin - b.startMin || b.duration - a.duration);
-
-                  // Detect nested containment: Task B is inside Task A if A is longer and covers B's timeframe
-                  const scheduledWithNesting = rawScheduled.map(item => {
-                    const containers = rawScheduled.filter(other =>
-                      other.task.id !== item.task.id &&
-                      other.duration >= item.duration + 20 &&
-                      item.startMin >= other.startMin - 2 &&
-                      item.endMin <= other.endMin + 5
-                    );
-                    // Choose most immediate parent container
-                    containers.sort((a, b) => a.duration - b.duration);
-                    const container = containers[0] || null;
-                    return {
-                      ...item,
-                      containerId: container ? container.task.id : null,
-                      containerTask: container ? container.task : null,
-                      isNested: Boolean(container)
-                    };
-                  });
-
-                  // Track parent IDs that contain nested sub-blocks
-                  const parentContainerIds = new Set(
-                    scheduledWithNesting.filter(it => it.isNested).map(it => it.containerId)
-                  );
-
-                  // Top-level non-nested tasks divide lanes among themselves
-                  const topLevel = scheduledWithNesting
-                    .filter(it => !it.isNested)
-                    .map(it => ({ ...it, hasNestedChildren: parentContainerIds.has(it.task.id) }));
-
-                  const topLevelWithLanes = topLevel.map(item => ({ ...item, lane: 0, totalLanes: 1 }));
-                  for (let i = 0; i < topLevelWithLanes.length; i++) {
-                    for (let j = 0; j < i; j++) {
-                      if (topLevelWithLanes[i].startMin < topLevelWithLanes[j].endMin && topLevelWithLanes[i].endMin > topLevelWithLanes[j].startMin) {
-                        if (topLevelWithLanes[i].lane === topLevelWithLanes[j].lane) {
-                          topLevelWithLanes[i].lane = topLevelWithLanes[j].lane + 1;
-                        }
-                        const lanes = Math.max(topLevelWithLanes[i].lane, topLevelWithLanes[j].lane) + 1;
-                        topLevelWithLanes[i].totalLanes = Math.max(topLevelWithLanes[i].totalLanes, lanes);
-                        topLevelWithLanes[j].totalLanes = Math.max(topLevelWithLanes[j].totalLanes, lanes);
-                      }
-                    }
-                  }
-
-                  // Nested tasks inside the same container divide nested lanes if they overlap each other
-                  const nested = scheduledWithNesting.filter(it => it.isNested);
-                  const nestedWithLanes = nested.map(item => ({ ...item, nestedLane: 0, nestedTotalLanes: 1 }));
-                  for (let i = 0; i < nestedWithLanes.length; i++) {
-                    for (let j = 0; j < i; j++) {
-                      if (nestedWithLanes[i].containerId === nestedWithLanes[j].containerId) {
-                        if (nestedWithLanes[i].startMin < nestedWithLanes[j].endMin && nestedWithLanes[i].endMin > nestedWithLanes[j].startMin) {
-                          if (nestedWithLanes[i].nestedLane === nestedWithLanes[j].nestedLane) {
-                            nestedWithLanes[i].nestedLane = nestedWithLanes[j].nestedLane + 1;
-                          }
-                          const lanes = Math.max(nestedWithLanes[i].nestedLane, nestedWithLanes[j].nestedLane) + 1;
-                          nestedWithLanes[i].nestedTotalLanes = Math.max(nestedWithLanes[i].nestedTotalLanes, lanes);
-                          nestedWithLanes[j].nestedTotalLanes = Math.max(nestedWithLanes[j].nestedTotalLanes, lanes);
-                        }
-                      }
-                    }
-                  }
-
-                  // Merge top-level and nested tasks
-                  const colScheduled = [...topLevelWithLanes, ...nestedWithLanes];
+                {columnsData.map(col => {
+                  const { colDate, isToday, colScheduled } = col;
 
                   return (
                     <div
@@ -1550,4 +1565,6 @@ export default function TodayView({
       )}
     </main>
   );
-}
+});
+
+export default TodayView;

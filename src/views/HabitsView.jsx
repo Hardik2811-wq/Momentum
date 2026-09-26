@@ -8,7 +8,7 @@ const HABIT_COLOR_CLASSES = {
   tertiary: { fixed: 'bg-tertiary-fixed text-on-tertiary-fixed-variant', text: 'text-tertiary', checked: 'bg-tertiary text-on-tertiary' }
 };
 
-export default function HabitsView({ habits = [], checkInHabit, addHabit, updateHabit, deleteHabit, useGraceDay, goals = [], stats = {} }) {
+const HabitsView = React.memo(function HabitsView({ habits = [], checkInHabit, addHabit, updateHabit, deleteHabit, useGraceDay, goals = [], stats = {} }) {
   const [dailyToggle, setDailyToggle] = useState('Daily');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
@@ -50,6 +50,21 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
 
   const currentYear = new Date().getFullYear();
   const today = todayKey();
+
+  // Precompute last 7 days metadata once (zero Date allocations in habit list)
+  const weekDaysMeta = useMemo(() => {
+    const days = last7Days();
+    const tDay = todayKey();
+    return days.map(dayStr => {
+      const d = new Date(`${dayStr}T12:00:00`);
+      return {
+        dayStr,
+        isToday: dayStr === tDay,
+        dayLabel: DAY_LABELS[d.getDay()] || 'D',
+        formattedDate: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      };
+    });
+  }, []);
 
   const calendarData = useMemo(() => {
     const startDate = new Date(currentYear, 0, 1);
@@ -304,13 +319,8 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
       
       <div className="pt-gutter-base mt-gutter-xs flex flex-col sm:flex-row sm:items-center justify-between gap-gutter-md border-t border-outline-variant/15">
         <div className="flex items-center gap-2">
-          {last7Days().map((dayStr) => {
-            const isToday = dayStr === todayKey();
+          {weekDaysMeta.map(({ dayStr, isToday, dayLabel, formattedDate }) => {
             const isCompleted = habit.completedDays?.includes(dayStr);
-            const jsDayOfWeek = new Date(`${dayStr}T12:00:00`).getDay();
-            const dayLabel = DAY_LABELS[jsDayOfWeek] || 'D';
-            const dateObj = new Date(`${dayStr}T12:00:00`);
-            const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
             
             return (
               <div key={dayStr} className="flex flex-col items-center gap-1.5">
@@ -597,4 +607,6 @@ export default function HabitsView({ habits = [], checkInHabit, addHabit, update
       />
     </main>
   );
-}
+});
+
+export default HabitsView;

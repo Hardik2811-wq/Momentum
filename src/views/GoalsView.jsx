@@ -52,7 +52,7 @@ function getEndOfYear() {
   return `${d.getFullYear()}-12-31`;
 }
 
-export default function GoalsView({
+const GoalsView = React.memo(function GoalsView({
   goals = [],
   addGoal,
   updateGoal,
@@ -173,23 +173,50 @@ export default function GoalsView({
     });
   }, [goals, filter, statusFilter, searchQuery]);
 
-  // Executive Horizon Stats
+  // Executive Horizon Stats (O(G + T + H) time, O(G) space)
   const horizonStats = useMemo(() => {
     const total = goals.length;
-    const onTrack = goals.filter(g => g.velocity === 'ahead' || g.velocity === 'on-track').length;
+    let onTrack = 0;
+    let sumProgress = 0;
+    const goalIdSet = new Set();
+    const goalTitleSet = new Set();
+    const linkedHabitIdSet = new Set();
+
+    for (let i = 0; i < total; i++) {
+      const g = goals[i];
+      if (g.velocity === 'ahead' || g.velocity === 'on-track') onTrack++;
+      sumProgress += (g.workProgress ?? g.progress ?? 0);
+      goalIdSet.add(g.id);
+      if (g.title) goalTitleSet.add(g.title);
+      if (Array.isArray(g.linkedHabitIds)) {
+        for (let j = 0; j < g.linkedHabitIds.length; j++) {
+          linkedHabitIdSet.add(g.linkedHabitIds[j]);
+        }
+      }
+    }
     const onTrackPct = total > 0 ? Math.round((onTrack / total) * 100) : 100;
-    
-    const allLinkedTasks = tasks.filter(t => goals.some(g => g.id === t.goalId));
-    const activeTasks = allLinkedTasks.filter(t => !t.completed).length;
-    const completedTasks = allLinkedTasks.filter(t => t.completed).length;
 
-    const linkedHabitsCount = habits.filter(h =>
-      goals.some(g => (g.linkedHabitIds || []).includes(h.id) || h.linkedGoal === g.title)
-    ).length;
+    // Single O(T) pass over tasks
+    let activeTasks = 0;
+    let completedTasks = 0;
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      if (t.goalId && goalIdSet.has(t.goalId)) {
+        if (t.completed) completedTasks++;
+        else activeTasks++;
+      }
+    }
 
-    const avgProgress = total > 0
-      ? Math.round(goals.reduce((acc, g) => acc + (g.workProgress ?? g.progress ?? 0), 0) / total)
-      : 0;
+    // Single O(H) pass over habits
+    let linkedHabitsCount = 0;
+    for (let i = 0; i < habits.length; i++) {
+      const h = habits[i];
+      if (linkedHabitIdSet.has(h.id) || (h.linkedGoal && goalTitleSet.has(h.linkedGoal))) {
+        linkedHabitsCount++;
+      }
+    }
+
+    const avgProgress = total > 0 ? Math.round(sumProgress / total) : 0;
 
     return { total, onTrack, onTrackPct, activeTasks, completedTasks, linkedHabitsCount, avgProgress };
   }, [goals, tasks, habits]);
@@ -1047,4 +1074,6 @@ export default function GoalsView({
       />
     </main>
   );
-}
+});
+
+export default GoalsView;

@@ -32,13 +32,16 @@ function useLocalStorage(key, defaultValue) {
 /* ── Date helpers ── */
 function dateKey(date = new Date()) {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return `${year}-${month < 10 ? '0' : ''}${month}-${day < 10 ? '0' : ''}${day}`;
 }
 
 function dateFromKey(key) {
-  return new Date(`${key}T12:00:00`);
+  const y = +key.slice(0, 4);
+  const m = +key.slice(5, 7) - 1;
+  const d = +key.slice(8, 10);
+  return new Date(y, m, d, 12, 0, 0);
 }
 
 function shiftDateKey(key, days) {
@@ -52,18 +55,33 @@ const dayOfWeek = () => new Date().getDay(); // 0=Sun
 
 function calcStreak(completedDays) {
   if (!completedDays || completedDays.length === 0) return 0;
-  const sorted = [...new Set(completedDays.filter(day => /^\d{4}-\d{2}-\d{2}$/.test(day)))].sort().reverse();
-  if (sorted.length === 0) return 0;
+  const set = new Set();
+  for (let i = 0; i < completedDays.length; i++) {
+    const d = completedDays[i];
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      set.add(d);
+    }
+  }
+  if (set.size === 0) return 0;
+
   const today = todayKey();
   const yesterday = shiftDateKey(today, -1);
 
-  // streak must include today or yesterday
-  if (sorted[0] !== today && sorted[0] !== yesterday) return 0;
+  let current = null;
+  if (set.has(today)) {
+    current = today;
+  } else if (set.has(yesterday)) {
+    current = yesterday;
+  } else {
+    return 0;
+  }
 
   let streak = 1;
-  for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i] === shiftDateKey(sorted[i - 1], -1)) {
+  while (true) {
+    const prev = shiftDateKey(current, -1);
+    if (set.has(prev)) {
       streak++;
+      current = prev;
     } else {
       break;
     }
@@ -481,38 +499,106 @@ export default function useStore() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  /* ── Reactive Goal Metrics derived from Tasks & Habits ── */
+  /* ── Reactive Goal Metrics derived from Tasks & Habits (O(G + T + H)) ── */
   const reactiveGoals = useMemo(() => {
-    return goals.map(g => {
-      const linked = tasks.filter(t => t.goalId === g.id);
-      const activeCount = linked.filter(t => !t.completed).length;
-      const completedCount = linked.filter(t => t.completed).length;
-      const nextTask = linked.filter(t => !t.completed).slice().sort((a, b) => {
-        const dueA = a.dueDate === 'Today' ? 0 : a.dueDate === 'This Week' ? 1 : 2;
-        const dueB = b.dueDate === 'Today' ? 0 : b.dueDate === 'This Week' ? 1 : 2;
-        if (dueA !== dueB) return dueA - dueB;
-        const impactA = a.impact === 'high' || a.priority === 'high' ? 0 : a.impact === 'medium' || a.priority === 'normal' ? 1 : 2;
-        const impactB = b.impact === 'high' || b.priority === 'high' ? 0 : b.impact === 'medium' || b.priority === 'normal' ? 1 : 2;
-        return impactA - impactB;
-      })[0] || null;
+    // 1. Group tasks by goalId in single O(T) pass
+    const tasksByGoal = new Map();
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      if (!t.goalId) continue;
+      let entry = tasksByGoal.get(t.goalId);
+      if (!entry) {
+        entry = { activeCount: 0, completedCount: 0, totalCount: 0, uncompletedTasks: [] };
+        tasksByGoal.set(t.goalId, entry);
+      }
+      entry.totalCount++;
+      if (t.completed) {
+        entry.completedCount++;
+      } else {
+        entry.activeCount++;
+        entry.uncompletedTasks.push(t);
+      }
+    }
 
-      // Linked habits
-      const linkedHabits = habits.filter(h => (g.linkedHabitIds || []).includes(h.id) || h.linkedGoal === g.title);
+    // 2. Index habits in single O(H) pass
+    const habitsById = new Map();
+    const habitsByGoalTitle = new Map();
+    for (let i = 0; i < habits.length; i++) {
+      const h = habits[i];
+      habitsById.set(h.id, h);
+      if (h.linkedGoal) {
+        let list = habitsByGoalTitle.get(h.linkedGoal);
+        if (!list) {
+          list = [];
+          habitsByGoalTitle.set(h.linkedGoal, list);
+        }
+        list.push(h);
+      }
+    }
+
+    const nowMs = Date.now();
+
+    // 3. Map goals in O(G)
+    return goals.map(g => {
+      const entry = tasksByGoal.get(g.id);
+      const activeCount = entry ? entry.activeCount : 0;
+      const completedCount = entry ? entry.completedCount : 0;
+      const totalLinked = entry ? entry.totalCount : 0;
+
+      // Find highest priority next task in single O(K) pass without array sort
+      let nextTask = null;
+      if (entry && entry.uncompletedTasks.length > 0) {
+        let bestScore = Infinity;
+        const uncompleted = entry.uncompletedTasks;
+        for (let i = 0; i < uncompleted.length; i++) {
+          const t = uncompleted[i];
+          const due = t.dueDate === 'Today' ? 0 : t.dueDate === 'This Week' ? 1 : 2;
+          const impact = t.impact === 'high' || t.priority === 'high' ? 0 : t.impact === 'medium' || t.priority === 'normal' ? 1 : 2;
+          const score = due * 10 + impact;
+          if (score < bestScore) {
+            bestScore = score;
+            nextTask = t;
+          }
+        }
+      }
+
+      // Linked habits lookup in O(1)
+      const linkedHabits = [];
+      const seenHabitIds = new Set();
+      if (Array.isArray(g.linkedHabitIds)) {
+        for (let i = 0; i < g.linkedHabitIds.length; i++) {
+          const h = habitsById.get(g.linkedHabitIds[i]);
+          if (h && !seenHabitIds.has(h.id)) {
+            seenHabitIds.add(h.id);
+            linkedHabits.push(h);
+          }
+        }
+      }
+      const titleHabits = habitsByGoalTitle.get(g.title);
+      if (titleHabits) {
+        for (let i = 0; i < titleHabits.length; i++) {
+          const h = titleHabits[i];
+          if (!seenHabitIds.has(h.id)) {
+            seenHabitIds.add(h.id);
+            linkedHabits.push(h);
+          }
+        }
+      }
 
       // Compute daysLeft dynamically from targetDate
       let daysLeft = g.daysLeft;
       if (g.targetDate && g.dateType !== 'open') {
         const targetMs = new Date(`${g.targetDate}T23:59:59`).getTime();
         if (!isNaN(targetMs)) {
-          daysLeft = Math.max(0, Math.ceil((targetMs - Date.now()) / (1000 * 60 * 60 * 24)));
+          daysLeft = Math.max(0, Math.ceil((targetMs - nowMs) / (1000 * 60 * 60 * 24)));
         }
       } else if (g.dateType === 'open') {
         daysLeft = null;
       }
 
       // Work progress: derived from tasks or manual progress
-      const workProgress = linked.length
-        ? Math.round((completedCount / linked.length) * 100)
+      const workProgress = totalLinked > 0
+        ? Math.round((completedCount / totalLinked) * 100)
         : (g.workProgress ?? g.progress ?? 0);
 
       // Dynamic velocity engine
@@ -532,7 +618,7 @@ export default function useStore() {
       return {
         ...g,
         tasksActive: activeCount,
-        linkedTaskCount: linked.length,
+        linkedTaskCount: totalLinked,
         completedTaskCount: completedCount,
         workProgress,
         daysLeft,
@@ -1016,46 +1102,78 @@ export default function useStore() {
     setTimerState(prev => ({ ...prev, activeTaskId: id }));
   }, []);
 
-  /* Computed stats */
+  /* Computed stats (single-pass O(N) time, O(1) extra space) */
   const stats = useMemo(() => {
+    let completed = 0;
+    let highPriority = 0;
+    let normalPriority = 0;
+    let lowPriority = 0;
     const total = tasks.length;
-    const completed = tasks.filter(t => t.completed).length;
-    const highPriority = tasks.filter(t => t.priority === 'high' && !t.completed).length;
-    const normalPriority = tasks.filter(t => t.priority === 'normal' && !t.completed).length;
-    const lowPriority = tasks.filter(t => t.priority === 'low' && !t.completed).length;
+
+    for (let i = 0; i < total; i++) {
+      const t = tasks[i];
+      if (t.completed) {
+        completed++;
+      } else {
+        if (t.priority === 'high') highPriority++;
+        else if (t.priority === 'normal') normalPriority++;
+        else if (t.priority === 'low') lowPriority++;
+      }
+    }
     const pending = total - completed;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-    const goalsOnTrack = reactiveGoals.filter(g => g.velocity !== 'behind').length;
+    let goalsOnTrack = 0;
     const totalGoals = reactiveGoals.length;
+    for (let i = 0; i < totalGoals; i++) {
+      if (reactiveGoals[i].velocity !== 'behind') goalsOnTrack++;
+    }
 
-    const habitStreaks = habits.map(h => ({
-      id: h.id,
-      streak: calcStreak(h.completedDays),
-      completedToday: (h.completedDays || []).includes(todayKey()),
-    }));
-    const longestStreak = Math.max(0, ...habitStreaks.map(s => s.streak));
-    const habitsCompletedToday = habitStreaks.filter(s => s.completedToday).length;
+    const today = todayKey();
+    let longestStreak = 0;
+    let habitsCompletedToday = 0;
+    const totalHabits = habits.length;
+    const habitStreaks = new Array(totalHabits);
 
-    const habitRate = habits.length > 0 ? Math.round((habitsCompletedToday / habits.length) * 100) : 0;
+    for (let i = 0; i < totalHabits; i++) {
+      const h = habits[i];
+      const streak = calcStreak(h.completedDays);
+      const isCompletedToday = (h.completedDays || []).includes(today);
+      if (streak > longestStreak) longestStreak = streak;
+      if (isCompletedToday) habitsCompletedToday++;
+      habitStreaks[i] = {
+        id: h.id,
+        streak,
+        completedToday: isCompletedToday,
+      };
+    }
+
+    const habitRate = totalHabits > 0 ? Math.round((habitsCompletedToday / totalHabits) * 100) : 0;
     const goalRate = totalGoals > 0 ? Math.round((goalsOnTrack / totalGoals) * 100) : 0;
     const momentumScore = Math.round((completionRate * 0.4) + (goalRate * 0.3) + (habitRate * 0.3));
 
     // Real logged focus time today
     const startOfToday = new Date().setHours(0, 0, 0, 0);
-    const todaySessions = focusSessions.filter(s => s.timestamp >= startOfToday);
-    const completedFocusMinutes = todaySessions.reduce((acc, s) => acc + (s.durationMinutes || 0), 0);
+    let completedFocusMinutes = 0;
+    let focusSessionsCount = 0;
+    for (let i = 0; i < focusSessions.length; i++) {
+      const s = focusSessions[i];
+      if (s.timestamp >= startOfToday) {
+        completedFocusMinutes += s.durationMinutes || 0;
+        focusSessionsCount++;
+      }
+    }
     const completedFocusHours = Number((completedFocusMinutes / 60).toFixed(1));
 
     return {
       total, completed, pending, highPriority, normalPriority, lowPriority,
       completionRate, goalsOnTrack, totalGoals,
       habitStreaks, longestStreak, habitsCompletedToday,
-      totalHabits: habits.length,
+      totalHabits,
       momentumScore,
       completedFocusMinutes,
       completedFocusHours,
-      focusSessionsCount: todaySessions.length,
+      focusSessionsCount,
     };
   }, [tasks, reactiveGoals, habits, focusSessions]);
 

@@ -1,18 +1,32 @@
 export const IMPACT_LABELS = { high: 'High', medium: 'Medium', low: 'Low' };
 
 function localDateKey(date) {
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  return `${y}-${m < 10 ? '0' : ''}${m}-${d < 10 ? '0' : ''}${d}`;
+}
+
+let cachedToday = '';
+let cachedTomorrow = '';
+let cacheExpiry = 0;
+
+function updatePlanDateCache() {
+  const now = new Date();
+  cachedToday = localDateKey(now);
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  cachedTomorrow = localDateKey(tomorrow);
+  cacheExpiry = Date.now() + 60000;
 }
 
 export function todayPlanDate() {
-  return localDateKey(new Date());
+  if (Date.now() > cacheExpiry) updatePlanDateCache();
+  return cachedToday;
 }
 
 export function tomorrowPlanDate() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return localDateKey(tomorrow);
+  if (Date.now() > cacheExpiry) updatePlanDateCache();
+  return cachedTomorrow;
 }
 
 export function taskPlanDate(task = {}) {
@@ -43,13 +57,18 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
     // If task has a base plannedDate, don't show before base date
     if (pDate && dateStr < pDate) return false;
 
+    // Fast-path: daily recurrence does not require Date instantiation
+    if (task.recurrence === 'daily') return true;
+
+    // Fast-path: yearly recurrence does not require Date instantiation
+    if (task.recurrence === 'yearly') {
+      return pDate ? pDate.slice(5) === dateStr.slice(5) : false;
+    }
+
     const targetDate = new Date(`${dateStr}T12:00:00`);
     if (Number.isNaN(targetDate.getTime())) return false;
     const dayOfWeek = targetDate.getDay(); // 0: Sun, 1: Mon, ...
 
-    if (task.recurrence === 'daily') {
-      return true;
-    }
     if (task.recurrence === 'weekly') {
       if (pDate) {
         const baseDay = new Date(`${pDate}T12:00:00`).getDay();
@@ -67,12 +86,6 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
         return targetDate.getDate() === baseDayNum;
       }
       return targetDate.getDate() === 1;
-    }
-    if (task.recurrence === 'yearly') {
-      if (pDate) {
-        return pDate.slice(5) === dateStr.slice(5);
-      }
-      return false;
     }
   }
 
@@ -110,12 +123,12 @@ export function urgencyFromPlan(date = '') {
 export function deadlineStatus(task = {}) {
   if (!task.deadlineDate) return null;
   const value = new Date(`${task.deadlineDate}T${task.deadlineTime || '23:59'}:00`);
-  if (Number.isNaN(value.getTime())) return null;
-  const now = new Date();
-  if (value < now) return { label: 'Overdue', tone: 'overdue', timestamp: value.getTime() };
-  if (task.deadlineDate === todayPlanDate()) return { label: 'Due today', tone: 'today', timestamp: value.getTime() };
-  if (task.deadlineDate === tomorrowPlanDate()) return { label: 'Due tomorrow', tone: 'upcoming', timestamp: value.getTime() };
-  return { label: `Due ${planDateLabel(task.deadlineDate)}`, tone: 'upcoming', timestamp: value.getTime() };
+  const ts = value.getTime();
+  if (Number.isNaN(ts)) return null;
+  if (ts < Date.now()) return { label: 'Overdue', tone: 'overdue', timestamp: ts };
+  if (task.deadlineDate === todayPlanDate()) return { label: 'Due today', tone: 'today', timestamp: ts };
+  if (task.deadlineDate === tomorrowPlanDate()) return { label: 'Due tomorrow', tone: 'upcoming', timestamp: ts };
+  return { label: `Due ${planDateLabel(task.deadlineDate)}`, tone: 'upcoming', timestamp: ts };
 }
 
 export function taskImpact(task = {}) {

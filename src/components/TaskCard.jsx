@@ -8,7 +8,7 @@ const PRIORITY_BADGES = {
   low: 'bg-surface-container-high text-on-surface-variant border-black/5',
 };
 
-export default function TaskCard({
+const TaskCard = React.memo(function TaskCard({
   task,
   onToggleTask,
   onDeleteTask,
@@ -269,4 +269,6 @@ export default function TaskCard({
       )}
     </div>
   );
-}
+});
+
+export default TaskCard;
