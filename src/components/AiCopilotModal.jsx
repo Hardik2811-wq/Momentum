@@ -32,6 +32,67 @@ export default function AiCopilotModal({
   const [isParsingDoc, setIsParsingDoc] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [appliedPlans, setAppliedPlans] = useState(new Set());
+  const [editingPlanIds, setEditingPlanIds] = useState(new Set());
+
+  const toggleEditPlan = (messageId) => {
+    setEditingPlanIds(prev => {
+      const next = new Set(prev);
+      if (next.has(messageId)) next.delete(messageId);
+      else next.add(messageId);
+      return next;
+    });
+  };
+
+  const updatePlanGoal = (messageId, goalIdx, field, value) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.plan?.goals) return m;
+      const goals = [...m.plan.goals];
+      goals[goalIdx] = { ...goals[goalIdx], [field]: value };
+      return { ...m, plan: { ...m.plan, goals } };
+    }));
+  };
+
+  const removePlanGoal = (messageId, goalIdx) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.plan?.goals) return m;
+      const goals = m.plan.goals.filter((_, idx) => idx !== goalIdx);
+      return { ...m, plan: { ...m.plan, goals } };
+    }));
+  };
+
+  const updatePlanHabit = (messageId, habitIdx, field, value) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.plan?.habits) return m;
+      const habits = [...m.plan.habits];
+      habits[habitIdx] = { ...habits[habitIdx], [field]: value };
+      return { ...m, plan: { ...m.plan, habits } };
+    }));
+  };
+
+  const removePlanHabit = (messageId, habitIdx) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.plan?.habits) return m;
+      const habits = m.plan.habits.filter((_, idx) => idx !== habitIdx);
+      return { ...m, plan: { ...m.plan, habits } };
+    }));
+  };
+
+  const updatePlanTask = (messageId, taskIdx, field, value) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.plan?.tasks) return m;
+      const tasks = [...m.plan.tasks];
+      tasks[taskIdx] = { ...tasks[taskIdx], [field]: value };
+      return { ...m, plan: { ...m.plan, tasks } };
+    }));
+  };
+
+  const removePlanTask = (messageId, taskIdx) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.plan?.tasks) return m;
+      const tasks = m.plan.tasks.filter((_, idx) => idx !== taskIdx);
+      return { ...m, plan: { ...m.plan, tasks } };
+    }));
+  };
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -347,12 +408,26 @@ export default function AiCopilotModal({
                     <div className="whitespace-pre-wrap font-normal text-[#2C2C2E]">{msg.content}</div>
 
                     {/* Linear-Style Proposed Schedule Card */}
-                    {msg.hasPlan && msg.plan && (
+                    {msg.hasPlan && msg.plan && (() => {
+                      const isEditing = editingPlanIds.has(msg.id);
+                      return (
                       <div className="mt-3 p-4 rounded-xl bg-black/[0.02] border border-black/[0.08] space-y-3.5">
                         <div className="flex items-center justify-between border-b border-black/[0.06] pb-2">
-                          <span className="font-semibold text-xs text-[#1A1B1F]">
-                            Proposed Schedule
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-xs text-[#1A1B1F]">
+                              Proposed Schedule
+                            </span>
+                            {!isPlanApplied && (
+                              <button
+                                type="button"
+                                onClick={() => toggleEditPlan(msg.id)}
+                                className="px-2 py-0.5 rounded text-[11px] font-medium bg-black/[0.04] hover:bg-black/[0.08] text-[#1A1B1F] transition cursor-pointer flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">{isEditing ? 'done' : 'edit'}</span>
+                                <span>{isEditing ? 'Done' : 'Edit'}</span>
+                              </button>
+                            )}
+                          </div>
                           <span className="text-[11px] text-[#8E8E93] font-mono">
                             {[
                               msg.plan.goals?.length ? `${msg.plan.goals.length} goals` : null,
@@ -367,9 +442,40 @@ export default function AiCopilotModal({
                           <div className="space-y-1.5">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E8E93]">Horizons</span>
                             {msg.plan.goals.map((g, idx) => (
-                              <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between">
-                                <span className="font-medium text-[#1A1B1F]">{g.title}</span>
-                                <span className="text-[10px] text-[#8E8E93] uppercase font-mono">{g.category || 'career'}</span>
+                              <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between gap-2">
+                                {isEditing ? (
+                                  <>
+                                    <input
+                                      type="text"
+                                      value={g.title || ''}
+                                      onChange={(e) => updatePlanGoal(msg.id, idx, 'title', e.target.value)}
+                                      className="flex-1 py-0.5 px-1.5 bg-black/[0.03] border border-black/10 rounded font-medium text-[#1A1B1F] text-xs outline-none focus:bg-white focus:border-[#0A84FF]"
+                                    />
+                                    <select
+                                      value={g.category || 'career'}
+                                      onChange={(e) => updatePlanGoal(msg.id, idx, 'category', e.target.value)}
+                                      className="py-0.5 px-1 bg-black/[0.03] border border-black/10 rounded text-[10px] font-mono uppercase text-[#64748B] outline-none"
+                                    >
+                                      <option value="career">CAREER</option>
+                                      <option value="health">HEALTH</option>
+                                      <option value="creative">CREATIVE</option>
+                                      <option value="finance">FINANCE</option>
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() => removePlanGoal(msg.id, idx)}
+                                      className="text-[#8E8E93] hover:text-red-500 p-0.5 cursor-pointer"
+                                      title="Remove goal"
+                                    >
+                                      <span className="material-symbols-outlined text-[15px]">close</span>
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="font-medium text-[#1A1B1F]">{g.title}</span>
+                                    <span className="text-[10px] text-[#8E8E93] uppercase font-mono">{g.category || 'career'}</span>
+                                  </>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -380,9 +486,40 @@ export default function AiCopilotModal({
                           <div className="space-y-1.5">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E8E93]">Daily Rituals</span>
                             {msg.plan.habits.map((h, idx) => (
-                              <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between">
-                                <span className="font-medium text-[#1A1B1F]">{h.title}</span>
-                                <span className="text-[10px] text-[#8E8E93]">{h.frequency || h.cadence}</span>
+                              <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between gap-2">
+                                {isEditing ? (
+                                  <>
+                                    <input
+                                      type="text"
+                                      value={h.title || ''}
+                                      onChange={(e) => updatePlanHabit(msg.id, idx, 'title', e.target.value)}
+                                      className="flex-1 py-0.5 px-1.5 bg-black/[0.03] border border-black/10 rounded font-medium text-[#1A1B1F] text-xs outline-none focus:bg-white focus:border-[#0A84FF]"
+                                    />
+                                    <select
+                                      value={h.cadence || 'Morning'}
+                                      onChange={(e) => updatePlanHabit(msg.id, idx, 'cadence', e.target.value)}
+                                      className="py-0.5 px-1 bg-black/[0.03] border border-black/10 rounded text-[11px] text-[#64748B] outline-none"
+                                    >
+                                      <option value="Morning">Morning</option>
+                                      <option value="Afternoon">Afternoon</option>
+                                      <option value="Evening">Evening</option>
+                                      <option value="Anytime">Anytime</option>
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() => removePlanHabit(msg.id, idx)}
+                                      className="text-[#8E8E93] hover:text-red-500 p-0.5 cursor-pointer"
+                                      title="Remove habit"
+                                    >
+                                      <span className="material-symbols-outlined text-[15px]">close</span>
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="font-medium text-[#1A1B1F]">{h.title}</span>
+                                    <span className="text-[10px] text-[#8E8E93]">{h.frequency || h.cadence}</span>
+                                  </>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -392,13 +529,46 @@ export default function AiCopilotModal({
                         {Array.isArray(msg.plan.tasks) && msg.plan.tasks.length > 0 && (
                           <div className="space-y-1.5">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E8E93]">Execution Timeline</span>
-                            <div className="space-y-1 max-h-44 overflow-y-auto">
+                            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
                               {msg.plan.tasks.map((t, idx) => (
-                                <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between">
-                                  <span className="truncate pr-2 font-medium text-[#1A1B1F]">{t.title}</span>
-                                  <span className="text-[10px] text-[#8E8E93] font-mono shrink-0">
-                                    {t.plannedDate} {t.startTime ? `• ${t.startTime}` : ''}
-                                  </span>
+                                <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between gap-2">
+                                  {isEditing ? (
+                                    <>
+                                      <input
+                                        type="text"
+                                        value={t.title || ''}
+                                        onChange={(e) => updatePlanTask(msg.id, idx, 'title', e.target.value)}
+                                        className="flex-1 py-0.5 px-1.5 bg-black/[0.03] border border-black/10 rounded font-medium text-[#1A1B1F] text-xs outline-none focus:bg-white focus:border-[#0A84FF]"
+                                      />
+                                      <input
+                                        type="date"
+                                        value={t.plannedDate || ''}
+                                        onChange={(e) => updatePlanTask(msg.id, idx, 'plannedDate', e.target.value)}
+                                        className="py-0.5 px-1 bg-black/[0.03] border border-black/10 rounded text-[10px] font-mono text-[#64748B] outline-none"
+                                      />
+                                      <input
+                                        type="time"
+                                        value={t.startTime || ''}
+                                        onChange={(e) => updatePlanTask(msg.id, idx, 'startTime', e.target.value)}
+                                        className="py-0.5 px-1 bg-black/[0.03] border border-black/10 rounded text-[10px] font-mono text-[#64748B] outline-none"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => removePlanTask(msg.id, idx)}
+                                        className="text-[#8E8E93] hover:text-red-500 p-0.5 cursor-pointer"
+                                        title="Remove task"
+                                      >
+                                        <span className="material-symbols-outlined text-[15px]">close</span>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="truncate pr-2 font-medium text-[#1A1B1F]">{t.title}</span>
+                                      <span className="text-[10px] text-[#8E8E93] font-mono shrink-0">
+                                        {t.plannedDate} {t.startTime ? `• ${t.startTime}` : ''}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -424,7 +594,8 @@ export default function AiCopilotModal({
                           )}
                         </div>
                       </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
               </div>
