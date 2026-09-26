@@ -136,6 +136,9 @@ export default function App() {
             goals={store.goals}
             habits={store.habits}
             stats={store.stats}
+            focusSessions={store.focusSessions}
+            onStartFocus={startFocusForTask}
+            onOpenQuickAdd={openQuickAdd}
           />
         );
       case 'settings':
