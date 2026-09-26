@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import TaskDetailModal from '../components/TaskDetailModal';
 import DeleteRecurringModal from '../components/DeleteRecurringModal';
 import {
