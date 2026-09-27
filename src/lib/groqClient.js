@@ -480,7 +480,7 @@ USER QUERY: "${userPrompt.trim()}"`;
       const activeMsgs = isPruned
         ? [
             { role: 'system', content: COPILOT_SYSTEM_PROMPT },
-            { role: 'user', content: `TODAY: ${currentDateStr}\nUSER QUERY: "${userPrompt.trim().slice(0, 1000)}"` }
+            { role: 'user', content: `TODAY: ${currentDateStr}\nUSER QUERY: "${userPrompt.trim().slice(0, 8000)}"` }
           ]
         : messages;
 
