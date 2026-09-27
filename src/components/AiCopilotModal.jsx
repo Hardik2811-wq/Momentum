@@ -262,7 +262,7 @@ export default function AiCopilotModal({
         const id = 'h' + (Date.now() + idx + 100);
         const linkedGoalId = h.goalIndex !== undefined && goalIdMap.has(h.goalIndex)
           ? goalIdMap.get(h.goalIndex)
-          : null;
+          : h.linkedGoalId || null;
 
         addHabit({
           id,
@@ -272,7 +272,8 @@ export default function AiCopilotModal({
           duration: h.duration || '30 mins',
           icon: h.icon || 'cached',
           colorToken: h.colorToken || 'primary',
-          linkedGoal: linkedGoalId ? plan.goals[h.goalIndex]?.title : ''
+          linkedGoal: linkedGoalId ? (plan.goals?.[h.goalIndex]?.title || h.linkedGoal || '') : (h.linkedGoal || ''),
+          linkedGoalId: linkedGoalId || null
         });
         habitIdMap.set(idx, id);
       });

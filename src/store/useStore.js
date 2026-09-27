@@ -501,15 +501,16 @@ export default function useStore() {
 
   /* ── Reactive Goal Metrics derived from Tasks & Habits (O(G + T + H)) ── */
   const reactiveGoals = useMemo(() => {
-    // 1. Group tasks by goalId in single O(T) pass
+    // 1. Group tasks by goalId in single O(T) pass (coercing goalId to String)
     const tasksByGoal = new Map();
     for (let i = 0; i < tasks.length; i++) {
       const t = tasks[i];
-      if (!t.goalId) continue;
-      let entry = tasksByGoal.get(t.goalId);
+      if (t.goalId === undefined || t.goalId === null || t.goalId === '') continue;
+      const gIdStr = String(t.goalId);
+      let entry = tasksByGoal.get(gIdStr);
       if (!entry) {
         entry = { activeCount: 0, completedCount: 0, totalCount: 0, uncompletedTasks: [] };
-        tasksByGoal.set(t.goalId, entry);
+        tasksByGoal.set(gIdStr, entry);
       }
       entry.totalCount++;
       if (t.completed) {
@@ -522,10 +523,20 @@ export default function useStore() {
 
     // 2. Index habits in single O(H) pass
     const habitsById = new Map();
+    const habitsByGoalId = new Map();
     const habitsByGoalTitle = new Map();
     for (let i = 0; i < habits.length; i++) {
       const h = habits[i];
-      habitsById.set(h.id, h);
+      habitsById.set(String(h.id), h);
+      if (h.linkedGoalId !== undefined && h.linkedGoalId !== null && h.linkedGoalId !== '') {
+        const gIdStr = String(h.linkedGoalId);
+        let list = habitsByGoalId.get(gIdStr);
+        if (!list) {
+          list = [];
+          habitsByGoalId.set(gIdStr, list);
+        }
+        list.push(h);
+      }
       if (h.linkedGoal) {
         let list = habitsByGoalTitle.get(h.linkedGoal);
         if (!list) {
@@ -540,7 +551,8 @@ export default function useStore() {
 
     // 3. Map goals in O(G)
     return goals.map(g => {
-      const entry = tasksByGoal.get(g.id);
+      const goalIdStr = String(g.id);
+      const entry = tasksByGoal.get(goalIdStr);
       const activeCount = entry ? entry.activeCount : 0;
       const completedCount = entry ? entry.completedCount : 0;
       const totalLinked = entry ? entry.totalCount : 0;
@@ -562,14 +574,24 @@ export default function useStore() {
         }
       }
 
-      // Linked habits lookup in O(1)
+      // Linked habits lookup
       const linkedHabits = [];
       const seenHabitIds = new Set();
       if (Array.isArray(g.linkedHabitIds)) {
         for (let i = 0; i < g.linkedHabitIds.length; i++) {
-          const h = habitsById.get(g.linkedHabitIds[i]);
-          if (h && !seenHabitIds.has(h.id)) {
-            seenHabitIds.add(h.id);
+          const h = habitsById.get(String(g.linkedHabitIds[i]));
+          if (h && !seenHabitIds.has(String(h.id))) {
+            seenHabitIds.add(String(h.id));
+            linkedHabits.push(h);
+          }
+        }
+      }
+      const idHabits = habitsByGoalId.get(goalIdStr);
+      if (idHabits) {
+        for (let i = 0; i < idHabits.length; i++) {
+          const h = idHabits[i];
+          if (!seenHabitIds.has(String(h.id))) {
+            seenHabitIds.add(String(h.id));
             linkedHabits.push(h);
           }
         }
@@ -578,8 +600,8 @@ export default function useStore() {
       if (titleHabits) {
         for (let i = 0; i < titleHabits.length; i++) {
           const h = titleHabits[i];
-          if (!seenHabitIds.has(h.id)) {
-            seenHabitIds.add(h.id);
+          if (!seenHabitIds.has(String(h.id))) {
+            seenHabitIds.add(String(h.id));
             linkedHabits.push(h);
           }
         }
@@ -638,24 +660,32 @@ export default function useStore() {
   }, [setTasks, showToast]);
 
   const toggleTask = useCallback((id) => {
-    const target = tasks.find(t => t.id === id);
-    const isNowCompleted = target ? !target.completed : false;
-    const linkedHabit = target?.linkedHabitId ? habits.find(h => h.id === target.linkedHabitId) : null;
-    const habitNeedsCheckIn = isNowCompleted && linkedHabit && !(linkedHabit.completedDays || []).includes(todayKey());
+    const target = tasks.find(t => String(t.id) === String(id));
+    if (!target) return;
+    const isNowCompleted = !target.completed;
+    const linkedHabit = target.linkedHabitId ? habits.find(h => String(h.id) === String(target.linkedHabitId)) : null;
+    const today = todayKey();
 
     if (isNowCompleted && settings.soundEffects) playChime('complete');
-    setTasks(prev => prev.map(t => t.id === id ? {
+    setTasks(prev => prev.map(t => String(t.id) === String(id) ? {
       ...t,
       completed: isNowCompleted,
       completedAt: isNowCompleted ? Date.now() : null
     } : t));
 
-    if (habitNeedsCheckIn) {
-      const today = todayKey();
-      setHabits(prev => prev.map(h => h.id === target.linkedHabitId
-        ? { ...h, completedDays: [...(h.completedDays || []), today] }
-        : h));
-      showToast(`Task complete. ${linkedHabit.title} checked in.`);
+    if (linkedHabit) {
+      setHabits(prev => prev.map(h => {
+        if (String(h.id) !== String(target.linkedHabitId)) return h;
+        const days = h.completedDays || [];
+        if (isNowCompleted) {
+          return days.includes(today) ? h : { ...h, completedDays: [...days, today] };
+        } else {
+          return { ...h, completedDays: days.filter(d => d !== today) };
+        }
+      }));
+      if (isNowCompleted && !(linkedHabit.completedDays || []).includes(today)) {
+        showToast(`Task complete. ${linkedHabit.title} checked in.`);
+      }
     }
   }, [tasks, habits, setTasks, setHabits, settings.soundEffects, showToast]);
 
@@ -792,20 +822,29 @@ export default function useStore() {
   }, [setGoals, setTasks, showToast]);
 
   const updateGoal = useCallback((id, patch) => {
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...patch } : g));
+    const target = goals.find(g => String(g.id) === String(id));
+    setGoals(prev => prev.map(g => String(g.id) === String(id) ? { ...g, ...patch } : g));
+    if (patch.title && target && patch.title !== target.title) {
+      setHabits(prev => prev.map(h => {
+        if (String(h.linkedGoalId) === String(id) || h.linkedGoal === target.title) {
+          return { ...h, linkedGoal: patch.title };
+        }
+        return h;
+      }));
+    }
     showToast('Goal updated');
-  }, [setGoals, showToast]);
+  }, [goals, setGoals, setHabits, showToast]);
 
   const updateGoalProgress = useCallback((id, delta) => {
     setGoals(prev => prev.map(g =>
-      g.id === id ? { ...g, progress: Math.max(0, Math.min(100, (g.progress || 0) + delta)) } : g
+      String(g.id) === String(id) ? { ...g, progress: Math.max(0, Math.min(100, (g.progress || 0) + delta)) } : g
     ));
   }, [setGoals]);
 
   const deleteGoal = useCallback((id) => {
-    const target = goals.find(g => g.id === id);
+    const target = goals.find(g => String(g.id) === String(id));
     if (!target) return;
-    setGoals(prev => prev.filter(g => g.id !== id));
+    setGoals(prev => prev.filter(g => String(g.id) !== String(id)));
     showToast(`Goal deleted: "${target.title}"`, {
       actionLabel: 'Undo',
       onAction: () => {
@@ -818,10 +857,13 @@ export default function useStore() {
   /* Habits Actions */
   const checkInHabit = useCallback((id, targetDateKey = null) => {
     const targetDay = targetDateKey || todayKey();
+    let isCheckingIn = false;
+
     setHabits(prev => prev.map(h => {
-      if (h.id !== id) return h;
+      if (String(h.id) !== String(id)) return h;
       const days = h.completedDays || [];
       const alreadyChecked = days.includes(targetDay);
+      isCheckingIn = !alreadyChecked;
       if (!alreadyChecked && settings.soundEffects) {
         playChime('complete');
       }
@@ -830,7 +872,21 @@ export default function useStore() {
       }
       return { ...h, completedDays: [...days, targetDay] };
     }));
-  }, [setHabits, settings.soundEffects]);
+
+    // Auto sync today's scheduled tasks linked to this habit
+    if (targetDay === todayKey()) {
+      setTasks(prev => prev.map(t => {
+        if (String(t.linkedHabitId) === String(id)) {
+          return {
+            ...t,
+            completed: isCheckingIn,
+            completedAt: isCheckingIn ? Date.now() : null
+          };
+        }
+        return t;
+      }));
+    }
+  }, [setHabits, setTasks, settings.soundEffects]);
 
   const addHabit = useCallback((habit) => {
     const newId = habit.id || ('h' + Date.now());
