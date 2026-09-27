@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js';
 import { getGroqApiKey, setGroqApiKey } from '../lib/groqClient.js';
+import { resetNlpMemory } from '../lib/nlpMemory.js';
 import { planDateLabel, taskPlanDate, todayPlanDate } from '../lib/taskMetadata.js';
 
 /* ── localStorage wrapper ── */
@@ -1056,6 +1057,10 @@ export default function useStore() {
       frictionTask: '',
       history: []
     });
+    resetNlpMemory();
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem('momentum_goal_life_areas');
+    }
     showToast('Workspace wiped clean. Ready for your personal setup.');
   }, [setTasks, setGoals, setHabits, setReflections, setFocusSessions, showToast]);
 
