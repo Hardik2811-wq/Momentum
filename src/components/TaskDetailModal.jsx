@@ -162,6 +162,12 @@ export default function TaskDetailModal({
   const handleSave = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!formData.title.trim()) return;
+
+    const durMins = formData.isFlexible ? null : (Number(formData.durationMinutes) || 60);
+    const computedEnd = (!formData.isFlexible && formData.startTime && durMins)
+      ? calculateEndTime(formData.startTime, durMins)
+      : (formData.endTime || null);
+
     onUpdateTask(task.id, {
       title: formData.title.trim(),
       urgency: urgencyFromPlan(formData.plannedDate),
@@ -173,8 +179,8 @@ export default function TaskDetailModal({
       deadlineDate: formData.deadlineDate || null,
       deadlineTime: formData.deadlineDate ? formData.deadlineTime || null : null,
       startTime: formData.startTime || null,
-      endTime: formData.isFlexible ? null : (formData.endTime || null),
-      durationMinutes: formData.isFlexible ? null : (Number(formData.durationMinutes) || 60),
+      endTime: computedEnd,
+      durationMinutes: durMins,
       isFlexible: Boolean(formData.isFlexible),
       areas: formData.areas && formData.areas.length > 0 ? formData.areas : ['Career & Craft'],
       category: formData.areas?.[0] || 'Career & Craft',

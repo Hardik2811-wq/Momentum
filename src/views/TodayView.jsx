@@ -419,20 +419,26 @@ const TodayView = React.memo(function TodayView({
         if (isTaskScheduledForDate(t, colDate) && t.startTime) {
           if (!t.completed) {
             colTasks.push(t);
-            let dur = Number(t.durationMinutes) || 45;
-            if (t.startTime && t.endTime) {
-              const diff = calculateDuration(t.startTime, t.endTime);
-              if (diff > 0) dur = diff;
+            let dur = Number(t.durationMinutes);
+            if (!dur || isNaN(dur)) {
+              if (t.startTime && t.endTime) {
+                const diff = calculateDuration(t.startTime, t.endTime);
+                if (diff > 0) dur = diff;
+              }
             }
+            if (!dur || isNaN(dur)) dur = 45;
             colMins += dur;
           }
           const sm = minutesFromStartOfDay(t.startTime);
           if (sm !== null) {
-            let dur = Number(t.durationMinutes) || 45;
-            if (t.startTime && t.endTime) {
-              const diff = calculateDuration(t.startTime, t.endTime);
-              if (diff > 0) dur = diff;
+            let dur = Number(t.durationMinutes);
+            if (!dur || isNaN(dur)) {
+              if (t.startTime && t.endTime) {
+                const diff = calculateDuration(t.startTime, t.endTime);
+                if (diff > 0) dur = diff;
+              }
             }
+            if (!dur || isNaN(dur)) dur = 45;
             rawScheduled.push({ task: t, startMin: sm, endMin: sm + dur, duration: dur });
           }
         }
