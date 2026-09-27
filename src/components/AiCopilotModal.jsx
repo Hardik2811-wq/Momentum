@@ -538,7 +538,7 @@ export default function AiCopilotModal({
                         {Array.isArray(msg.plan.tasks) && msg.plan.tasks.length > 0 && (
                           <div className="space-y-1.5">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E8E93]">Execution Timeline</span>
-                            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
+                            <div className="space-y-1.5 max-h-72 overflow-y-auto pr-0.5">
                               {msg.plan.tasks.map((t, idx) => (
                                 <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between gap-2">
                                   {isEditing ? (
