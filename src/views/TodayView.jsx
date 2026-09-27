@@ -332,19 +332,20 @@ const TodayView = React.memo(function TodayView({
 
   /* ── Slotting & Unslotting Actions ── */
   const handleSlotTask = (taskId, timeStr, targetDate = viewDate) => {
-    const target = tasks.find(t => t.id === taskId);
+    const target = tasks.find(t => String(t.id) === String(taskId));
     if (!target) return;
-    const dur = Number(target.durationMinutes) || 45;
+    const dur = Number(target.durationMinutes) || 60;
     const endTime = calculateEndTime(timeStr, dur);
     onUpdateTask(taskId, {
       plannedDate: targetDate,
       dueDate: legacyDueDateForPlan(targetDate),
       startTime: timeStr,
       endTime,
+      durationMinutes: dur,
       isFlexible: false
     });
     setActiveSlotMenuTaskId(null);
-    toast.success(`Slotted "${target.title}" at ${timeStr}`);
+    toast.success(`Slotted "${target.title}" at ${formatTimeString(timeStr)}`);
   };
 
   const totalUnscheduledCount = useMemo(() => {

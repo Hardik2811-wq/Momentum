@@ -71,9 +71,9 @@ export default function TaskDetailModal({
   useEffect(() => {
     if (task) {
       const isFlex = Boolean(task.isFlexible || task.durationMinutes === null);
-      const computedDur = (!isFlex && task.startTime && task.endTime)
-        ? (calculateDuration(task.startTime, task.endTime) || task.durationMinutes || 60)
-        : (task.durationMinutes ?? 60);
+      const computedDur = isFlex ? null : (Number(task.durationMinutes) || ((task.startTime && task.endTime) ? calculateDuration(task.startTime, task.endTime) : 60));
+      const computedEnd = isFlex ? '' : (task.startTime && computedDur ? calculateEndTime(task.startTime, computedDur) : (task.endTime || ''));
+
       setFormData({
         title: task.title || '',
         plannedDate: taskPlanDate(task),
@@ -81,8 +81,8 @@ export default function TaskDetailModal({
         deadlineTime: task.deadlineTime || '',
         impact: taskImpact(task),
         startTime: task.startTime || '',
-        endTime: isFlex ? '' : (task.endTime || (task.startTime ? calculateEndTime(task.startTime, computedDur) : '')),
-        durationMinutes: isFlex ? null : computedDur,
+        endTime: computedEnd,
+        durationMinutes: computedDur,
         isFlexible: isFlex,
         areas: Array.isArray(task.areas) && task.areas.length > 0 ? task.areas : (task.category ? [task.category] : ['Career & Craft']),
         energy: task.energy || 'High',
