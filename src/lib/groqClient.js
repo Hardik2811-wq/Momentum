@@ -572,9 +572,19 @@ USER QUERY: "${userPrompt.trim()}"`;
       }
     } catch {}
   }
+
   if (Array.isArray(cachedAvailableModels) && cachedAvailableModels.length > 0) {
-    modelsToTry = cachedAvailableModels.filter(m => SUPPORTED_MODELS.includes(m) || m.includes('llama') || m.includes('mixtral') || m.includes('gemma'));
-    if (modelsToTry.length === 0) modelsToTry = cachedAvailableModels.slice(0, 4);
+    const matched = SUPPORTED_MODELS.filter(m => cachedAvailableModels.includes(m));
+    if (matched.length > 0) {
+      modelsToTry = matched;
+    } else {
+      const invalidKeywords = ['guard', 'whisper', 'embed', 'moderation', 'classifier', 'vision'];
+      const chatModels = cachedAvailableModels.filter(m => {
+        const id = String(m).toLowerCase();
+        return !invalidKeywords.some(kw => id.includes(kw));
+      });
+      if (chatModels.length > 0) modelsToTry = chatModels;
+    }
   }
 
   let lastError = null;
