@@ -472,59 +472,77 @@ USER QUERY: "${userPrompt.trim()}"`;
   messages.push({ role: 'user', content: userInstruction });
 
   const callModel = async (modelName) => {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+    const makeRequest = async (tokenLimit) => {
+      const payload = {
         model: modelName,
         messages,
         response_format: { type: 'json_object' },
-        temperature: 0.2,
-        max_tokens: 2200
-      })
-    });
+        temperature: 0.2
+      };
+      if (tokenLimit) payload.max_tokens = tokenLimit;
 
-    if (res.ok) {
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (content) {
-        const rawJson = JSON.parse(content);
-        return normalizeCopilotPlan(rawJson, currentDateStr);
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          const rawJson = JSON.parse(content);
+          return normalizeCopilotPlan(rawJson, currentDateStr);
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        const msg = err.error?.message || `HTTP ${res.status}`;
+        if (msg.includes('max_tokens') && tokenLimit !== 512) {
+          return makeRequest(512);
+        }
       }
-    }
 
-    // Fallback without json_object constraint
-    const fallbackRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+      // Fallback without json_object constraint
+      const fallbackPayload = {
         model: modelName,
         messages: [
           ...messages,
           { role: 'user', content: 'Return ONLY raw JSON object without markdown or code fences.' }
         ],
-        temperature: 0.2,
-        max_tokens: 2200
-      })
-    });
+        temperature: 0.2
+      };
+      if (tokenLimit) fallbackPayload.max_tokens = tokenLimit;
 
-    if (!fallbackRes.ok) {
-      const err = await fallbackRes.json().catch(() => ({}));
-      throw new Error(err.error?.message || `HTTP ${fallbackRes.status}`);
-    }
+      const fallbackRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(fallbackPayload)
+      });
 
-    const data = await fallbackRes.json();
-    const rawContent = data.choices?.[0]?.message?.content || '';
-    const match = rawContent.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON object found in response');
-    const rawJson = JSON.parse(match[0]);
-    return normalizeCopilotPlan(rawJson, currentDateStr);
+      if (!fallbackRes.ok) {
+        const err = await fallbackRes.json().catch(() => ({}));
+        const msg = err.error?.message || `HTTP ${fallbackRes.status}`;
+        if (msg.includes('max_tokens') && tokenLimit !== 512) {
+          return makeRequest(512);
+        }
+        throw new Error(msg);
+      }
+
+      const data = await fallbackRes.json();
+      const rawContent = data.choices?.[0]?.message?.content || '';
+      const match = rawContent.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('No JSON object found in response');
+      const rawJson = JSON.parse(match[0]);
+      return normalizeCopilotPlan(rawJson, currentDateStr);
+    };
+
+    return makeRequest(1024);
   };
 
   let modelsToTry = SUPPORTED_MODELS;
