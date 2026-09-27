@@ -308,6 +308,7 @@ export default function AiCopilotModal({
           areas: Array.isArray(t.areas) ? t.areas : ['Career & Craft'],
           goalId: linkedGoalId,
           linkedHabitId,
+          subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
           recurrence: t.recurrence || 'none',
           completed: false,
           dueDate: t.plannedDate ? 'Today' : 'This Week'
@@ -571,7 +572,14 @@ export default function AiCopilotModal({
                                     </>
                                   ) : (
                                     <>
-                                      <span className="truncate pr-2 font-medium text-[#1A1B1F]">{t.title}</span>
+                                      <div className="flex-1 min-w-0 pr-2">
+                                        <p className="truncate font-medium text-[#1A1B1F]">{t.title}</p>
+                                        {Array.isArray(t.subtasks) && t.subtasks.length > 0 && (
+                                          <p className="text-[10px] text-[#8E8E93] truncate">
+                                            {t.subtasks.length} steps: {t.subtasks.map(s => s.title || s).slice(0, 2).join(', ')}{t.subtasks.length > 2 ? '...' : ''}
+                                          </p>
+                                        )}
+                                      </div>
                                       <span className="text-[10px] text-[#8E8E93] font-mono shrink-0">
                                         {t.plannedDate} {t.startTime ? `• ${t.startTime}` : ''}
                                       </span>

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import TimezoneSelect from '../components/TimezoneSelect';
 import { sendNotification } from '../store/useStore';
-import { getGroqApiKey, setGroqApiKey, testGroqConnection } from '../lib/groqClient';
+import { getGroqApiKey, setGroqApiKey, testGroqConnection, getCustomCopilotDirective, setCustomCopilotDirective } from '../lib/groqClient';
 import { getNlpInsights, resetNlpMemory } from '../lib/nlpMemory';
 
 const Toggle = ({ checked, onChange }) => (
@@ -57,6 +57,8 @@ export default function SettingsView({
   const [keySaved, setKeySaved] = useState(false);
   const [testingKey, setTestingKey] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [customDirective, setCustomDirective] = useState(() => getCustomCopilotDirective());
+  const [directiveSaved, setDirectiveSaved] = useState(false);
   const fileInputRef = useRef(null);
 
   const inputCls = 'bg-[#F5F4FA] border-black/[0.07] text-[#1A1B1F]';
@@ -351,6 +353,46 @@ export default function SettingsView({
                 </button>
               </div>
             )}
+          </div>
+
+          <div className="mt-4 border-t border-black/[0.06] pt-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1A1B1F]">
+                Master Copilot Strategy & Behavior Directive
+              </label>
+              {directiveSaved && (
+                <span className="text-[11px] font-semibold text-emerald-600">Saved to AI memory</span>
+              )}
+            </div>
+            <p className="text-[11px] text-[#8E8E93] mb-2 leading-relaxed">
+              Define your strict personal operating rules, exam timetable, time blocking, and psychological mandates. Copilot respects this on every single plan without eating repetitive prompt tokens.
+            </p>
+            <textarea
+              rows={4}
+              value={customDirective}
+              onChange={(e) => {
+                setCustomDirective(e.target.value);
+                setDirectiveSaved(false);
+              }}
+              placeholder="e.g. MISSION: 90+ in CN/CML/MERN. Direct discipline. No hedging. When plan breaks, reschedule immediately. Daily check-in at 8 AM and 8 PM."
+              className={`w-full p-2.5 rounded-xl text-[12px] font-mono leading-relaxed outline-none border resize-y ${inputCls}`}
+            />
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-[10px] text-[#BBBBC0]">
+                {customDirective.length} characters • Injected into all Copilot plans
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomCopilotDirective(customDirective);
+                  setDirectiveSaved(true);
+                  setTimeout(() => setDirectiveSaved(false), 2500);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-[#1A1B1F] text-white text-[11px] font-semibold hover:bg-black transition-colors"
+              >
+                Save Strategy Directive
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] pt-4">

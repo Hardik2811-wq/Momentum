@@ -49,6 +49,28 @@ export function setGroqApiKey(key = '') {
   }
 }
 
+export function getCustomCopilotDirective() {
+  if (typeof window !== 'undefined') {
+    try {
+      return window.localStorage?.getItem('momentum_copilot_directive') || '';
+    } catch {}
+  }
+  return '';
+}
+
+export function setCustomCopilotDirective(directive = '') {
+  if (typeof window !== 'undefined') {
+    try {
+      const clean = (directive || '').trim();
+      if (clean) {
+        window.localStorage?.setItem('momentum_copilot_directive', clean);
+      } else {
+        window.localStorage?.removeItem('momentum_copilot_directive');
+      }
+    } catch {}
+  }
+}
+
 export async function testGroqConnection(apiKey = null) {
   const passedKey = typeof apiKey === 'string' ? apiKey.trim() : '';
   const key = (passedKey || getGroqApiKey() || '').trim();
@@ -320,7 +342,7 @@ Return ONLY raw JSON object (no markdown code blocks):
     "summary": "1-line headline",
     "goals": [{"title":"", "category":"career"|"health"|"creative"|"finance", "why":"", "targetDate":"YYYY-MM-DD"|null}],
     "habits": [{"title":"", "cadence":"Morning"|"Afternoon"|"Evening"|"Anytime", "frequency":"Every Day"|"Weekdays"|"3x / week", "duration":"15 mins"|"30 mins"|"45 mins"|"60 mins", "icon":"cached"|"terminal"|"fitness_center"|"auto_stories", "colorToken":"primary"|"secondary"|"tertiary", "goalIndex":0|null}],
-    "tasks": [{"title":"", "plannedDate":"YYYY-MM-DD", "startTime":"HH:MM"|null, "durationMinutes":30, "impact":"high"|"medium"|"low", "priority":"high"|"normal"|"low", "areas":["Career & Craft"|"Deep Focus"|"Health & Vitality"], "goalIndex":0|null, "existingGoalId":"string"|null, "habitIndex":0|null, "existingHabitId":"string"|null}]
+    "tasks": [{"title":"", "plannedDate":"YYYY-MM-DD", "startTime":"HH:MM"|null, "durationMinutes":30, "impact":"high"|"medium"|"low", "priority":"high"|"normal"|"low", "areas":["Career & Craft"|"Deep Focus"|"Health & Vitality"], "goalIndex":0|null, "existingGoalId":"string"|null, "habitIndex":0|null, "existingHabitId":"string"|null, "subtasks":["step 1", "step 2"]}]
   }
 }`;
 
@@ -386,6 +408,17 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
           areas: ['Career & Craft']
         };
       }
+      const rawSubtasks = Array.isArray(t.subtasks) ? t.subtasks : [];
+      const formattedSubtasks = rawSubtasks.map((s, sIdx) => {
+        if (typeof s === 'string') {
+          return { id: `st-${Date.now()}-${sIdx}`, title: s.trim(), completed: false };
+        }
+        if (s && typeof s === 'object') {
+          return { id: s.id || `st-${Date.now()}-${sIdx}`, title: s.title || String(s), completed: Boolean(s.completed) };
+        }
+        return null;
+      }).filter(Boolean);
+
       return {
         title: t.title || 'Scheduled Task',
         plannedDate: t.plannedDate || t.date || today,
@@ -397,7 +430,8 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
         goalIndex: typeof t.goalIndex === 'number' ? t.goalIndex : null,
         existingGoalId: t.existingGoalId || (typeof t.goalIndex === 'string' ? t.goalIndex : null),
         habitIndex: typeof t.habitIndex === 'number' ? t.habitIndex : null,
-        existingHabitId: t.existingHabitId || (typeof t.habitIndex === 'string' ? t.habitIndex : null)
+        existingHabitId: t.existingHabitId || (typeof t.habitIndex === 'string' ? t.habitIndex : null),
+        subtasks: formattedSubtasks
       };
     });
   }
@@ -454,9 +488,14 @@ ${memoryContext}
 ${docSection}
 USER QUERY: "${userPrompt.trim()}"`;
 
+  const userDirective = getCustomCopilotDirective();
+  const directivePrompt = userDirective
+    ? `\n\nUSER'S MASTER DIRECTIVE & STRATEGY:\n${userDirective}\nHonor these rules, time blocks, and anti-avoidance priorities strictly.`
+    : '';
+
   // Format messages
   const messages = [
-    { role: 'system', content: COPILOT_SYSTEM_PROMPT }
+    { role: 'system', content: COPILOT_SYSTEM_PROMPT + directivePrompt }
   ];
 
   // Append recent chat history (last 4 exchanges), truncating long messages to ~300 chars to save prompt tokens
@@ -555,7 +594,7 @@ USER QUERY: "${userPrompt.trim()}"`;
       return normalizeCopilotPlan(rawJson, currentDateStr);
     };
 
-    return makeRequest(1024);
+    return makeRequest(2048);
   };
 
   let modelsToTry = SUPPORTED_MODELS;
