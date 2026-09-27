@@ -167,8 +167,10 @@ export function effortLabel(minutes) {
 
 export function calculateDuration(startTime, endTime) {
   if (!startTime || !endTime) return null;
-  const [sh, sm] = startTime.split(':').map(Number);
-  const [eh, em] = endTime.split(':').map(Number);
+  const s24 = parseTimeString(startTime) || startTime;
+  const e24 = parseTimeString(endTime) || endTime;
+  const [sh, sm] = s24.split(':').map(Number);
+  const [eh, em] = e24.split(':').map(Number);
   if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return null;
   const startMins = sh * 60 + sm;
   let endMins = eh * 60 + em;
@@ -178,7 +180,8 @@ export function calculateDuration(startTime, endTime) {
 
 export function calculateEndTime(startTime, durationMinutes) {
   if (!startTime || !durationMinutes) return '';
-  const [sh, sm] = startTime.split(':').map(Number);
+  const s24 = parseTimeString(startTime) || startTime;
+  const [sh, sm] = s24.split(':').map(Number);
   if (isNaN(sh) || isNaN(sm)) return '';
   const totalMins = (sh * 60 + sm + Number(durationMinutes)) % (24 * 60);
   const eh = Math.floor(totalMins / 60);
@@ -220,8 +223,16 @@ export function formatTimeString(timeStr) {
 export function parseTimeString(str) {
   if (!str) return '';
   const s = String(str).trim().toLowerCase();
-  const m = s.match(/(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*(am|pm)?/i) ||
-            s.match(/([01]?[0-9]|2[0-3]):([0-5][0-9])/);
+
+  // 1. Check for 24-hour format: "14:00", "09:30", "23:45"
+  const m24 = s.match(/^([01]?[0-9]|2[0-3]):([0-5][0-9])$/);
+  if (m24) {
+    return `${String(parseInt(m24[1], 10)).padStart(2, '0')}:${m24[2]}`;
+  }
+
+  // 2. Check for 12-hour format with or without am/pm: "2pm", "4:30pm", "9am"
+  const m = s.match(/^(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*(am|pm)?$/i) ||
+            s.match(/\b(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*(am|pm)\b/i);
   if (!m) return '';
   let hour = parseInt(m[1], 10);
   const minute = m[2] ? parseInt(m[2], 10) : 0;

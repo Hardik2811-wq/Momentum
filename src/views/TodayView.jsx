@@ -38,6 +38,7 @@ import {
   formatDurationLabel,
   calculateDuration,
   calculateEndTime,
+  parseTimeString,
   legacyDueDateForPlan,
   isTaskScheduledForDate
 } from '../lib/taskMetadata';
@@ -71,8 +72,10 @@ function formatDateHeader(dateStr) {
 
 function minutesFromStartOfDay(timeStr) {
   if (!timeStr) return null;
-  const [h, m] = timeStr.split(':').map(Number);
-  return h * 60 + (m || 0);
+  const parsed = parseTimeString(timeStr) || timeStr;
+  const [h, m] = parsed.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
 }
 
 function format12Hour(minutes) {
