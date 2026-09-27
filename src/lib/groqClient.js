@@ -7,10 +7,10 @@
 const SUPPORTED_MODELS = [
   'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant',
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
-  'meta-llama/llama-4-scout-17b-16e-instruct',
-  'qwen/qwen3.8-27b'
+  'llama3-70b-8192',
+  'llama3-8b-8192',
+  'mixtral-8x7b-32768',
+  'gemma2-9b-it'
 ];
 
 let inMemoryKey = '';
@@ -527,10 +527,28 @@ USER QUERY: "${userPrompt.trim()}"`;
     return normalizeCopilotPlan(rawJson, currentDateStr);
   };
 
-  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'openai/gpt-oss-120b'];
+  let modelsToTry = SUPPORTED_MODELS;
+  if (!cachedAvailableModels) {
+    try {
+      const mRes = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': `Bearer ${apiKey}` }
+      });
+      if (mRes.ok) {
+        const mData = await mRes.json();
+        if (Array.isArray(mData?.data)) {
+          cachedAvailableModels = mData.data.map(m => m.id);
+        }
+      }
+    } catch {}
+  }
+  if (Array.isArray(cachedAvailableModels) && cachedAvailableModels.length > 0) {
+    modelsToTry = cachedAvailableModels.filter(m => SUPPORTED_MODELS.includes(m) || m.includes('llama') || m.includes('mixtral') || m.includes('gemma'));
+    if (modelsToTry.length === 0) modelsToTry = cachedAvailableModels.slice(0, 4);
+  }
+
   let lastError = null;
 
-  for (const m of models) {
+  for (const m of modelsToTry) {
     try {
       const parsed = await callModel(m);
       if (parsed) {
