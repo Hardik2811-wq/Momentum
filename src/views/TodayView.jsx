@@ -425,7 +425,11 @@ const TodayView = React.memo(function TodayView({
           }
           const sm = minutesFromStartOfDay(t.startTime);
           if (sm !== null) {
-            const dur = Number(t.durationMinutes) || 45;
+            let dur = Number(t.durationMinutes) || 45;
+            if (t.startTime && t.endTime) {
+              const diff = calculateDuration(t.startTime, t.endTime);
+              if (diff > 0) dur = diff;
+            }
             rawScheduled.push({ task: t, startMin: sm, endMin: sm + dur, duration: dur });
           }
         }
