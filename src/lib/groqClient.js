@@ -459,12 +459,16 @@ USER QUERY: "${userPrompt.trim()}"`;
     { role: 'system', content: COPILOT_SYSTEM_PROMPT }
   ];
 
-  // Append recent chat history (last 6 exchanges)
+  // Append recent chat history (last 4 exchanges), truncating long messages to ~300 chars to save prompt tokens
   if (Array.isArray(chatHistory)) {
-    const recents = chatHistory.slice(-6);
+    const recents = chatHistory.slice(-4);
     for (const msg of recents) {
       if (msg.role && msg.content) {
-        messages.push({ role: msg.role, content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content) });
+        let contentStr = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+        if (contentStr.length > 300) {
+          contentStr = contentStr.slice(0, 300) + '... (truncated for brevity)';
+        }
+        messages.push({ role: msg.role, content: contentStr });
       }
     }
   }
@@ -472,10 +476,17 @@ USER QUERY: "${userPrompt.trim()}"`;
   messages.push({ role: 'user', content: userInstruction });
 
   const callModel = async (modelName) => {
-    const makeRequest = async (tokenLimit) => {
+    const makeRequest = async (tokenLimit, isPruned = false) => {
+      const activeMsgs = isPruned
+        ? [
+            { role: 'system', content: COPILOT_SYSTEM_PROMPT },
+            { role: 'user', content: `TODAY: ${currentDateStr}\nUSER QUERY: "${userPrompt.trim().slice(0, 1000)}"` }
+          ]
+        : messages;
+
       const payload = {
         model: modelName,
-        messages,
+        messages: activeMsgs,
         response_format: { type: 'json_object' },
         temperature: 0.2
       };
@@ -500,8 +511,9 @@ USER QUERY: "${userPrompt.trim()}"`;
       } else {
         const err = await res.json().catch(() => ({}));
         const msg = err.error?.message || `HTTP ${res.status}`;
-        if (msg.includes('max_tokens') && tokenLimit !== 512) {
-          return makeRequest(512);
+        const isLenErr = msg.toLowerCase().includes('reduce the length') || msg.toLowerCase().includes('max_tokens') || msg.toLowerCase().includes('context');
+        if (isLenErr && !isPruned) {
+          return makeRequest(512, true);
         }
       }
 
@@ -509,7 +521,7 @@ USER QUERY: "${userPrompt.trim()}"`;
       const fallbackPayload = {
         model: modelName,
         messages: [
-          ...messages,
+          ...activeMsgs,
           { role: 'user', content: 'Return ONLY raw JSON object without markdown or code fences.' }
         ],
         temperature: 0.2
@@ -528,8 +540,9 @@ USER QUERY: "${userPrompt.trim()}"`;
       if (!fallbackRes.ok) {
         const err = await fallbackRes.json().catch(() => ({}));
         const msg = err.error?.message || `HTTP ${fallbackRes.status}`;
-        if (msg.includes('max_tokens') && tokenLimit !== 512) {
-          return makeRequest(512);
+        const isLenErr = msg.toLowerCase().includes('reduce the length') || msg.toLowerCase().includes('max_tokens') || msg.toLowerCase().includes('context');
+        if (isLenErr && !isPruned) {
+          return makeRequest(512, true);
         }
         throw new Error(msg);
       }
