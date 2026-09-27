@@ -296,11 +296,13 @@ export default function AiCopilotModal({
           plannedDate: t.plannedDate || todayPlanDate(),
           startTime: t.startTime || null,
           duration: t.durationMinutes || 45,
+          energy: t.energy || (t.impact === 'high' ? 'High' : t.impact === 'low' ? 'Low' : 'Normal'),
           impact: t.impact || 'medium',
           priority: t.priority || 'normal',
           areas: Array.isArray(t.areas) ? t.areas : ['Career & Craft'],
           goalId: linkedGoalId,
           linkedHabitId,
+          recurrence: t.recurrence || 'none',
           completed: false,
           dueDate: t.plannedDate ? 'Today' : 'This Week'
         });
