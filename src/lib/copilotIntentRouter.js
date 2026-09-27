@@ -5,6 +5,7 @@
  */
 import { parseNaturalTask } from './nlpParser.js';
 import { harvestApiResult } from './nlpMemory.js';
+import { calculateEndTime } from './taskMetadata.js';
 
 export function resolveLocalCopilotIntent({
   query = '',
@@ -31,12 +32,17 @@ export function resolveLocalCopilotIntent({
     const ext = parsed.extracted || {};
 
     if (title) {
+      const durMins = ext.durationMinutes || 60;
+      const endTime = ext.startTime ? calculateEndTime(ext.startTime, durMins) : null;
+
       const newTask = {
         id: Date.now(),
         title,
         plannedDate: ext.plannedDate || today,
         startTime: ext.startTime || null,
-        duration: ext.durationMinutes || 45,
+        endTime,
+        durationMinutes: durMins,
+        duration: durMins,
         energy: ext.energy || 'Normal',
         impact: ext.energy === 'High' ? 'high' : 'medium',
         priority: ext.urgency === 'today' ? 'high' : 'normal',

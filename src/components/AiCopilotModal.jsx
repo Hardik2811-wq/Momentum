@@ -291,12 +291,17 @@ export default function AiCopilotModal({
           ? habitIdMap.get(t.habitIndex)
           : t.existingHabitId || null;
 
+        const durMins = Number(t.durationMinutes) || 60;
+        const endTime = t.startTime ? calculateEndTime(t.startTime, durMins) : (t.endTime || null);
+
         addTask({
           id,
           title: t.title,
           plannedDate: t.plannedDate || todayPlanDate(),
           startTime: t.startTime || null,
-          duration: t.durationMinutes || 45,
+          endTime,
+          durationMinutes: durMins,
+          duration: durMins,
           energy: t.energy || (t.impact === 'high' ? 'High' : t.impact === 'low' ? 'Low' : 'Normal'),
           impact: t.impact || 'medium',
           priority: t.priority || 'normal',

@@ -213,11 +213,12 @@ export function parseCompoundDuration(str) {
 
 export function formatTimeString(timeStr) {
   if (!timeStr) return '';
-  const [h, m] = String(timeStr).split(':').map(Number);
-  if (isNaN(h)) return '';
+  const parsed = parseTimeString(timeStr) || timeStr;
+  const [h, m] = String(parsed).split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return '';
   const ampm = h >= 12 ? 'PM' : 'AM';
   const hr = h % 12 || 12;
-  return `${hr}:${String(m || 0).padStart(2, '0')} ${ampm}`;
+  return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
 export function parseTimeString(str) {

@@ -335,7 +335,7 @@ export default function QuickAddModal({
   const [impact, setImpact] = useState('low');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [durationMinutes, setDurationMinutes] = useState(45);
+  const [durationMinutes, setDurationMinutes] = useState(60);
   const [isFlexible, setIsFlexible] = useState(false);
   const [hasSetDuration, setHasSetDuration] = useState(false);
   const [customEffortInput, setCustomEffortInput] = useState('');
@@ -601,7 +601,7 @@ export default function QuickAddModal({
       deadlineTime: deadlineDate ? deadlineTime || null : null,
       startTime: startTime || null,
       endTime: isFlexible ? null : (endTime || null),
-      durationMinutes: isFlexible ? null : (Number(durationMinutes) || 45),
+      durationMinutes: isFlexible ? null : (Number(durationMinutes) || 60),
       isFlexible: Boolean(isFlexible),
       energy,
       goalId: goalId || null,
