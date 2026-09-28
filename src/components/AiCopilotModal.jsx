@@ -86,6 +86,19 @@ export default function AiCopilotModal({
     }));
   };
 
+  const updatePlanSubtasks = (messageId, taskIdx, subtasksString) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.plan?.tasks) return m;
+      const tasks = [...m.plan.tasks];
+      const parsed = subtasksString.split('\n')
+        .map(s => s.trim())
+        .filter(Boolean)
+        .map((title, sIdx) => ({ id: `st-${Date.now()}-${sIdx}`, title, completed: false }));
+      tasks[taskIdx] = { ...tasks[taskIdx], subtasks: parsed };
+      return { ...m, plan: { ...m.plan, tasks } };
+    }));
+  };
+
   const removePlanTask = (messageId, taskIdx) => {
     setMessages(prev => prev.map(m => {
       if (m.id !== messageId || !m.plan?.tasks) return m;
@@ -310,6 +323,8 @@ export default function AiCopilotModal({
           linkedHabitId,
           subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
           recurrence: t.recurrence || 'none',
+          deadlineDate: t.deadlineDate || null,
+          deadlineTime: t.deadlineTime || null,
           completed: false,
           dueDate: t.plannedDate ? 'Today' : 'This Week'
         });
@@ -470,6 +485,13 @@ export default function AiCopilotModal({
                                       <option value="creative">CREATIVE</option>
                                       <option value="finance">FINANCE</option>
                                     </select>
+                                    <input
+                                      type="date"
+                                      value={g.targetDate || ''}
+                                      onChange={(e) => updatePlanGoal(msg.id, idx, 'targetDate', e.target.value || null)}
+                                      className="py-0.5 px-1 bg-black/[0.03] border border-black/10 rounded text-[10px] font-mono text-[#64748B] outline-none"
+                                      title="Target date"
+                                    />
                                     <button
                                       type="button"
                                       onClick={() => removePlanGoal(msg.id, idx)}
@@ -481,7 +503,14 @@ export default function AiCopilotModal({
                                   </>
                                 ) : (
                                   <>
-                                    <span className="font-medium text-[#1A1B1F]">{g.title}</span>
+                                    <div className="flex-1 min-w-0 pr-2">
+                                      <span className="font-medium text-[#1A1B1F]">{g.title}</span>
+                                      {g.targetDate && (
+                                        <span className="ml-2 text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-mono">
+                                          due {g.targetDate}
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="text-[10px] text-[#8E8E93] uppercase font-mono">{g.category || 'career'}</span>
                                   </>
                                 )}
@@ -514,6 +543,32 @@ export default function AiCopilotModal({
                                       <option value="Evening">Evening</option>
                                       <option value="Anytime">Anytime</option>
                                     </select>
+                                    <select
+                                      value={h.goalIndex ?? (h.linkedGoalId || '')}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === '') {
+                                          updatePlanHabit(msg.id, idx, 'goalIndex', null);
+                                          updatePlanHabit(msg.id, idx, 'linkedGoalId', null);
+                                        } else if (val.startsWith('plan-')) {
+                                          updatePlanHabit(msg.id, idx, 'goalIndex', Number(val.replace('plan-', '')));
+                                          updatePlanHabit(msg.id, idx, 'linkedGoalId', null);
+                                        } else {
+                                          updatePlanHabit(msg.id, idx, 'linkedGoalId', val);
+                                          updatePlanHabit(msg.id, idx, 'goalIndex', null);
+                                        }
+                                      }}
+                                      className="py-0.5 px-1 bg-black/[0.03] border border-black/10 rounded text-[10px] text-blue-700 outline-none max-w-[110px] truncate"
+                                      title="Linked Horizon"
+                                    >
+                                      <option value="">No Linked Horizon</option>
+                                      {Array.isArray(msg.plan.goals) && msg.plan.goals.map((g, gIdx) => (
+                                        <option key={`pg-${gIdx}`} value={`plan-${gIdx}`}>★ {g.title}</option>
+                                      ))}
+                                      {goals.map(g => (
+                                        <option key={`eg-${g.id}`} value={g.id}>Goal: {g.title}</option>
+                                      ))}
+                                    </select>
                                     <button
                                       type="button"
                                       onClick={() => removePlanHabit(msg.id, idx)}
@@ -525,7 +580,19 @@ export default function AiCopilotModal({
                                   </>
                                 ) : (
                                   <>
-                                    <span className="font-medium text-[#1A1B1F]">{h.title}</span>
+                                    <div className="flex-1 min-w-0 pr-2">
+                                      <span className="font-medium text-[#1A1B1F]">{h.title}</span>
+                                      {(() => {
+                                        const linkedTitle = typeof h.goalIndex === 'number'
+                                          ? msg.plan.goals?.[h.goalIndex]?.title
+                                          : (goals.find(g => g.id === h.linkedGoalId)?.title || h.linkedGoal);
+                                        return linkedTitle ? (
+                                          <span className="ml-2 text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-mono truncate inline-block max-w-[140px] align-middle">
+                                            linked: {linkedTitle}
+                                          </span>
+                                        ) : null;
+                                      })()}
+                                    </div>
                                     <span className="text-[10px] text-[#8E8E93]">{h.frequency || h.cadence}</span>
                                   </>
                                 )}
@@ -542,41 +609,244 @@ export default function AiCopilotModal({
                               {msg.plan.tasks.map((t, idx) => (
                                 <div key={idx} className="p-2 rounded-lg bg-white border border-black/[0.05] text-xs flex items-center justify-between gap-2">
                                   {isEditing ? (
-                                    <>
-                                      <input
-                                        type="text"
-                                        value={t.title || ''}
-                                        onChange={(e) => updatePlanTask(msg.id, idx, 'title', e.target.value)}
-                                        className="flex-1 py-0.5 px-1.5 bg-black/[0.03] border border-black/10 rounded font-medium text-[#1A1B1F] text-xs outline-none focus:bg-white focus:border-[#0A84FF]"
-                                      />
-                                      <input
-                                        type="date"
-                                        value={t.plannedDate || ''}
-                                        onChange={(e) => updatePlanTask(msg.id, idx, 'plannedDate', e.target.value)}
-                                        className="py-0.5 px-1 bg-black/[0.03] border border-black/10 rounded text-[10px] font-mono text-[#64748B] outline-none"
-                                      />
-                                      <input
-                                        type="time"
-                                        value={t.startTime || ''}
-                                        onChange={(e) => updatePlanTask(msg.id, idx, 'startTime', e.target.value)}
-                                        className="py-0.5 px-1 bg-black/[0.03] border border-black/10 rounded text-[10px] font-mono text-[#64748B] outline-none"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => removePlanTask(msg.id, idx)}
-                                        className="text-[#8E8E93] hover:text-red-500 p-0.5 cursor-pointer"
-                                        title="Remove task"
-                                      >
-                                        <span className="material-symbols-outlined text-[15px]">close</span>
-                                      </button>
-                                    </>
+                                    <div className="w-full space-y-2 p-1">
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="text"
+                                          value={t.title || ''}
+                                          onChange={(e) => updatePlanTask(msg.id, idx, 'title', e.target.value)}
+                                          placeholder="Task title..."
+                                          className="flex-1 py-1 px-2 bg-black/[0.03] border border-black/10 rounded-lg font-medium text-[#1A1B1F] text-xs outline-none focus:bg-white focus:border-[#0A84FF]"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => removePlanTask(msg.id, idx)}
+                                          className="text-[#8E8E93] hover:text-red-500 p-1 cursor-pointer shrink-0"
+                                          title="Remove task"
+                                        >
+                                          <span className="material-symbols-outlined text-[16px]">close</span>
+                                        </button>
+                                      </div>
+
+                                      {/* Secondary Row: Date, Time, Duration, Impact, Recurrence */}
+                                      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                                        <div className="flex items-center gap-1 bg-black/[0.03] px-2 py-0.5 rounded-md border border-black/10">
+                                          <span className="text-[#8E8E93] text-[10px]">Date</span>
+                                          <input
+                                            type="date"
+                                            value={t.plannedDate || ''}
+                                            onChange={(e) => updatePlanTask(msg.id, idx, 'plannedDate', e.target.value)}
+                                            className="bg-transparent font-mono text-[#1A1B1F] outline-none text-[11px]"
+                                          />
+                                        </div>
+
+                                        <div className="flex items-center gap-1 bg-black/[0.03] px-2 py-0.5 rounded-md border border-black/10">
+                                          <span className="text-[#8E8E93] text-[10px]">Time</span>
+                                          <input
+                                            type="time"
+                                            value={t.startTime || ''}
+                                            onChange={(e) => updatePlanTask(msg.id, idx, 'startTime', e.target.value)}
+                                            className="bg-transparent font-mono text-[#1A1B1F] outline-none text-[11px]"
+                                          />
+                                        </div>
+
+                                        <div className="flex items-center gap-1 bg-black/[0.03] px-2 py-0.5 rounded-md border border-black/10">
+                                          <span className="text-[#8E8E93] text-[10px]">Effort</span>
+                                          <select
+                                            value={t.durationMinutes || 45}
+                                            onChange={(e) => updatePlanTask(msg.id, idx, 'durationMinutes', Number(e.target.value))}
+                                            className="bg-transparent font-semibold text-[#1A1B1F] outline-none text-[11px]"
+                                          >
+                                            <option value={15}>15m</option>
+                                            <option value={30}>30m</option>
+                                            <option value={45}>45m</option>
+                                            <option value={60}>60m (1h)</option>
+                                            <option value={90}>90m (1.5h)</option>
+                                            <option value={120}>120m (2h)</option>
+                                            <option value={150}>150m (2.5h)</option>
+                                            <option value={180}>180m (3h)</option>
+                                          </select>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 bg-black/[0.03] px-2 py-0.5 rounded-md border border-black/10">
+                                          <span className="text-[#8E8E93] text-[10px]">Impact</span>
+                                          <select
+                                            value={t.impact || 'medium'}
+                                            onChange={(e) => updatePlanTask(msg.id, idx, 'impact', e.target.value)}
+                                            className="bg-transparent font-semibold text-[#1A1B1F] outline-none text-[11px]"
+                                          >
+                                            <option value="high">High</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="low">Low</option>
+                                          </select>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 bg-black/[0.03] px-2 py-0.5 rounded-md border border-black/10">
+                                          <span className="text-[#8E8E93] text-[10px]">Repeat</span>
+                                          <select
+                                            value={t.recurrence || 'none'}
+                                            onChange={(e) => updatePlanTask(msg.id, idx, 'recurrence', e.target.value)}
+                                            className="bg-transparent font-semibold text-teal-700 outline-none text-[11px]"
+                                          >
+                                            <option value="none">No repeat</option>
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                          </select>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 bg-black/[0.03] px-2 py-0.5 rounded-md border border-black/10">
+                                          <span className="text-[#8E8E93] text-[10px]">Deadline</span>
+                                          <input
+                                            type="date"
+                                            value={t.deadlineDate || ''}
+                                            onChange={(e) => updatePlanTask(msg.id, idx, 'deadlineDate', e.target.value || null)}
+                                            className="bg-transparent font-mono text-rose-700 outline-none text-[11px]"
+                                            title="Optional Deadline"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {/* Third Row: Goal & Habit Linking */}
+                                      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-black/[0.04]">
+                                        <div className="flex items-center gap-1">
+                                          <span className="material-symbols-outlined text-[13px] text-blue-600">flag</span>
+                                          <select
+                                            value={t.goalIndex !== undefined && t.goalIndex !== null ? `plan-${t.goalIndex}` : (t.existingGoalId || '')}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              if (val === '') {
+                                                updatePlanTask(msg.id, idx, 'goalIndex', null);
+                                                updatePlanTask(msg.id, idx, 'existingGoalId', null);
+                                              } else if (val.startsWith('plan-')) {
+                                                updatePlanTask(msg.id, idx, 'goalIndex', Number(val.replace('plan-', '')));
+                                                updatePlanTask(msg.id, idx, 'existingGoalId', null);
+                                              } else {
+                                                updatePlanTask(msg.id, idx, 'existingGoalId', val);
+                                                updatePlanTask(msg.id, idx, 'goalIndex', null);
+                                              }
+                                            }}
+                                            className="bg-black/[0.03] border border-black/10 rounded px-1.5 py-0.5 text-[11px] text-blue-700 outline-none max-w-[170px] truncate"
+                                            title="Linked Goal / Horizon"
+                                          >
+                                            <option value="">No Linked Goal</option>
+                                            {Array.isArray(msg.plan.goals) && msg.plan.goals.map((g, gIdx) => (
+                                              <option key={`ptg-${gIdx}`} value={`plan-${gIdx}`}>★ {g.title}</option>
+                                            ))}
+                                            {goals.map(g => (
+                                              <option key={`etg-${g.id}`} value={g.id}>Goal: {g.title}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          <span className="material-symbols-outlined text-[13px] text-rose-500">repeat</span>
+                                          <select
+                                            value={t.habitIndex !== undefined && t.habitIndex !== null ? `plan-${t.habitIndex}` : (t.existingHabitId || '')}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              if (val === '') {
+                                                updatePlanTask(msg.id, idx, 'habitIndex', null);
+                                                updatePlanTask(msg.id, idx, 'existingHabitId', null);
+                                              } else if (val.startsWith('plan-')) {
+                                                updatePlanTask(msg.id, idx, 'habitIndex', Number(val.replace('plan-', '')));
+                                                updatePlanTask(msg.id, idx, 'existingHabitId', null);
+                                              } else {
+                                                updatePlanTask(msg.id, idx, 'existingHabitId', val);
+                                                updatePlanTask(msg.id, idx, 'habitIndex', null);
+                                              }
+                                            }}
+                                            className="bg-black/[0.03] border border-black/10 rounded px-1.5 py-0.5 text-[11px] text-rose-700 outline-none max-w-[170px] truncate"
+                                            title="Linked Habit"
+                                          >
+                                            <option value="">No Linked Habit</option>
+                                            {Array.isArray(msg.plan.habits) && msg.plan.habits.map((h, hIdx) => (
+                                              <option key={`pth-${hIdx}`} value={`plan-${hIdx}`}>★ {h.title}</option>
+                                            ))}
+                                            {habits.map(h => (
+                                              <option key={`eth-${h.id}`} value={h.id}>Habit: {h.title}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      </div>
+
+                                      {/* Fourth Row: Subtask Checklist Lines */}
+                                      <div className="pt-1 border-t border-black/[0.04]">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8E8E93]">Subtasks (1 step per line)</span>
+                                          <span className="text-[10px] text-[#BBBBC0]">{(t.subtasks || []).length} steps</span>
+                                        </div>
+                                        <textarea
+                                          rows={2}
+                                          value={(t.subtasks || []).map(s => s.title || s).join('\n')}
+                                          onChange={(e) => updatePlanSubtasks(msg.id, idx, e.target.value)}
+                                          placeholder="Step 1&#10;Step 2&#10;Step 3..."
+                                          className="w-full p-1.5 bg-black/[0.03] border border-black/10 rounded text-[11px] font-mono leading-relaxed outline-none focus:bg-white focus:border-[#0A84FF]"
+                                        />
+                                      </div>
+                                    </div>
                                   ) : (
                                     <>
                                       <div className="flex-1 min-w-0 pr-2">
-                                        <p className="truncate font-medium text-[#1A1B1F]">{t.title}</p>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <p className="font-medium text-[#1A1B1F] text-xs">{t.title}</p>
+                                          
+                                          {/* Recurrence Badge */}
+                                          {t.recurrence && t.recurrence !== 'none' && (
+                                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/50">
+                                              <span className="material-symbols-outlined text-[10px]">sync</span>
+                                              <span className="capitalize">{t.recurrence}</span>
+                                            </span>
+                                          )}
+
+                                          {/* Impact Badge */}
+                                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                                            t.impact === 'high' ? 'bg-amber-50 text-amber-800 border border-amber-200/60' : 'bg-black/[0.04] text-[#64748B]'
+                                          }`}>
+                                            {t.impact || 'medium'}
+                                          </span>
+
+                                          {/* Duration */}
+                                          <span className="text-[10px] font-mono text-[#8E8E93]">
+                                            {t.durationMinutes || 45}m
+                                          </span>
+
+                                          {/* Deadline Badge */}
+                                          {t.deadlineDate && (
+                                            <span className="text-[9px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200/60">
+                                              due {t.deadlineDate}
+                                            </span>
+                                          )}
+
+                                          {/* Linked Goal Badge */}
+                                          {(() => {
+                                            const linkedGoalTitle = typeof t.goalIndex === 'number'
+                                              ? msg.plan.goals?.[t.goalIndex]?.title
+                                              : (goals.find(g => g.id === t.existingGoalId)?.title || t.goalTitle);
+                                            return linkedGoalTitle ? (
+                                              <span className="text-[9px] text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded font-mono truncate max-w-[130px] border border-blue-200/60" title={`Goal: ${linkedGoalTitle}`}>
+                                                ★ {linkedGoalTitle}
+                                              </span>
+                                            ) : null;
+                                          })()}
+
+                                          {/* Linked Habit Badge */}
+                                          {(() => {
+                                            const linkedHabitTitle = typeof t.habitIndex === 'number'
+                                              ? msg.plan.habits?.[t.habitIndex]?.title
+                                              : (habits.find(h => h.id === t.existingHabitId)?.title || t.habitTitle);
+                                            return linkedHabitTitle ? (
+                                              <span className="text-[9px] text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded font-mono truncate max-w-[130px] border border-rose-200/60" title={`Habit: ${linkedHabitTitle}`}>
+                                                ↻ {linkedHabitTitle}
+                                              </span>
+                                            ) : null;
+                                          })()}
+                                        </div>
+
+                                        {/* Subtasks Preview */}
                                         {Array.isArray(t.subtasks) && t.subtasks.length > 0 && (
-                                          <p className="text-[10px] text-[#8E8E93] truncate">
-                                            {t.subtasks.length} steps: {t.subtasks.map(s => s.title || s).slice(0, 2).join(', ')}{t.subtasks.length > 2 ? '...' : ''}
+                                          <p className="text-[10px] text-[#8E8E93] truncate mt-0.5">
+                                            {t.subtasks.length} steps: {t.subtasks.map(s => s.title || s).slice(0, 3).join(', ')}{t.subtasks.length > 3 ? '...' : ''}
                                           </p>
                                         )}
                                       </div>
