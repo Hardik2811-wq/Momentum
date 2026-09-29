@@ -75,7 +75,7 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         <div className="p-3 bg-emerald-50 border border-emerald-200/70 rounded-xl text-[11px] text-emerald-900 leading-relaxed">
-          Key sends once over TLS for validation and encryption. Browser never saves it. Database stores AES-256-GCM ciphertext only. Key decrypts only inside authenticated AI request.
+          Your key is protected and never stored in this browser.
         </div>
 
         {unavailable ? (
