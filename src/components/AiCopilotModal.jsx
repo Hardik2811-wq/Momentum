@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { parseDocumentFile } from '../lib/documentParser';
-import { generateExecutivePlanWithAI, hasUserApiKey } from '../lib/groqClient';
+import { generateExecutivePlanWithAI, hasAiService } from '../lib/groqClient';
 import { todayPlanDate, calculateEndTime } from '../lib/taskMetadata';
 import { resolveLocalCopilotIntent } from '../lib/copilotIntentRouter';
 import { harvestCopilotPlan } from '../lib/nlpMemory';
@@ -176,7 +176,7 @@ export default function AiCopilotModal({
       }
     }
 
-    if (!hasUserApiKey()) {
+    if (!hasAiService()) {
       onOpenApiKeyModal?.();
       return;
     }

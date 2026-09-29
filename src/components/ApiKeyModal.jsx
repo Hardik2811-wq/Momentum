@@ -1,201 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import { getGroqApiKey, setGroqApiKey, testGroqConnection } from '../lib/groqClient';
+import React, { useEffect, useState } from 'react';
+import { deleteByokKey, getByokStatus, hasAiService, saveByokKey } from '../lib/groqClient';
 
 export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
-  const [apiKey, setApiKey] = useState(() => getGroqApiKey() || '');
-  const [showKey, setShowKey] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [configured, setConfigured] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isTesting, setIsTesting] = useState(false);
-  const [testStatus, setTestStatus] = useState(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setApiKey(getGroqApiKey() || '');
-      setError('');
-      setTestStatus(null);
-      setIsTesting(false);
-    }
+    if (!isOpen) return;
+    setApiKey('');
+    setError('');
+    setConfigured(false);
+    if (!hasAiService()) return;
+    let active = true;
+    getByokStatus().then((result) => {
+      if (!active) return;
+      if (result.success) setConfigured(Boolean(result.configured));
+      else setError(result.error || 'Could not read BYOK status.');
+    });
+    return () => { active = false; };
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleTest = async () => {
-    const clean = apiKey.trim();
-    if (!clean) {
-      setError('Please paste your Groq API key first.');
+  const save = async (event) => {
+    event.preventDefault();
+    const key = apiKey.trim();
+    if (!/^gsk_[A-Za-z0-9_-]{20,}$/.test(key)) {
+      setError('Enter a valid Groq API key.');
       return;
     }
-    setIsTesting(true);
+    setLoading(true);
     setError('');
-    setTestStatus(null);
-    try {
-      const res = await testGroqConnection(clean);
-      if (res.success) {
-        setTestStatus({ success: true, message: 'Valid Groq API key! Connection succeeded.' });
-      } else {
-        setTestStatus({ success: false, message: res.error || 'Connection failed' });
-      }
-    } catch (err) {
-      setTestStatus({ success: false, message: err.message || 'Network error' });
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  const handleSave = (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    const clean = apiKey.trim();
-    if (!clean) {
-      setError('Please paste your Groq API key.');
+    const result = await saveByokKey(key);
+    setApiKey('');
+    setLoading(false);
+    if (!result.success) {
+      setError(result.error || 'Could not save BYOK key.');
       return;
     }
-    if (!clean.startsWith('gsk_')) {
-      setError('Invalid format. Groq API keys start with "gsk_".');
-      return;
-    }
-
-    setGroqApiKey(clean);
+    setConfigured(true);
+    onSuccess?.();
     onClose();
-    onSuccess?.(clean);
   };
 
+  const remove = async () => {
+    setLoading(true);
+    setError('');
+    const result = await deleteByokKey();
+    setLoading(false);
+    if (!result.success) {
+      setError(result.error || 'Could not remove BYOK key.');
+      return;
+    }
+    setConfigured(false);
+  };
+
+  const unavailable = !hasAiService();
   return (
-    <div
-      className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-black/[0.08] space-y-4 animate-scaleUp"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="byok-title">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-black/[0.08] space-y-4 animate-scaleUp" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-200/60 flex items-center justify-center text-violet-600">
-              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+              <span className="material-symbols-outlined text-[18px]">key</span>
             </div>
             <div>
-              <h2 className="text-[15px] font-bold text-[#1A1B1F] tracking-tight">Groq API Key</h2>
-              <p className="text-[11px] text-[#64748B]">Bring Your Own Key (BYOK) for Instant AI Breakdown</p>
+              <h2 id="byok-title" className="text-[15px] font-bold text-[#1A1B1F] tracking-tight">Secure Groq BYOK</h2>
+              <p className="text-[11px] text-[#64748B]">Your key. Encrypted server storage.</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-          >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-          </button>
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"><span className="material-symbols-outlined text-[18px]">close</span></button>
         </div>
 
-        <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl space-y-1">
-          <div className="flex items-center gap-1.5 text-amber-800 text-[11px] font-bold">
-            <span className="material-symbols-outlined text-[14px]">shield</span>
-            <span>Private & Stored in Local Browser</span>
-          </div>
-          <p className="text-[11px] text-amber-900/80 leading-relaxed">
-            Groq provides generous free tier credits with ultra-fast inference (~500 tokens/sec). Your key never leaves your device.
-          </p>
+        <div className="p-3 bg-emerald-50 border border-emerald-200/70 rounded-xl text-[11px] text-emerald-900 leading-relaxed">
+          Key sends once over TLS for validation and encryption. Browser never saves it. Database stores AES-256-GCM ciphertext only. Key decrypts only inside authenticated AI request.
         </div>
 
-        {getGroqApiKey() && (
-          <div className="p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between text-[11px] text-emerald-800">
-            <span className="flex items-center gap-1.5 font-medium">
-              <span className="material-symbols-outlined text-[15px] text-emerald-600">check_circle</span>
-              <span>Key currently active in this browser</span>
-            </span>
-            <button
-              type="button"
-              onClick={onClose}
-              className="font-bold underline text-emerald-700 hover:text-emerald-900 cursor-pointer"
-            >
-              Close
-            </button>
-          </div>
+        {unavailable ? (
+          <p className="text-[12px] leading-5 text-rose-700">Secure BYOK service is not configured. Deploy Edge Functions and server secrets first.</p>
+        ) : (
+          <form onSubmit={save} autoComplete="off" className="space-y-3">
+            {configured && <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-[11px] text-emerald-800"><span>BYOK key configured.</span><button type="button" disabled={loading} onClick={remove} className="font-bold text-rose-700 hover:text-rose-900 disabled:opacity-50">Remove</button></div>}
+            <div>
+              <label htmlFor="byok-key" className="block text-[11px] font-semibold text-[#1A1B1F] mb-1">{configured ? 'Replace Groq API key' : 'Groq API key'}</label>
+              <input id="byok-key" type="password" required autoFocus autoComplete="off" spellCheck="false" data-1p-ignore="true" data-lpignore="true" value={apiKey} onChange={(event) => { setApiKey(event.target.value); setError(''); }} placeholder="gsk_..." className="w-full px-3 py-2 text-[12px] font-mono rounded-xl border border-black/[0.1] bg-[#F5F4FA] focus:bg-white focus:border-[#0A84FF] outline-none transition" />
+            </div>
+            {error && <p className="text-[11px] text-rose-700">{error}</p>}
+            <div className="flex items-center justify-between pt-2 border-t border-black/[0.05]">
+              <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-[11px] text-[#0A84FF] font-semibold hover:underline">Get Groq key</a>
+              <div className="flex gap-2"><button type="button" onClick={onClose} className="px-3.5 py-1.5 rounded-xl text-[12px] font-medium text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={loading || !apiKey.trim()} className="px-4 py-1.5 rounded-xl text-[12px] font-semibold bg-[#0A84FF] text-white hover:bg-[#0071E3] disabled:opacity-50">{loading ? 'Securing…' : configured ? 'Replace key' : 'Secure key'}</button></div>
+            </div>
+          </form>
         )}
-
-        <form onSubmit={handleSave} autoComplete="off" className="space-y-3">
-          <div>
-            <label className="block text-[11px] font-semibold text-[#1A1B1F] mb-1">
-              Groq API Key
-            </label>
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                style={{ WebkitTextSecurity: showKey ? 'none' : 'disc' }}
-                required
-                autoFocus
-                autoComplete="off"
-                spellCheck="false"
-                data-1p-ignore="true"
-                data-lpignore="true"
-                name="momentum_groq_token"
-                id="momentum_groq_token"
-                value={apiKey}
-                onChange={(e) => {
-                  setApiKey(e.target.value);
-                  setError('');
-                  setTestStatus(null);
-                }}
-                placeholder="gsk_..."
-                className="w-full px-3 py-2 pr-10 text-[12px] font-mono rounded-xl border border-black/[0.1] bg-[#F5F4FA] focus:bg-white focus:border-[#0A84FF] outline-none transition"
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-2.5 text-slate-400 hover:text-slate-700 text-[14px] cursor-pointer"
-                title={showKey ? 'Hide key' : 'Show key'}
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  {showKey ? 'visibility_off' : 'visibility'}
-                </span>
-              </button>
-            </div>
-            {error && <p className="text-[11px] text-red-500 mt-1">{error}</p>}
-            {testStatus && (
-              <p className={`text-[11px] mt-1 font-medium ${testStatus.success ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {testStatus.success ? '✓' : '✕'} {testStatus.message}
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between text-[11px]">
-            <a
-              href="https://console.groq.com/keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#0A84FF] font-semibold hover:underline inline-flex items-center gap-1"
-            >
-              <span>Get free key at console.groq.com</span>
-              <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-            </a>
-
-            <button
-              type="button"
-              onClick={handleTest}
-              disabled={isTesting || !apiKey.trim()}
-              className="text-slate-500 hover:text-slate-800 font-semibold underline disabled:opacity-40 cursor-pointer"
-            >
-              {isTesting ? 'Testing…' : 'Test Key'}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/[0.05]">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3.5 py-1.5 rounded-xl text-[12px] font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!apiKey.trim()}
-              className="px-4 py-1.5 rounded-xl text-[12px] font-semibold bg-[#0A84FF] text-white hover:bg-[#0071E3] transition shadow-xs disabled:opacity-50 cursor-pointer"
-            >
-              Save Key & Activate
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );

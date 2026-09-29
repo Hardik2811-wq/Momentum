@@ -36,3 +36,17 @@ Run the local web server:
 npm run dev
 ```
 Open `http://localhost:3000` in your web browser.
+
+## Secure AI deployment
+
+Do not add a Groq key to `.env`, `VITE_*` variables, browser storage, or workspace snapshots.
+Each user supplies their own Groq key through an authenticated BYOK flow. The browser sends it once over TLS. The server validates it, encrypts it, and stores ciphertext only.
+
+1. Apply Supabase migrations, including `202609290001_secure_ai_proxy.sql`.
+2. Deploy `supabase/functions/groq-proxy` and `supabase/functions/byok-credentials` with JWT verification enabled.
+3. Set Edge Function secrets: `ALLOWED_ORIGIN`, `ACTIVE_BYOK_KEY_VERSION=1`, `BYOK_ENCRYPTION_KEY_V1`, and optionally `GROQ_MODEL`.
+4. Set `ALLOWED_ORIGIN` to one exact production origin, for example `https://app.example.com`.
+5. Generate `BYOK_ENCRYPTION_KEY_V1` as 32 random bytes encoded in base64. Store it only in Edge Function secrets.
+6. Do not set `GROQ_API_KEY` in any Vite or server environment.
+
+The functions reject unauthenticated users, wrong origins, oversized prompts, unsupported methods, and excessive AI/key-change requests. Configure platform-level WAF, rate limiting, TLS, security headers, logs, and alerting before public launch.

@@ -15,7 +15,7 @@ import {
   parseTimeString
 } from '../lib/taskMetadata';
 import { parseNaturalTask } from '../lib/nlpParser';
-import { getGroqApiKey, parseWithGroq } from '../lib/groqClient';
+import { hasAiService, parseWithGroq } from '../lib/groqClient';
 import {
   harvestApiResult,
   recordAiSuccess,
@@ -522,13 +522,10 @@ export default function QuickAddModal({
     }
   };
 
-  const handleAiBreakdown = async (explicitKey = null) => {
-    const passedKey = typeof explicitKey === 'string' ? explicitKey.trim() : null;
+  const handleAiBreakdown = async () => {
     if (!title.trim() || isAiParsing) return;
 
-    // Check if user has key configured
-    const key = passedKey || getGroqApiKey();
-    if (!key) {
+    if (!hasAiService()) {
       setShowApiKeyModal(true);
       return;
     }
@@ -536,7 +533,7 @@ export default function QuickAddModal({
     setAiFeedback(null);
     setIsAiParsing(true);
     try {
-      const res = await parseWithGroq(title, goals, key);
+      const res = await parseWithGroq(title, goals);
       if (res.success && res.data) {
         applyExtractedDetails(res.data, true);
         harvestApiResult(title, res.data, { alreadyCounted: true });
@@ -742,7 +739,7 @@ export default function QuickAddModal({
                     onClick={() => setShowApiKeyModal(true)}
                     className="text-[11px] font-bold text-rose-700 underline hover:text-rose-900 cursor-pointer"
                   >
-                    Update Key
+                    AI setup
                   </button>
                 )}
                 <button
@@ -1597,14 +1594,13 @@ export default function QuickAddModal({
         </form>
       </div>
 
-      {/* BYOK API Key Prompt Modal */}
+      {/* Secure server-side AI service status */}
       <ApiKeyModal
         isOpen={showApiKeyModal}
         onClose={() => setShowApiKeyModal(false)}
-        onSuccess={(savedKey) => {
+        onSuccess={() => {
           setShowApiKeyModal(false);
-          onUpdateSettings?.({ groqApiKey: savedKey });
-          handleAiBreakdown(savedKey);
+          handleAiBreakdown();
         }}
       />
     </div>

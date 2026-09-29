@@ -10,6 +10,11 @@ alter table public.workspace_snapshots enable row level security;
 revoke all on public.workspace_snapshots from anon, authenticated;
 grant select, insert, update, delete on public.workspace_snapshots to authenticated;
 
+drop policy if exists "Users read own workspace" on public.workspace_snapshots;
+drop policy if exists "Users create own workspace" on public.workspace_snapshots;
+drop policy if exists "Users update own workspace" on public.workspace_snapshots;
+drop policy if exists "Users delete own workspace" on public.workspace_snapshots;
+
 create policy "Users read own workspace" on public.workspace_snapshots for select to authenticated using ((select auth.uid()) = user_id);
 create policy "Users create own workspace" on public.workspace_snapshots for insert to authenticated with check ((select auth.uid()) = user_id);
 create policy "Users update own workspace" on public.workspace_snapshots for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
@@ -20,5 +25,6 @@ returns trigger language plpgsql security invoker set search_path = '' as $$
 begin new.updated_at = now(); return new; end;
 $$;
 
+drop trigger if exists workspace_snapshots_set_updated_at on public.workspace_snapshots;
 create trigger workspace_snapshots_set_updated_at before update on public.workspace_snapshots
 for each row execute function public.set_updated_at();

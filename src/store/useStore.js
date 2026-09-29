@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js';
-import { getGroqApiKey, setGroqApiKey } from '../lib/groqClient.js';
+import { purgeLegacyGroqKey } from '../lib/groqClient.js';
 import { resetNlpMemory } from '../lib/nlpMemory.js';
 import { planDateLabel, taskPlanDate, todayPlanDate } from '../lib/taskMetadata.js';
 
@@ -9,7 +9,13 @@ function useLocalStorage(key, defaultValue) {
   const [value, setValue] = useState(() => {
     try {
       const saved = localStorage.getItem(key);
-      return saved ? JSON.parse(saved) : defaultValue;
+      const parsed = saved ? JSON.parse(saved) : defaultValue;
+      if (key === 'momentum_settings' && parsed && typeof parsed === 'object' && 'groqApiKey' in parsed) {
+        const { groqApiKey: _removedSecret, ...safeSettings } = parsed;
+        localStorage.setItem(key, JSON.stringify(safeSettings));
+        return safeSettings;
+      }
+      return parsed;
     } catch {
       return defaultValue;
     }
@@ -364,7 +370,6 @@ const DEFAULT_SETTINGS = {
   autoBreaks: true,
   soundEffects: true,
   showFocusBar: true,
-  groqApiKey: '',
   profile: {
     name: '',
     role: '',
@@ -385,17 +390,9 @@ export default function useStore() {
   const [cloudReady, setCloudReady] = useState(!isSupabaseConfigured);
   const cloudLoadRef = useRef(false);
 
-  // Keep groqApiKey synced between cloud settings and local client
   useEffect(() => {
-    if (settings?.groqApiKey) {
-      setGroqApiKey(settings.groqApiKey);
-    } else {
-      const localKey = getGroqApiKey();
-      if (localKey) {
-        setSettings(prev => ({ ...prev, groqApiKey: localKey }));
-      }
-    }
-  }, [settings?.groqApiKey, setSettings]);
+    purgeLegacyGroqKey();
+  }, []);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return undefined;
@@ -430,26 +427,16 @@ export default function useStore() {
               timezone: meta.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
             };
           }
-          // Sync groqApiKey from cloud snapshot to local client
-          if (mergedSettings.groqApiKey) {
-            setGroqApiKey(mergedSettings.groqApiKey);
-          } else {
-            const localKey = getGroqApiKey();
-            if (localKey) {
-              mergedSettings.groqApiKey = localKey;
-            }
-          }
+          delete mergedSettings.groqApiKey;
           setSettings(mergedSettings);
         }
         if (Array.isArray(saved.focusSessions)) setFocusSessions(saved.focusSessions);
       } else {
         // First-time user: seed profile with metadata from sign-up
         const meta = session.user.user_metadata || {};
-        const localKey = getGroqApiKey();
-        if (meta.full_name || meta.name || meta.role || localKey) {
+        if (meta.full_name || meta.name || meta.role) {
           setSettings(prev => ({
             ...prev,
-            groqApiKey: prev.groqApiKey || localKey || '',
             profile: {
               ...prev.profile,
               name: meta.full_name || meta.name || prev.profile?.name || '',

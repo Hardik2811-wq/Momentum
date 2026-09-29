@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import TimezoneSelect from '../components/TimezoneSelect';
+import ApiKeyModal from '../components/ApiKeyModal';
 import { sendNotification } from '../store/useStore';
-import { getGroqApiKey, setGroqApiKey, testGroqConnection, getCustomCopilotDirective, setCustomCopilotDirective } from '../lib/groqClient';
+import { getCustomCopilotDirective, setCustomCopilotDirective } from '../lib/groqClient';
 import { getNlpInsights, resetNlpMemory } from '../lib/nlpMemory';
 
 const Toggle = ({ checked, onChange }) => (
@@ -52,11 +53,8 @@ export default function SettingsView({
 }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [groqKeyInput, setGroqKeyInput] = useState('');
+  const [showByokModal, setShowByokModal] = useState(false);
   const [intelligence, setIntelligence] = useState(() => getNlpInsights());
-  const [keySaved, setKeySaved] = useState(false);
-  const [testingKey, setTestingKey] = useState(false);
-  const [testResult, setTestResult] = useState(null);
   const [customDirective, setCustomDirective] = useState(() => getCustomCopilotDirective());
   const [directiveSaved, setDirectiveSaved] = useState(false);
   const fileInputRef = useRef(null);
@@ -70,41 +68,6 @@ export default function SettingsView({
     window.addEventListener('momentum:nlp-learned', refreshIntelligence);
     return () => window.removeEventListener('momentum:nlp-learned', refreshIntelligence);
   }, []);
-
-  const handleTestGroq = async (customKey = null) => {
-    setTestingKey(true);
-    setTestResult(null);
-    try {
-      const res = await testGroqConnection(customKey);
-      if (res.success) {
-        const count = res.models?.length ? ` (${res.models.length} models ready)` : '';
-        setTestResult({ success: true, message: `Valid! Connection to Groq verified${count}.` });
-      } else {
-        setTestResult({ success: false, message: res.error || 'Connection failed' });
-      }
-    } catch (err) {
-      setTestResult({ success: false, message: err.message || 'Network error' });
-    } finally {
-      setTestingKey(false);
-    }
-  };
-
-  const saveGroqKey = () => {
-    if (!groqKeyInput.trim()) return;
-    const clean = groqKeyInput.trim();
-    setGroqApiKey(clean);
-    updateSettings?.({ groqApiKey: clean });
-    setGroqKeyInput('');
-    setKeySaved(true);
-    setTestResult(null);
-  };
-
-  const clearGroqKey = () => {
-    setGroqApiKey('');
-    updateSettings?.({ groqApiKey: '' });
-    setKeySaved(false);
-    setTestResult(null);
-  };
 
   const clearLearning = () => {
     if (!window.confirm('Remove local task patterns and learning history? This cannot be undone.')) return;
@@ -277,82 +240,13 @@ export default function SettingsView({
           </div>
 
           <div className="mt-5 border-t border-black/[0.06] pt-4">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[12px] font-semibold text-[#1A1B1F]">Groq Cloud Inference (BYOK)</p>
-                <p className="mt-0.5 text-[11px] leading-4 text-[#8E8E93]">
-                  {getGroqApiKey() || keySaved ? 'Your personal Groq API key is active for this workspace.' : 'No key saved. AI task fill & intelligent parsing requires a free Groq API key.'}
-                </p>
-                <a
-                  href="https://console.groq.com/keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 text-[11px] text-[#0A84FF] font-semibold hover:underline inline-flex items-center gap-1"
-                >
-                  <span>Get your free API key at console.groq.com</span>
-                  <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-                </a>
+                <p className="text-[12px] font-semibold text-[#1A1B1F]">Secure Groq BYOK</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-[#8E8E93]">Your key is encrypted server-side. Browser and workspace snapshots never retain it.</p>
               </div>
-              {(getGroqApiKey() || keySaved) && (
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleTestGroq()}
-                    disabled={testingKey}
-                    className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#0A84FF] bg-blue-50 hover:bg-blue-100 border border-blue-200/60 transition disabled:opacity-50"
-                  >
-                    {testingKey ? 'Testing…' : 'Test Connection'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearGroqKey}
-                    className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-red-500 hover:bg-red-50 transition"
-                  >
-                    Remove key
-                  </button>
-                </div>
-              )}
+              <button type="button" onClick={() => setShowByokModal(true)} className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#0A84FF] bg-blue-50 hover:bg-blue-100 border border-blue-200/60 transition">Manage key</button>
             </div>
-
-            {testResult && (
-              <div className={`mt-2.5 px-3 py-1.5 rounded-xl text-[11px] font-medium border flex items-center justify-between gap-2 animate-fadeIn ${
-                testResult.success
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : 'bg-rose-50 text-rose-800 border-rose-200'
-              }`}>
-                <span>{testResult.success ? '✓' : '✕'} {testResult.message}</span>
-                <button type="button" onClick={() => setTestResult(null)} className="text-slate-400 hover:text-slate-600">
-                  <span className="material-symbols-outlined text-[13px]">close</span>
-                </button>
-              </div>
-            )}
-
-            {!getGroqApiKey() && !keySaved && (
-              <div className="mt-3 flex gap-2">
-                <input
-                  type="text"
-                  style={{ WebkitTextSecurity: 'disc' }}
-                  autoComplete="off"
-                  spellCheck="false"
-                  data-1p-ignore="true"
-                  data-lpignore="true"
-                  name="momentum_groq_settings_key"
-                  id="momentum_groq_settings_key"
-                  value={groqKeyInput}
-                  onChange={(event) => setGroqKeyInput(event.target.value)}
-                  placeholder="Paste Groq API key (gsk_...)"
-                  className={`min-w-0 flex-1 px-3 py-2 rounded-xl text-[12px] font-mono outline-none border ${inputCls}`}
-                />
-                <button
-                  type="button"
-                  onClick={saveGroqKey}
-                  disabled={!groqKeyInput.trim()}
-                  className="rounded-xl bg-[#0A84FF] px-4 py-2 text-[12px] font-semibold text-white disabled:opacity-50 hover:bg-[#0071E3] transition"
-                >
-                  Save Key
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="mt-4 border-t border-black/[0.06] pt-4">
@@ -609,6 +503,7 @@ export default function SettingsView({
         }}
         onCancel={() => setShowClearConfirm(false)}
       />
+      <ApiKeyModal isOpen={showByokModal} onClose={() => setShowByokModal(false)} />
     </main>
   );
 }
