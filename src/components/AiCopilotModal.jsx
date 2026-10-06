@@ -203,7 +203,7 @@ export default function AiCopilotModal({
       const result = await generateExecutivePlanWithAI({
         userPrompt: userMsg.content,
         documentContext: docToSend,
-        chatHistory: messages.slice(-5),
+        chatHistory: messages.slice(-8),
         goals,
         habits,
         tasks,
@@ -252,13 +252,14 @@ export default function AiCopilotModal({
   const handleApprovePlan = (messageId, plan) => {
     if (!plan || appliedPlans.has(messageId)) return;
 
+    const timestamp = Date.now();
     const goalIdMap = new Map();
     const habitIdMap = new Map();
 
-    // 1. Create Goals
+    // 1. Create Goals with distinct collision-free IDs
     if (Array.isArray(plan.goals)) {
       plan.goals.forEach((g, idx) => {
-        const id = 'g' + (Date.now() + idx);
+        const id = `g-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
         addGoal({
           id,
           title: g.title,
@@ -275,10 +276,14 @@ export default function AiCopilotModal({
     // 2. Create Habits
     if (Array.isArray(plan.habits)) {
       plan.habits.forEach((h, idx) => {
-        const id = 'h' + (Date.now() + idx + 100);
-        const linkedGoalId = h.goalIndex !== undefined && goalIdMap.has(h.goalIndex)
+        const id = `h-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
+        const linkedGoalId = (h.goalIndex !== undefined && h.goalIndex !== null && goalIdMap.has(h.goalIndex))
           ? goalIdMap.get(h.goalIndex)
           : h.linkedGoalId || null;
+
+        const linkedGoalTitle = linkedGoalId
+          ? (plan.goals?.[h.goalIndex]?.title || h.linkedGoal || '')
+          : (h.linkedGoal || '');
 
         addHabit({
           id,
@@ -288,7 +293,7 @@ export default function AiCopilotModal({
           duration: h.duration || '30 mins',
           icon: h.icon || 'cached',
           colorToken: h.colorToken || 'primary',
-          linkedGoal: linkedGoalId ? (plan.goals?.[h.goalIndex]?.title || h.linkedGoal || '') : (h.linkedGoal || ''),
+          linkedGoal: linkedGoalTitle,
           linkedGoalId: linkedGoalId || null
         });
         habitIdMap.set(idx, id);
@@ -298,12 +303,12 @@ export default function AiCopilotModal({
     // 3. Create & Schedule Tasks
     if (Array.isArray(plan.tasks)) {
       plan.tasks.forEach((t, idx) => {
-        const id = Date.now() + idx + 200;
-        const linkedGoalId = t.goalIndex !== undefined && goalIdMap.has(t.goalIndex)
+        const id = `t-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
+        const linkedGoalId = (t.goalIndex !== undefined && t.goalIndex !== null && goalIdMap.has(t.goalIndex))
           ? goalIdMap.get(t.goalIndex)
           : t.existingGoalId || null;
 
-        const linkedHabitId = t.habitIndex !== undefined && habitIdMap.has(t.habitIndex)
+        const linkedHabitId = (t.habitIndex !== undefined && t.habitIndex !== null && habitIdMap.has(t.habitIndex))
           ? habitIdMap.get(t.habitIndex)
           : t.existingHabitId || null;
 
@@ -338,6 +343,22 @@ export default function AiCopilotModal({
 
     // 4. Harvest newly approved verbs and entities into local offline memory
     harvestCopilotPlan(plan);
+
+    // 5. Inject confirmation into chat history so AI dynamically retains this context across subsequent turns
+    const goalsCount = plan.goals?.length || 0;
+    const habitsCount = plan.habits?.length || 0;
+    const tasksCount = plan.tasks?.length || 0;
+    const confirmationText = `Plan successfully added to schedule: ${goalsCount} goals, ${habitsCount} habits, and ${tasksCount} tasks are now live in your workspace.`;
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: `sys-${Date.now()}`,
+        role: 'assistant',
+        content: confirmationText,
+        hasPlan: false
+      }
+    ]);
 
     try {
       confetti({

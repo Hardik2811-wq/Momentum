@@ -600,14 +600,18 @@ USER QUERY: "${cleanPrompt}"`;
     { role: 'system', content: enforceCavemanSystemPrompt(COPILOT_SYSTEM_PROMPT + directivePrompt) }
   ];
 
-  // Append recent chat history (last 4 exchanges), truncating long messages to ~300 chars to save prompt tokens
+  // Append recent chat history (last 8 exchanges) with plan retention to preserve dynamic context
   if (Array.isArray(chatHistory)) {
-    const recents = chatHistory.slice(-4);
+    const recents = chatHistory.slice(-8);
     for (const msg of recents) {
-      if (msg.role && msg.content) {
-        let contentStr = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-        if (contentStr.length > 300) {
-          contentStr = contentStr.slice(0, 300) + '... (truncated for brevity)';
+      if (msg.role && (msg.content || msg.plan)) {
+        let contentStr = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || '');
+        if (msg.plan && typeof msg.plan === 'object') {
+          const planSummary = msg.plan.summary || `${msg.plan.goals?.length || 0} goals, ${msg.plan.tasks?.length || 0} tasks`;
+          contentStr += ` [Plan Proposed: "${planSummary}"]`;
+        }
+        if (contentStr.length > 500) {
+          contentStr = contentStr.slice(0, 500) + '... (truncated for brevity)';
         }
         messages.push({ role: msg.role, content: contentStr });
       }

@@ -495,23 +495,40 @@ export default function useStore() {
 
   /* ── Reactive Goal Metrics derived from Tasks & Habits (O(G + T + H)) ── */
   const reactiveGoals = useMemo(() => {
-    // 1. Group tasks by goalId in single O(T) pass (coercing goalId to String)
+    // 1. Group tasks by goalId and goalTitle in single O(T) pass
     const tasksByGoal = new Map();
+    const tasksByGoalTitle = new Map();
     for (let i = 0; i < tasks.length; i++) {
       const t = tasks[i];
-      if (t.goalId === undefined || t.goalId === null || t.goalId === '') continue;
-      const gIdStr = String(t.goalId);
-      let entry = tasksByGoal.get(gIdStr);
-      if (!entry) {
-        entry = { activeCount: 0, completedCount: 0, totalCount: 0, uncompletedTasks: [] };
-        tasksByGoal.set(gIdStr, entry);
+      if (t.goalId !== undefined && t.goalId !== null && t.goalId !== '') {
+        const gIdStr = String(t.goalId);
+        let entry = tasksByGoal.get(gIdStr);
+        if (!entry) {
+          entry = { activeCount: 0, completedCount: 0, totalCount: 0, uncompletedTasks: [] };
+          tasksByGoal.set(gIdStr, entry);
+        }
+        entry.totalCount++;
+        if (t.completed) {
+          entry.completedCount++;
+        } else {
+          entry.activeCount++;
+          entry.uncompletedTasks.push(t);
+        }
       }
-      entry.totalCount++;
-      if (t.completed) {
-        entry.completedCount++;
-      } else {
-        entry.activeCount++;
-        entry.uncompletedTasks.push(t);
+      if (t.goalTitle && typeof t.goalTitle === 'string') {
+        const titleKey = t.goalTitle.trim().toLowerCase();
+        let entry = tasksByGoalTitle.get(titleKey);
+        if (!entry) {
+          entry = { activeCount: 0, completedCount: 0, totalCount: 0, uncompletedTasks: [] };
+          tasksByGoalTitle.set(titleKey, entry);
+        }
+        entry.totalCount++;
+        if (t.completed) {
+          entry.completedCount++;
+        } else {
+          entry.activeCount++;
+          entry.uncompletedTasks.push(t);
+        }
       }
     }
 
@@ -531,11 +548,12 @@ export default function useStore() {
         }
         list.push(h);
       }
-      if (h.linkedGoal) {
-        let list = habitsByGoalTitle.get(h.linkedGoal);
+      if (h.linkedGoal && typeof h.linkedGoal === 'string') {
+        const cleanGoalName = h.linkedGoal.trim().toLowerCase();
+        let list = habitsByGoalTitle.get(cleanGoalName);
         if (!list) {
           list = [];
-          habitsByGoalTitle.set(h.linkedGoal, list);
+          habitsByGoalTitle.set(cleanGoalName, list);
         }
         list.push(h);
       }
@@ -546,7 +564,8 @@ export default function useStore() {
     // 3. Map goals in O(G)
     return goals.map(g => {
       const goalIdStr = String(g.id);
-      const entry = tasksByGoal.get(goalIdStr);
+      const titleKey = g.title ? g.title.trim().toLowerCase() : '';
+      const entry = tasksByGoal.get(goalIdStr) || (titleKey ? tasksByGoalTitle.get(titleKey) : null);
       const activeCount = entry ? entry.activeCount : 0;
       const completedCount = entry ? entry.completedCount : 0;
       const totalLinked = entry ? entry.totalCount : 0;
@@ -590,13 +609,15 @@ export default function useStore() {
           }
         }
       }
-      const titleHabits = habitsByGoalTitle.get(g.title);
-      if (titleHabits) {
-        for (let i = 0; i < titleHabits.length; i++) {
-          const h = titleHabits[i];
-          if (!seenHabitIds.has(String(h.id))) {
-            seenHabitIds.add(String(h.id));
-            linkedHabits.push(h);
+      if (titleKey) {
+        const titleHabits = habitsByGoalTitle.get(titleKey);
+        if (titleHabits) {
+          for (let i = 0; i < titleHabits.length; i++) {
+            const h = titleHabits[i];
+            if (!seenHabitIds.has(String(h.id))) {
+              seenHabitIds.add(String(h.id));
+              linkedHabits.push(h);
+            }
           }
         }
       }
@@ -847,7 +868,7 @@ export default function useStore() {
 
   /* Goals Actions */
   const addGoal = useCallback((goalData) => {
-    const newId = 'g' + Date.now();
+    const newId = goalData.id || ('g' + Date.now() + Math.random().toString(36).slice(2, 7));
     const { initialTasks = [], linkedHabitIds = [], ...rest } = goalData;
 
     const createdGoal = {
@@ -961,7 +982,7 @@ export default function useStore() {
   }, [setHabits, setTasks, settings.soundEffects]);
 
   const addHabit = useCallback((habit) => {
-    const newId = habit.id || ('h' + Date.now());
+    const newId = habit.id || ('h' + Date.now() + Math.random().toString(36).slice(2, 7));
     const newHabit = {
       completedDays: [],
       graceDays: habit.graceDays ?? 1,
