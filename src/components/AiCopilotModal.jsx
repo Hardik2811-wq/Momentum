@@ -5,6 +5,7 @@ import { generateExecutivePlanWithAI, hasAiService } from '../lib/groqClient';
 import { todayPlanDate, calculateEndTime } from '../lib/taskMetadata';
 import { resolveLocalCopilotIntent } from '../lib/copilotIntentRouter';
 import { harvestCopilotPlan } from '../lib/nlpMemory';
+import LifeGraphVisualizer from './LifeGraphVisualizer';
 
 const QUICK_CHIPS = [
   { label: 'Schedule from document', prompt: 'I have attached a project document. Analyze the deliverables, milestones, and schedule them into my Planner.' },
@@ -18,6 +19,7 @@ export default function AiCopilotModal({
   goals = [],
   habits = [],
   tasks = [],
+  schedules = [],
   stats = null,
   addGoal,
   addHabit,
@@ -26,6 +28,7 @@ export default function AiCopilotModal({
   checkInHabit,
   onOpenApiKeyModal
 }) {
+  const [copilotView, setCopilotView] = useState('chat'); // 'chat' | 'graph'
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [attachedDoc, setAttachedDoc] = useState(null);
@@ -359,24 +362,67 @@ export default function AiCopilotModal({
         </div>
 
         {/* Minimal Header (Linear / Raycast Style) */}
-        <header className="px-5 py-3 border-b border-black/[0.06] flex items-center justify-between shrink-0 bg-white select-none">
+        <header className="px-4 sm:px-5 py-2.5 border-b border-black/[0.06] flex items-center justify-between shrink-0 bg-white select-none">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <h3 className="font-semibold text-[13px] text-[#1A1B1F] tracking-tight">Copilot</h3>
-            <span className="text-[#8E8E93] text-[12px]">• Plan &amp; Schedule</span>
+            <span className="text-[#8E8E93] text-[12px] hidden sm:inline">• Plan &amp; Schedule</span>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-7 h-7 rounded-lg text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-black/[0.04] flex items-center justify-center transition cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle: Chat vs Graphify Life Graph */}
+            <div className="flex items-center p-0.5 bg-black/[0.04] rounded-lg border border-black/[0.06]">
+              <button
+                type="button"
+                onClick={() => setCopilotView('chat')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                  copilotView === 'chat'
+                    ? 'bg-white text-[#1A1B1F] shadow-2xs'
+                    : 'text-[#8E8E93] hover:text-[#1A1B1F]'
+                }`}
+                title="Copilot Chat Assistant"
+              >
+                <span className="material-symbols-outlined text-[14px]">chat</span>
+                <span>Chat</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopilotView('graph')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                  copilotView === 'graph'
+                    ? 'bg-[#0A84FF] text-white shadow-2xs'
+                    : 'text-[#8E8E93] hover:text-[#1A1B1F]'
+                }`}
+                title="Graphify Life Graph DAG"
+              >
+                <span className="material-symbols-outlined text-[14px]">hub</span>
+                <span>Graphify</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-7 h-7 rounded-lg text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-black/[0.04] flex items-center justify-center transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
         </header>
 
-        {/* Message Canvas / Empty State */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+        {copilotView === 'graph' ? (
+          <LifeGraphVisualizer
+            tasks={tasks}
+            goals={goals}
+            habits={habits}
+            schedules={schedules}
+            toggleTask={toggleTask}
+            onSwitchToChat={() => setCopilotView('chat')}
+          />
+        ) : (
+          <>
+            {/* Message Canvas / Empty State */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
           
           {/* Clean, quiet empty state (no bot monologue) */}
           {messages.length === 0 && (
@@ -972,7 +1018,9 @@ export default function AiCopilotModal({
             </button>
           </form>
         </footer>
-      </div>
-    </div>
-  );
+      </>
+    )}
+  </div>
+</div>
+);
 }

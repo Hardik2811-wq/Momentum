@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { calcStreak, last7Days, todayKey, DAY_LABELS } from '../store/useStore';
 import HabitModal from '../components/HabitModal';
+import { computeHabitDecayMetrics } from '../lib/habitDecayGuard';
 
 const HABIT_COLOR_CLASSES = {
   primary: { fixed: 'bg-primary-fixed text-on-primary-fixed-variant', text: 'text-primary', checked: 'bg-primary text-on-primary' },
@@ -277,6 +278,7 @@ const HabitsView = React.memo(function HabitsView({ habits = [], checkInHabit, a
   const streakInfo = stats.habitStreaks?.find(s => s.id === habit.id);
   const streak = streakInfo ? streakInfo.streak : calcStreak(habit.completedDays || []);
   const color = HABIT_COLOR_CLASSES[habit.colorToken] || HABIT_COLOR_CLASSES.primary;
+  const decay = computeHabitDecayMetrics(habit, today);
   
   return (
     <div key={habit.id} className="group relative rounded-2xl bg-surface-container-lowest p-gutter-lg sm:p-gutter-xl shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-outline-variant/30">
@@ -316,6 +318,39 @@ const HabitsView = React.memo(function HabitsView({ habits = [], checkInHabit, a
           </div>
         </div>
       </div>
+
+      {/* Habit Decay Alert Strip */}
+      {decay.isAtRisk && (
+        <div className={`mt-2 mb-2 p-2.5 rounded-xl flex items-center justify-between gap-2 text-[11px] border transition-all ${
+          decay.riskLevel === 'critical'
+            ? 'bg-rose-50/90 border-rose-200/80 text-rose-800'
+            : 'bg-amber-50/90 border-amber-200/80 text-amber-900'
+        }`}>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="material-symbols-outlined text-[15px] shrink-0">
+              {decay.riskLevel === 'critical' ? 'warning' : 'timelapse'}
+            </span>
+            <span className="font-bold shrink-0">
+              {decay.riskLevel === 'critical' ? 'Critical Decay' : 'Decay Warning'} ({Math.round(decay.survivalProb * 100)}% survival):
+            </span>
+            <span className="truncate">{decay.mvrSuggestion}</span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              checkInHabit(habit.id, today);
+            }}
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 cursor-pointer shadow-3xs transition active:scale-95 ${
+              decay.riskLevel === 'critical'
+                ? 'bg-rose-600 text-white hover:bg-rose-700'
+                : 'bg-amber-600 text-white hover:bg-amber-700'
+            }`}
+          >
+            2m Micro-rep
+          </button>
+        </div>
+      )}
       
       <div className="pt-gutter-base mt-gutter-xs flex flex-col sm:flex-row sm:items-center justify-between gap-gutter-md border-t border-outline-variant/15">
         <div className="flex items-center gap-2">

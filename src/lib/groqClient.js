@@ -5,34 +5,177 @@
  */
 
 import { isSupabaseConfigured, supabase } from './supabase.js';
+import { curatePromptIngress, enforceCavemanSystemPrompt, sanitizeCavemanEgress } from './cavemanCompressor.js';
 
 const AI_FUNCTION = 'groq-proxy';
 const BYOK_FUNCTION = 'byok-credentials';
 
+export function getLocalGroqKey() {
+  if (typeof window === 'undefined') return '';
+  try {
+    const key = window.localStorage?.getItem('momentum_groq_api_key') || '';
+    if (key && key.startsWith('gsk_')) return key;
+  } catch {}
+  const envKey = import.meta?.env?.VITE_GROQ_API_KEY || '';
+  if (envKey && envKey.startsWith('gsk_')) return envKey;
+  return '';
+}
+
 export function hasAiService() {
-  return isSupabaseConfigured;
+  return true;
 }
 
 export function purgeLegacyGroqKey() {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.removeItem('momentum_groq_api_key');
-  } catch {}
+  // Retained for backward-compat; direct client BYOK is active.
+}
+
+const OLLAMA_HOSTS = [
+  'http://100.128.172.45:11435', // LAN proxy (accessible from phone & emulator)
+  'http://127.0.0.1:11434',      // Local PC direct
+  'http://localhost:11434',
+  'http://10.0.2.2:11434'        // Android emulator host loopback
+];
+
+async function callOllama(messages, { temperature, maxTokens, jsonMode = true } = {}) {
+  for (const host of OLLAMA_HOSTS) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const ping = await fetch(`${host}/api/tags`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!ping.ok) continue;
+
+      const tags = await ping.json();
+      const models = tags.models || [];
+      if (models.length === 0) continue;
+
+      // Prefer qwen2.5-coder or first available model
+      const targetModel = models.find(m => m.name.includes('qwen2.5-coder'))?.name || models[0].name;
+
+      const body = {
+        model: targetModel,
+        messages,
+        stream: false,
+        options: {
+          temperature: temperature ?? 0.2,
+          num_predict: maxTokens ?? 4096
+        }
+      };
+      if (jsonMode) {
+        body.format = 'json';
+      }
+
+      const res = await fetch(`${host}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          content: data.message?.content || '',
+          model: `ollama:${targetModel}`
+        };
+      }
+    } catch {
+      // Try next host
+    }
+  }
+  return null;
 }
 
 async function callAiService(messages, { temperature, maxTokens, jsonMode = true } = {}) {
-  if (!isSupabaseConfigured || !supabase) {
-    throw new Error('AI service is not configured. Contact workspace administrator.');
+  // 1. Try local Ollama first (free, offline, tested with qwen2.5-coder)
+  try {
+    const ollamaResult = await callOllama(messages, { temperature, maxTokens, jsonMode });
+    if (ollamaResult && ollamaResult.content) {
+      return ollamaResult;
+    }
+  } catch {}
+
+  // 2. Try Groq API with robust model fallbacks
+  const localKey = getLocalGroqKey();
+  if (localKey) {
+    // Dynamic candidate models: try fastest production model first, then standard alternatives
+    const candidateModels = [
+      'llama-3.1-8b-instant',
+      'llama-3.3-70b-versatile',
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b'
+    ];
+
+    let lastError = null;
+    for (const model of candidateModels) {
+      try {
+        const payload = {
+          model,
+          messages,
+          temperature: temperature ?? 0.2,
+          max_tokens: maxTokens ?? 4096
+        };
+        if (jsonMode) {
+          payload.response_format = { type: 'json_object' };
+        }
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localKey}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          return {
+            content: resJson.choices?.[0]?.message?.content || '',
+            model: resJson.model || model
+          };
+        }
+
+        const errData = await response.json().catch(() => ({}));
+        lastError = errData?.error?.message || `Groq API returned HTTP ${response.status}`;
+        const lowerErr = lastError.toLowerCase();
+
+        // If error is model-specific (decommissioned, not found, retired), proceed to next candidate
+        if (
+          response.status === 400 ||
+          response.status === 404 ||
+          lowerErr.includes('decommissioned') ||
+          lowerErr.includes('does not exist') ||
+          lowerErr.includes('not supported') ||
+          lowerErr.includes('deprecated') ||
+          lowerErr.includes('model')
+        ) {
+          continue;
+        }
+
+        // If invalid API key or auth, stop immediately
+        if (response.status === 401) {
+          throw new Error('Invalid Groq API Key. Tap Settings -> Manage key to update.');
+        }
+      } catch (err) {
+        if (err.message && err.message.includes('Invalid Groq API Key')) throw err;
+      }
+    }
+    if (lastError) throw new Error(lastError);
   }
 
-  const { data, error } = await supabase.functions.invoke(AI_FUNCTION, {
-    body: { messages, temperature, maxTokens, jsonMode }
-  });
+  // 3. Fallback to Supabase edge function proxy if configured
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, {
+      body: { messages, temperature, maxTokens, jsonMode }
+    });
 
-  if (error || !data?.content) {
-    throw new Error(data?.error || 'AI service request failed.');
+    if (error || !data?.content) {
+      throw new Error(data?.error || 'AI service request failed. Tap Settings -> Manage key to add your Groq key.');
+    }
+    return data;
   }
-  return data;
+
+  throw new Error('No AI engine connected. Make sure Ollama is running or add a Groq key in Settings.');
 }
 
 async function callByokService(body) {
@@ -44,16 +187,80 @@ async function callByokService(body) {
   return { success: true, ...data };
 }
 
-export function getByokStatus() {
-  return callByokService({ action: 'status' });
+export async function getByokStatus() {
+  const localKey = getLocalGroqKey();
+  if (localKey) {
+    return { success: true, configured: true, storage: 'device' };
+  }
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const session = (await supabase.auth.getSession())?.data?.session;
+      if (session) {
+        const cloudRes = await callByokService({ action: 'status' });
+        if (cloudRes.success && cloudRes.configured) return cloudRes;
+      }
+    } catch {}
+  }
+  return { success: true, configured: false };
 }
 
-export function saveByokKey(key) {
-  return callByokService({ action: 'save', key });
+export async function saveByokKey(key) {
+  const cleanKey = (key || '').trim();
+  if (!/^gsk_[A-Za-z0-9_-]{20,}$/.test(cleanKey)) {
+    return { success: false, error: 'Enter a valid Groq API key (starts with gsk_).' };
+  }
+
+  // Live validate with Groq API
+  try {
+    const testRes = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: { Authorization: `Bearer ${cleanKey}` }
+    });
+    if (!testRes.ok) {
+      const errData = await testRes.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errData?.error?.message || 'Invalid Groq API key. Check console.groq.com/keys.'
+      };
+    }
+  } catch (netErr) {
+    console.warn('Groq key live check skipped due to network:', netErr);
+  }
+
+  // Save to device localStorage
+  try {
+    window.localStorage?.setItem('momentum_groq_api_key', cleanKey);
+  } catch (storageErr) {
+    return { success: false, error: 'Could not store key in device storage.' };
+  }
+
+  // Optional background sync to Supabase edge function if session exists
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const session = (await supabase.auth.getSession())?.data?.session;
+      if (session) {
+        await callByokService({ action: 'save', key: cleanKey });
+      }
+    } catch {}
+  }
+
+  return { success: true, configured: true };
 }
 
-export function deleteByokKey() {
-  return callByokService({ action: 'delete' });
+export async function deleteByokKey() {
+  try {
+    window.localStorage?.removeItem('momentum_groq_api_key');
+  } catch {}
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const session = (await supabase.auth.getSession())?.data?.session;
+      if (session) {
+        await callByokService({ action: 'delete' });
+      }
+    } catch {}
+  }
+
+  return { success: true, configured: false };
 }
 
 export function getCustomCopilotDirective() {
@@ -101,18 +308,24 @@ export async function parseWithGroq(input = '', goals = []) {
   }
   if (!hasAiService()) return { success: false, error: 'AI service is not configured.' };
 
+  // Passive Ingress Curation: strip filler tokens, keep dense semantic entities
+  const curated = curatePromptIngress(input.trim());
+  const cleanInput = curated.curatedPrompt || input.trim();
+
   const goalsContext = goals.length > 0
     ? `Available goals: ${goals.map(g => `"${g.title}" (id: ${g.id})`).join(', ')}`
     : '';
 
-  const userPrompt = `Extract task metadata into a JSON object: "${input.trim()}"\n${goalsContext}`;
+  const userPrompt = `Extract task metadata into a JSON object: "${cleanInput}"\n${goalsContext}`;
 
   try {
     const result = await callAiService([
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: enforceCavemanSystemPrompt(SYSTEM_PROMPT) },
       { role: 'user', content: userPrompt }
     ], { temperature: 0.1, maxTokens: 800 });
-    return { success: true, data: JSON.parse(result.content), source: 'groq_api', model: result.model };
+
+    const cleanContent = sanitizeCavemanEgress(result.content);
+    return { success: true, data: JSON.parse(cleanContent), source: 'groq_api', model: result.model };
   } catch (error) {
     return { success: false, error: error.message || 'AI service request failed.' };
   }
@@ -367,11 +580,15 @@ export async function generateExecutivePlanWithAI({
     docSection = `\n--- ATTACHED DOC OUTLINE: ${documentContext.name || 'document'} ---\n${cleanDoc}\n--- END DOC ---\n`;
   }
 
+  // Passive Ingress Curation: strip filler tokens, keep dense semantic payload
+  const curated = curatePromptIngress(userPrompt.trim());
+  const cleanPrompt = curated.curatedPrompt || userPrompt.trim();
+
   const userInstruction = `TODAY: ${currentDateStr}
 
 ${memoryContext}
 ${docSection}
-USER QUERY: "${userPrompt.trim()}"`;
+USER QUERY: "${cleanPrompt}"`;
 
   const userDirective = getCustomCopilotDirective();
   const directivePrompt = userDirective
@@ -380,7 +597,7 @@ USER QUERY: "${userPrompt.trim()}"`;
 
   // Format messages
   const messages = [
-    { role: 'system', content: COPILOT_SYSTEM_PROMPT + directivePrompt }
+    { role: 'system', content: enforceCavemanSystemPrompt(COPILOT_SYSTEM_PROMPT + directivePrompt) }
   ];
 
   // Append recent chat history (last 4 exchanges), truncating long messages to ~300 chars to save prompt tokens
@@ -401,9 +618,10 @@ USER QUERY: "${userPrompt.trim()}"`;
 
   try {
     const result = await callAiService(messages, { temperature: 0.2, maxTokens: 4096 });
+    const cleanContent = sanitizeCavemanEgress(result.content);
     return {
       success: true,
-      data: normalizeCopilotPlan(JSON.parse(result.content), currentDateStr),
+      data: normalizeCopilotPlan(JSON.parse(cleanContent), currentDateStr),
       model: result.model
     };
   } catch (error) {

@@ -6,6 +6,7 @@
 import { parseNaturalTask } from './nlpParser.js';
 import { harvestApiResult } from './nlpMemory.js';
 import { calculateEndTime } from './taskMetadata.js';
+import { curatePromptIngress } from './cavemanCompressor.js';
 
 export function resolveLocalCopilotIntent({
   query = '',
@@ -16,8 +17,12 @@ export function resolveLocalCopilotIntent({
   todayDate = '',
   actions = {}
 }) {
-  const text = (query || '').trim();
-  if (!text) return { handledLocally: false };
+  const rawText = (query || '').trim();
+  if (!rawText) return { handledLocally: false };
+
+  // Passive Ingress Curation: strip conversational preamble, keep core intent
+  const curated = curatePromptIngress(rawText);
+  const text = curated.curatedPrompt || rawText;
 
   const today = todayDate || new Date().toISOString().slice(0, 10);
 

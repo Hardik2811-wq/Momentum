@@ -68,14 +68,14 @@ export default function ApiKeyModal({ isOpen, onClose, onSuccess }) {
             </div>
             <div>
               <h2 id="byok-title" className="text-[15px] font-bold text-[#1A1B1F] tracking-tight">Secure Groq BYOK</h2>
-              <p className="text-[11px] text-[#64748B]">Your key. Encrypted server storage.</p>
+              <p className="text-[11px] text-[#64748B]">Your key. Secure device storage &amp; direct inference.</p>
             </div>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"><span className="material-symbols-outlined text-[18px]">close</span></button>
         </div>
 
         <div className="p-3 bg-emerald-50 border border-emerald-200/70 rounded-xl text-[11px] text-emerald-900 leading-relaxed">
-          Your key is protected and never stored in this browser.
+          Your key is saved directly to your device and used for high-speed AI tasks. Never exposed or logged.
         </div>
 
         {unavailable ? (

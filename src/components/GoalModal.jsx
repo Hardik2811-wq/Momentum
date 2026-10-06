@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { InlineGoalCalendar } from './GoalDetailDrawer';
+import { queryLearnedMemory } from '../lib/nlpMemory';
 
 const CATEGORY_MAP = {
   career:   { label: 'Career & Craft', color: 'primary', icon: 'terminal' },
@@ -42,6 +43,7 @@ export default function GoalModal({
     initialTasks: [''],
     linkedHabitIds: []
   });
+  const [nlpDetected, setNlpDetected] = useState(null);
 
   if (!isOpen) return null;
 
@@ -55,7 +57,54 @@ export default function GoalModal({
       initialTasks: [''],
       linkedHabitIds: []
     });
+    setNlpDetected(null);
     onClose();
+  };
+
+  const handleTitleChange = (val) => {
+    const lower = val.toLowerCase();
+    let detectedCat = null;
+    let detectedHorizon = null;
+
+    if (/\b(health|run|marathon|gym|fitness|diet|workout|cardio|sleep|weight)\b/i.test(lower)) {
+      detectedCat = 'health';
+    } else if (/\b(art|music|design|creative|book|write|album|draw|novel|podcast)\b/i.test(lower)) {
+      detectedCat = 'creative';
+    } else if (/\b(finance|money|wealth|save|invest|crypto|revenue|salary|income|mrr)\b/i.test(lower)) {
+      detectedCat = 'finance';
+    } else if (/\b(code|career|job|client|app|launch|saas|project|ship|dev|website|exam|degree)\b/i.test(lower)) {
+      detectedCat = 'career';
+    }
+
+    if (/\b(this\s+week|by\s+sunday|end\s+of\s+week)\b/i.test(lower)) {
+      detectedHorizon = 'week';
+    } else if (/\b(this\s+month|end\s+of\s+month|by\s+month\s+end)\b/i.test(lower)) {
+      detectedHorizon = 'month';
+    } else if (/\b(this\s+year|end\s+of\s+year|by\s+december|by\s+year\s+end)\b/i.test(lower)) {
+      detectedHorizon = 'year';
+    }
+
+    const mem = queryLearnedMemory(val);
+    if (!detectedCat && mem.matched && mem.inferred.areas && mem.inferred.areas.length > 0) {
+      const area = mem.inferred.areas[0].toLowerCase();
+      if (area.includes('health')) detectedCat = 'health';
+      else if (area.includes('creative')) detectedCat = 'creative';
+      else if (area.includes('career') || area.includes('focus')) detectedCat = 'career';
+      else if (area.includes('personal')) detectedCat = 'finance';
+    }
+
+    setNewGoalForm(prev => ({
+      ...prev,
+      title: val,
+      categories: detectedCat ? [detectedCat] : prev.categories,
+      dateType: detectedHorizon || prev.dateType
+    }));
+
+    if (detectedCat || detectedHorizon) {
+      setNlpDetected({ category: detectedCat, horizon: detectedHorizon });
+    } else {
+      setNlpDetected(null);
+    }
   };
 
   const handleAddGoal = (e) => {
@@ -141,15 +190,23 @@ export default function GoalModal({
             <div className="lg:col-span-7 p-5 sm:p-6 overflow-visible lg:overflow-y-auto space-y-5 border-r-0 lg:border-r border-black/[0.06] dark:border-white/[0.06]">
               {/* Goal Title */}
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Goal Title *
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Goal Title *
+                  </label>
+                  {nlpDetected && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0A84FF] bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full animate-fadeIn">
+                      <span className="material-symbols-outlined text-[12px]">auto_awesome</span>
+                      <span>NLP auto-detected {nlpDetected.category ? CATEGORY_MAP[nlpDetected.category]?.label : ''} {nlpDetected.horizon ? `(${nlpDetected.horizon})` : ''}</span>
+                    </span>
+                  )}
+                </div>
                 <textarea
                   rows={2}
                   required
                   autoFocus
                   value={newGoalForm.title}
-                  onChange={(e) => setNewGoalForm({ ...newGoalForm, title: e.target.value })}
+                  onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="e.g. Ship Portfolio Website v3, Run Half Marathon..."
                   className="w-full text-xl sm:text-2xl font-bold text-[#1A1B1F] dark:text-white placeholder-slate-300 dark:placeholder-slate-600 bg-transparent border-none outline-none resize-none tracking-tight leading-snug focus:ring-0"
                 />

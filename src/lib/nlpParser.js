@@ -91,6 +91,31 @@ export function extractDateMatch(text) {
     return { token: inMonthMatch[0], date: formatYMD(d) };
   }
 
+  // 3b. Natural Horizons: end of month, end of year, next month, next year
+  const endOfMonthMatch = text.match(/\b(?:the\s+)?end\s+of\s+(?:the\s+)?month\b/i);
+  if (endOfMonthMatch) {
+    const lastDay = new Date(currentYear, now.getMonth() + 1, 0);
+    return { token: endOfMonthMatch[0], date: formatYMD(lastDay) };
+  }
+
+  const endOfYearMatch = text.match(/\b(?:the\s+)?end\s+of\s+(?:the\s+)?year\b/i);
+  if (endOfYearMatch) {
+    const lastDayOfYear = new Date(currentYear, 11, 31);
+    return { token: endOfYearMatch[0], date: formatYMD(lastDayOfYear) };
+  }
+
+  const nextMonthMatch = text.match(/\bnext\s+month\b/i);
+  if (nextMonthMatch) {
+    const d = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    return { token: nextMonthMatch[0], date: formatYMD(d) };
+  }
+
+  const nextYearMatch = text.match(/\bnext\s+year\b/i);
+  if (nextYearMatch) {
+    const d = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+    return { token: nextYearMatch[0], date: formatYMD(d) };
+  }
+
   // 4. ISO numeric: YYYY-MM-DD or YYYY/MM/DD
   const isoMatch = text.match(/\b(\d{4})[/-](\d{1,2})[/-](\d{1,2})\b/);
   if (isoMatch) {
@@ -187,6 +212,198 @@ export function extractDateMatch(text) {
   return null;
 }
 
+function escapeRegex(str = '') {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Extracts recurrence rule, recurrence until date, and target day sets.
+ * Handles compound patterns such as:
+ * - "repeat every weekday till nov 30"
+ * - "repeat math class at 11am for 90m repeat every tue, thu until 2026-12-31"
+ * - "every day till next friday"
+ * - "every month until end of year"
+ */
+export function extractRecurrenceMatch(text) {
+  if (!text || typeof text !== 'string') return null;
+
+  let recurrence = null;
+  let repeatDays = null;
+  let recurrenceUntil = null;
+  let recurrenceEndDate = null;
+  const matchedTokens = [];
+
+  // 1. Recurrence End Date ("till nov 30", "until 2026-12-31", "through dec 31", "up to next friday", "ending on nov 30")
+  const untilRegex = /\b(?:repeat\s+)?(?:till|until|through|thru|up\s+to|ending(?:\s+on)?)\s+([^\s,]+(?:\s+[^\s,]+){0,3})\b/i;
+  const untilMatch = text.match(untilRegex);
+  if (untilMatch) {
+    const candidateStr = untilMatch[1];
+    const dateRes = extractDateMatch(candidateStr);
+    if (dateRes) {
+      recurrenceEndDate = dateRes.date;
+      const d = new Date(`${dateRes.date}T12:00:00`);
+      d.setDate(d.getDate() + 1);
+      recurrenceUntil = formatYMD(d);
+
+      const fullUntilMatch = text.match(new RegExp(`\\b(?:repeat\\s+)?(?:till|until|through|thru|up\\s+to|ending(?:\\s+on)?)\\s+${escapeRegex(dateRes.token)}\\b`, 'i'));
+      if (fullUntilMatch) {
+        matchedTokens.push(fullUntilMatch[0]);
+      } else {
+        matchedTokens.push(untilMatch[0]);
+      }
+    }
+  }
+
+  // Create temporary text without the until clause to isolate frequency phrase
+  let textWithoutUntil = text;
+  matchedTokens.forEach(tok => {
+    textWithoutUntil = textWithoutUntil.replace(tok, ' ');
+  });
+
+  // 2. Frequency patterns
+  // 2a. Weekdays / Workdays
+  const weekdaysMatch = textWithoutUntil.match(/\b(?:repeat\s+)?(?:every\s+)?(?:weekdays?|workdays?)\b/i) ||
+                        textWithoutUntil.match(/\bon\s+weekdays?\b/i);
+  if (weekdaysMatch) {
+    recurrence = 'custom';
+    repeatDays = [1, 2, 3, 4, 5];
+    matchedTokens.push(weekdaysMatch[0]);
+  }
+
+  // 2b. Weekends
+  if (!recurrence) {
+    const weekendsMatch = textWithoutUntil.match(/\b(?:repeat\s+)?(?:every\s+)?weekends?\b/i) ||
+                          textWithoutUntil.match(/\bon\s+weekends?\b/i);
+    if (weekendsMatch) {
+      recurrence = 'custom';
+      repeatDays = [0, 6];
+      matchedTokens.push(weekendsMatch[0]);
+    }
+  }
+
+  // 2c. MWF / TTH
+  if (!recurrence) {
+    const mwfMatch = textWithoutUntil.match(/\b(?:repeat\s+)?(?:every\s+)?(?:mwf|m-w-f)\b/i);
+    if (mwfMatch) {
+      recurrence = 'custom';
+      repeatDays = [1, 3, 5];
+      matchedTokens.push(mwfMatch[0]);
+    }
+  }
+  if (!recurrence) {
+    const tthMatch = textWithoutUntil.match(/\b(?:repeat\s+)?(?:every\s+)?(?:tth|t-th)\b/i);
+    if (tthMatch) {
+      recurrence = 'custom';
+      repeatDays = [2, 4];
+      matchedTokens.push(tthMatch[0]);
+    }
+  }
+
+  // 2d. Explicit day list: e.g. "every tue, thu", "repeat every monday and wednesday", "every mon, wed, fri"
+  if (!recurrence) {
+    const daysListMatch = textWithoutUntil.match(/\b(?:repeat\s+)?(?:every|on)\s+((?:(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)s?(?:\s*(?:,|&|and)?\s*))+)\b/i);
+    if (daysListMatch) {
+      const daysStr = daysListMatch[1].toLowerCase();
+      const extractedDays = new Set();
+      const tokens = daysStr.split(/[\s,&]+/).filter(Boolean);
+      tokens.forEach(tok => {
+        const clean = tok.replace(/s$/, '').slice(0, 3);
+        if (DAY_INDEX[clean] !== undefined) {
+          extractedDays.add(DAY_INDEX[clean]);
+        }
+      });
+      if (extractedDays.size > 0) {
+        repeatDays = Array.from(extractedDays).sort((a, b) => a - b);
+        if (repeatDays.length === 7) {
+          recurrence = 'daily';
+        } else {
+          recurrence = 'custom';
+        }
+        matchedTokens.push(daysListMatch[0]);
+      }
+    }
+  }
+
+  // 2e. Daily / Every day / Everyday / Every night
+  if (!recurrence) {
+    const dailyMatch = textWithoutUntil.match(/\b(?:repeat\s+)?every\s+(?:day|daily|night)\b/i) ||
+                       textWithoutUntil.match(/\b(?:repeat\s+)?daily\b/i) ||
+                       textWithoutUntil.match(/\beveryday\b/i);
+    if (dailyMatch) {
+      recurrence = 'daily';
+      repeatDays = [0, 1, 2, 3, 4, 5, 6];
+      matchedTokens.push(dailyMatch[0]);
+    }
+  }
+
+  // 2f. Weekly / Every week
+  if (!recurrence) {
+    const weeklyMatch = textWithoutUntil.match(/\b(?:repeat\s+)?every\s+week\b/i) ||
+                        textWithoutUntil.match(/\b(?:repeat\s+)?weekly\b/i);
+    if (weeklyMatch) {
+      recurrence = 'weekly';
+      matchedTokens.push(weeklyMatch[0]);
+    }
+  }
+
+  // 2g. Monthly / Every month
+  if (!recurrence) {
+    const monthlyMatch = textWithoutUntil.match(/\b(?:repeat\s+)?every\s+month\b/i) ||
+                         textWithoutUntil.match(/\b(?:repeat\s+)?monthly\b/i);
+    if (monthlyMatch) {
+      recurrence = 'monthly';
+      matchedTokens.push(monthlyMatch[0]);
+    }
+  }
+
+  // 2h. Yearly / Every year / Annually
+  if (!recurrence) {
+    const yearlyMatch = textWithoutUntil.match(/\b(?:repeat\s+)?every\s+year\b/i) ||
+                        textWithoutUntil.match(/\b(?:repeat\s+)?yearly\b/i) ||
+                        textWithoutUntil.match(/\bannually\b/i);
+    if (yearlyMatch) {
+      recurrence = 'yearly';
+      matchedTokens.push(yearlyMatch[0]);
+    }
+  }
+
+  // Fallback: If until date was given with "repeat" keyword
+  if (!recurrence && (recurrenceEndDate || recurrenceUntil)) {
+    if (/\brepeat\b/i.test(textWithoutUntil)) {
+      recurrence = 'daily';
+    }
+  }
+
+  if (!recurrence && !recurrenceEndDate) {
+    return null;
+  }
+
+  // Build human-friendly label
+  let recurrenceLabel = 'Repeat';
+  const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  if (recurrence === 'daily') recurrenceLabel = 'Daily';
+  else if (recurrence === 'weekly') recurrenceLabel = 'Weekly';
+  else if (recurrence === 'monthly') recurrenceLabel = 'Monthly';
+  else if (recurrence === 'yearly') recurrenceLabel = 'Yearly';
+  else if (recurrence === 'custom' && repeatDays) {
+    if (repeatDays.length === 5 && [1, 2, 3, 4, 5].every(d => repeatDays.includes(d))) recurrenceLabel = 'Weekdays';
+    else if (repeatDays.length === 2 && [0, 6].every(d => repeatDays.includes(d))) recurrenceLabel = 'Weekends';
+    else recurrenceLabel = repeatDays.map(d => WEEKDAY_NAMES[d]).join(', ');
+  }
+  if (recurrenceEndDate) {
+    recurrenceLabel += ` till ${planDateLabel(recurrenceEndDate)}`;
+  }
+
+  return {
+    recurrence: recurrence || 'daily',
+    repeatDays,
+    recurrenceEndDate,
+    recurrenceUntil,
+    recurrenceLabel,
+    matchedTokens
+  };
+}
+
 export function parseNaturalTask(input = '', goals = [], habits = []) {
   if (!input || typeof input !== 'string') {
     return {
@@ -203,7 +420,22 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
   const extracted = {};
   let explicitScore = 0;
 
+  // 0. Recurrence & Recurrence End Date ("repeat every weekday till nov 30", "every tue, thu until 2026-12-31")
+  const recurrenceMatch = extractRecurrenceMatch(text);
+  if (recurrenceMatch) {
+    extracted.recurrence = recurrenceMatch.recurrence;
+    if (recurrenceMatch.repeatDays) extracted.repeatDays = recurrenceMatch.repeatDays;
+    if (recurrenceMatch.recurrenceEndDate) extracted.recurrenceEndDate = recurrenceMatch.recurrenceEndDate;
+    if (recurrenceMatch.recurrenceUntil) extracted.recurrenceUntil = recurrenceMatch.recurrenceUntil;
+    if (recurrenceMatch.recurrenceLabel) extracted.recurrenceLabel = recurrenceMatch.recurrenceLabel;
+    explicitScore += 0.35;
+    recurrenceMatch.matchedTokens.forEach(tok => {
+      text = text.replace(tok, ' ');
+    });
+  }
+
   // 1. Duration / Flexibility: ~open, flexible, 30m, 45 min, 1.5h, 90 mins, 2h, 3h, 4 hours, half an hour, an hour
+  // Also supports "for 2h", "fot 1234 duration", "duration: 45m"
   const flexMatch = text.match(/\b(~open|flexible|open-ended|untimed|no\s+rush)\b/i);
   if (flexMatch) {
     extracted.isFlexible = true;
@@ -211,8 +443,10 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
     explicitScore += 0.25;
     text = text.replace(flexMatch[0], ' ');
   } else {
-    const durationMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(?:m|min|mins|minutes|h|hr|hrs|hours)\b/i) ||
-                          text.match(/\b(half\s+an?\s+hour|an?\s+hour)\b/i);
+    const durationMatch = text.match(/\b(?:(?:for|fot|fro)\s+)?(\d+(?:\.\d+)?)\s*(?:m|min|mins|minutes|h|hr|hrs|hours)\b(?:\s*duration)?/i) ||
+                          text.match(/\b(?:(?:for|fot|fro)\s+)?(\d+)\s*(?:m|min|mins|minutes)?\s*duration\b/i) ||
+                          text.match(/\b(?:(?:for|fot|fro)\s+)?(half\s+an?\s+hour|an?\s+hour)\b/i) ||
+                          text.match(/\b(?:duration|dur)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(?:m|min|mins|minutes|h|hr|hrs|hours)?\b/i);
     if (durationMatch) {
       if (/half\s+an?\s+hour/i.test(durationMatch[0])) {
         extracted.durationMinutes = 30;
@@ -256,7 +490,7 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
   };
 
   // 2a. Time Range: e.g. "10am to 1:30pm", "10am - 12pm", "14:00 - 16:45", "from 2pm to 4:30pm"
-  const rangeMatch = text.match(/\b(?:from\s+)?((?:1[0-2]|0?[1-9])(?::[0-5][0-9])?\s*(?:am|pm)?|[01]?[0-9]|2[0-3]:[0-5][0-9])\s*(?:to|-|–)\s*((?:1[0-2]|0?[1-9])(?::[0-5][0-9])?\s*(?:am|pm)?|[01]?[0-9]|2[0-3]:[0-5][0-9])\b/i);
+  const rangeMatch = text.match(/\b(?:from\s+)?((?:[01]?[0-9]|2[0-3]):[0-5][0-9]|(?:1[0-2]|0?[1-9])(?::[0-5][0-9])?\s*(?:am|pm)?)\s*(?:to|-|–)\s*((?:[01]?[0-9]|2[0-3]):[0-5][0-9]|(?:1[0-2]|0?[1-9])(?::[0-5][0-9])?\s*(?:am|pm)?)\b/i);
   if (rangeMatch) {
     const s = parseSingleTime(rangeMatch[1]);
     const e = parseSingleTime(rangeMatch[2]);
@@ -309,6 +543,30 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
     text = text.replace(priorityMatch[0], ' ');
   }
 
+  // 3b. Conversational Impact & Priority
+  if (!extracted.impact) {
+    const highImpactMatch = text.match(/\b(urgent|critical|crucial|asap|top\s+priority|highest\s+priority|must\s+do|high\s+impact)\b/i);
+    const lowImpactMatch = text.match(/\b(low\s+priority|low\s+impact|minor\s+task|casual|whenever)\b/i);
+    const medImpactMatch = text.match(/\b(medium\s+priority|medium\s+impact|moderate)\b/i);
+
+    if (highImpactMatch) {
+      extracted.impact = 'high';
+      extracted.priority = 'high';
+      explicitScore += 0.15;
+      text = text.replace(highImpactMatch[0], ' ');
+    } else if (lowImpactMatch) {
+      extracted.impact = 'low';
+      extracted.priority = 'low';
+      explicitScore += 0.15;
+      text = text.replace(lowImpactMatch[0], ' ');
+    } else if (medImpactMatch) {
+      extracted.impact = 'medium';
+      extracted.priority = 'normal';
+      explicitScore += 0.15;
+      text = text.replace(medImpactMatch[0], ' ');
+    }
+  }
+
   // 4. Life Areas from Tags (#career, #creative, #focus, #habits, #health, #personal, @work, etc.)
   const areaTagMatch = text.match(/(?:#|@)(career|craft|work|job|creative|art|music|design|writing|focus|deepwork|study|code|habit|habits|routine|daily|health|gym|fitness|run|workout|personal|life|home|errand|errands)\b/i);
   if (areaTagMatch) {
@@ -329,7 +587,27 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
     }
   }
 
-  // 5. Due Date / Horizon: any format (ISO, Month-Day, Day-Month, relative days, day of week, today, tomorrow)
+  // 4b. Life Areas from Natural Domain Words (if untagged)
+  if (!extracted.areas) {
+    const naturalAreaMatch = text.match(/\b(gym|workout|cardio|running|jogging|fitness|doctor|dentist|groceries|laundry|errands|sketching|painting|songwriting)\b/i);
+    if (naturalAreaMatch) {
+      const w = naturalAreaMatch[1].toLowerCase();
+      if (['gym', 'workout', 'cardio', 'running', 'jogging', 'fitness', 'doctor', 'dentist'].includes(w)) {
+        extracted.areas = ['Health & Vitality'];
+      } else if (['groceries', 'laundry', 'errands'].includes(w)) {
+        extracted.areas = ['Personal & Life'];
+      } else if (['sketching', 'painting', 'songwriting'].includes(w)) {
+        extracted.areas = ['Creative & Expression'];
+      }
+      if (extracted.areas) explicitScore += 0.20;
+    }
+  }
+
+  // 5. Due Date / Horizon / Start Date
+  const startPrefixMatch = text.match(/\b(?:starting|starts|beginning|from)\s+/i);
+  if (startPrefixMatch) {
+    text = text.replace(startPrefixMatch[0], ' ');
+  }
   const dateResult = extractDateMatch(text);
   if (dateResult) {
     extracted.plannedDate = dateResult.date;
@@ -337,6 +615,11 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
     extracted.urgency = urgencyFromPlan(dateResult.date);
     explicitScore += 0.25;
     text = text.replace(dateResult.token, ' ');
+  } else if (extracted.recurrence) {
+    // Recurring tasks with no explicit start date start today
+    extracted.plannedDate = todayPlanDate();
+    extracted.dueDate = 'Today';
+    extracted.urgency = 'today';
   } else {
     const fallbackHorizonMatch = text.match(/\b(this\s+week|someday|backlog)\b/i);
     if (fallbackHorizonMatch) {
@@ -365,6 +648,10 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
     if (matchedGoal) {
       extracted.goalId = matchedGoal.id;
       extracted.goalTitle = matchedGoal.title;
+      if (!extracted.areas && matchedGoal.category) {
+        const areaLabel = matchedGoal.category === 'health' ? 'Health & Vitality' : matchedGoal.category === 'creative' ? 'Creative & Expression' : 'Career & Craft';
+        extracted.areas = [areaLabel];
+      }
     }
 
     const matchedHabit = Array.isArray(habits) && habits.find(h =>
@@ -381,9 +668,84 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
     text = text.replace(goalTagMatch[0], ' ');
   }
 
+  // 6b. Auto-detect Goal from natural title tokens
+  if (!extracted.goalId && Array.isArray(goals) && goals.length > 0) {
+    const lowerText = text.toLowerCase();
+    for (const g of goals) {
+      if (!g || !g.title) continue;
+      const lowerGTitle = g.title.toLowerCase();
+      if (lowerGTitle.length >= 4 && lowerText.includes(lowerGTitle)) {
+        extracted.goalId = g.id;
+        extracted.goalTitle = g.title;
+        if (!extracted.areas && g.category) {
+          const areaLabel = g.category === 'health' ? 'Health & Vitality' : g.category === 'creative' ? 'Creative & Expression' : 'Career & Craft';
+          extracted.areas = [areaLabel];
+        }
+        explicitScore += 0.2;
+        break;
+      }
+      const gTokens = lowerGTitle.split(/\s+/).filter(w => w.length >= 4 && !['ship', 'build', 'make', 'create', 'learn', 'master', 'with', 'your'].includes(w));
+      const matchedToken = gTokens.find(token => {
+        const tokenRegex = new RegExp(`\\b${token}\\b`, 'i');
+        return tokenRegex.test(text);
+      });
+      if (matchedToken) {
+        extracted.goalId = g.id;
+        extracted.goalTitle = g.title;
+        if (!extracted.areas && g.category) {
+          const areaLabel = g.category === 'health' ? 'Health & Vitality' : g.category === 'creative' ? 'Creative & Expression' : 'Career & Craft';
+          extracted.areas = [areaLabel];
+        }
+        explicitScore += 0.2;
+        break;
+      }
+    }
+  }
+
+  // 6c. Auto-detect Habit from natural title tokens
+  if (!extracted.habitId && Array.isArray(habits) && habits.length > 0) {
+    const lowerText = text.toLowerCase();
+    for (const h of habits) {
+      if (!h || !h.title) continue;
+      const lowerHTitle = h.title.toLowerCase();
+      if (lowerHTitle.length >= 4 && lowerText.includes(lowerHTitle)) {
+        extracted.habitId = h.id;
+        extracted.habitTitle = h.title;
+        extracted.linkedHabitId = h.id;
+        explicitScore += 0.2;
+        break;
+      }
+      const hTokens = lowerHTitle.split(/[\s/]+/).filter(w => w.length >= 4 && !['daily', 'every', 'routine', 'with'].includes(w));
+      const matchedToken = hTokens.find(token => {
+        const tokenRegex = new RegExp(`\\b${token}\\b`, 'i');
+        return tokenRegex.test(text);
+      });
+      if (matchedToken) {
+        extracted.habitId = h.id;
+        extracted.habitTitle = h.title;
+        extracted.linkedHabitId = h.id;
+        explicitScore += 0.2;
+        break;
+      }
+    }
+  }
+
   // 7. Clean up remaining text to get cleanTitle
-  const cleanTitle = text
+  let cleanTitle = text
     .replace(/\s+/g, ' ')
+    .trim();
+
+  // If recurrence was parsed or title has repeat tokens, clean them cleanly
+  if (extracted.recurrence || extracted.recurrenceEndDate || /^\s*repeat\b/i.test(cleanTitle)) {
+    cleanTitle = cleanTitle.replace(/^\s*repeat\s+/i, '');
+    cleanTitle = cleanTitle.replace(/\s+repeat\s*$/i, '');
+    cleanTitle = cleanTitle.replace(/\s+repeat\s+/gi, ' ');
+  }
+
+  // Strip dangling prepositions and conjunctions left over from extraction
+  cleanTitle = cleanTitle
+    .replace(/^(?:for|fot|fro|at|on|every|till|until|through|ending|dur|duration)\s+/i, '')
+    .replace(/\s+(?:for|fot|fro|at|on|every|till|until|through|ending|dur|duration)$/i, '')
     .replace(/^[-–—:,.\s]+|[-–—:,.\s]+$/g, '')
     .trim();
 
@@ -406,21 +768,31 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
       extracted.urgency = memoryResult.inferred.urgency;
       extracted.dueDate = memoryResult.inferred.urgency === 'today' ? 'Today' : 'This Week';
     }
+    if (!extracted.impact && memoryResult.inferred.impact) {
+      extracted.impact = memoryResult.inferred.impact;
+      if (!extracted.priority) extracted.priority = memoryResult.inferred.impact === 'high' ? 'high' : memoryResult.inferred.impact === 'low' ? 'low' : 'normal';
+    }
+    if (!extracted.goalId && memoryResult.inferred.goalId) {
+      extracted.goalId = memoryResult.inferred.goalId;
+      extracted.goalTitle = memoryResult.inferred.goalTitle;
+    }
+    if (!extracted.habitId && memoryResult.inferred.habitId) {
+      extracted.habitId = memoryResult.inferred.habitId;
+      extracted.habitTitle = memoryResult.inferred.habitTitle;
+      extracted.linkedHabitId = memoryResult.inferred.habitId;
+    }
     isFromLearnedMemory = true;
     learnedSource = memoryResult.source;
     explicitScore += memoryResult.confidenceBoost || 0.35;
   }
 
-  // 9. Infer Energy level if still not determined
+  // 9. Infer Task Effort & Energy level based on the semantic NATURE and cognitive/physical strain of the task
   const hasDetected = Object.keys(extracted).length > 0;
-  if (hasDetected && !extracted.energy) {
-    if ((extracted.durationMinutes && extracted.durationMinutes >= 75) || extracted.priority === 'high') {
-      extracted.energy = 'High';
-    } else if (extracted.priority === 'low' || (extracted.durationMinutes && extracted.durationMinutes <= 30)) {
-      extracted.energy = 'Low';
-    } else {
-      extracted.energy = 'Medium';
+  if (hasDetected) {
+    if (!extracted.energy) {
+      extracted.energy = classifyTaskEffort(cleanTitle || input, extracted);
     }
+    extracted.effort = extracted.energy.toLowerCase();
   }
 
   // 10. Confidence normalization (capped at 1.0)
@@ -442,4 +814,65 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
     isFromLearnedMemory,
     learnedSource
   };
+}
+
+/**
+ * Evaluates task nature, semantic strain, and cognitive/physical intensity.
+ * Effort does not only rely on time/duration, but what kind of task it is.
+ */
+export function classifyTaskEffort(text = '', extracted = {}) {
+  const clean = text.toLowerCase();
+
+  // 1. Explicit conversational effort indicators
+  if (/\b(deep focus|deep work|intense|strenuous|heavy|exhausting|hard|demanding|high effort|complex|grueling)\b/i.test(clean)) {
+    return 'High';
+  }
+  if (/\b(light|easy|quick|casual|low effort|simple|chill|relax\w*|breeze|minor|small)\b/i.test(clean)) {
+    return 'Low';
+  }
+  if (/\b(moderate|medium effort|standard|steady)\b/i.test(clean)) {
+    return 'Medium';
+  }
+
+  // 2. High Physical Strain / Athletic Exertion (High Effort regardless of whether it is 20m or 60m)
+  if (/\b(gym|workout|hiit|crossfit|sprint|weights|lift|lifting|cardio|pushups|deadlift|squats|marathon|boxing|sparring|training|run|jog|swim)\b/i.test(clean)) {
+    return 'High';
+  }
+
+  // 3. High Cognitive / Mental Intensity & Depth (High Effort even for short sessions)
+  if (/\b(code|coding|debug|debugging|program|programming|refactor|architect|architecture|algorithm|thesis|dissertation|write essay|exam|study for|audit|taxes|tax|accounting|financial model|balance sheet|pitch deck|system design|troubleshoot|root cause)\b/i.test(clean)) {
+    return 'High';
+  }
+
+  // 4. High Stress / Emotional Friction / High Stakes
+  if (/\b(dentist|doctor|surgery|interview|negotiate|performance review|court|dispute|confront)\b/i.test(clean)) {
+    return 'High';
+  }
+
+  // 5. Low Friction / Routine / Passive / Admin (Low Effort even if 45m or 1h)
+  if (/\b(groceries|grocery|buy|order|shop|laundry|wash dishes|dishes|trash|take out trash|clean room|dust|sweep|reply to email|check email|slack|check mail|water plants|walk\w*|stroll\w*|podcast|stretch\w*|tea|coffee|listen\w*|casual read|skim|browse)\b/i.test(clean)) {
+    return 'Low';
+  }
+
+  // 6. Medium Structured Production
+  if (/\b(draft|design|wireframe|edit|write blog|prep meal|cook dinner|meal prep|sync|meeting|review pr|research|plan trip|organize|declutter)\b/i.test(clean)) {
+    return 'Medium';
+  }
+
+  // 7. Check queryLearnedMemory if available
+  try {
+    const mem = queryLearnedMemory(text);
+    if (mem.matched && mem.inferred.energy) {
+      return mem.inferred.energy;
+    }
+  } catch {
+    // Safe noop
+  }
+
+  // 8. Fallback heuristics: If duration is very high (>= 90m) without any light indicators -> High
+  if (extracted.durationMinutes && extracted.durationMinutes >= 90) {
+    return 'High';
+  }
+
+  return 'Medium';
 }

@@ -14,6 +14,7 @@ import {
   formatTimeString,
   parseTimeString
 } from '../lib/taskMetadata';
+import { detectScheduleCollisions, findOptimalTimeGap } from '../lib/scheduleCollisionGuard';
 import { parseNaturalTask } from '../lib/nlpParser';
 import { hasAiService, parseWithGroq } from '../lib/groqClient';
 import {
@@ -320,14 +321,20 @@ export default function QuickAddModal({
   isOpen,
   onClose,
   onAddTask,
+  onAddSchedule,
   onUpdateSettings,
   goals = [],
   habits = [],
+  tasks = [],
+  schedules = [],
+  initialTitle = '',
   initialTime = '',
   initialDate = '',
   initialGoalId = '',
-  initialHabitId = ''
+  initialHabitId = '',
+  initialMode = 'task'
 }) {
+  const [mode, setMode] = useState(initialMode || 'task'); // 'task' | 'schedule'
   const [title, setTitle] = useState('');
   const [plannedDate, setPlannedDate] = useState('');
   const [deadlineDate, setDeadlineDate] = useState('');
@@ -345,6 +352,7 @@ export default function QuickAddModal({
   const [habitId, setHabitId] = useState('');
   const [repeatType, setRepeatType] = useState('none'); // 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
   const [repeatDays, setRepeatDays] = useState([1, 2, 3, 4, 5]); // 0=Sun, 1=Mon, ..., 6=Sat
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
   const [subtasks, setSubtasks] = useState([]);
   const [showSubtasks, setShowSubtasks] = useState(false);
   const [newSubtaskInput, setNewSubtaskInput] = useState('');
@@ -353,7 +361,7 @@ export default function QuickAddModal({
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   // Active micro-popover menu
-  const [activeMenu, setActiveMenu] = useState(null); // 'date' | 'time' | 'areas' | 'energy' | 'goal' | 'habit' | 'repeat'
+  const [activeMenu, setActiveMenu] = useState(null); // 'date' | 'time' | 'effort' | 'impact' | 'areas' | 'energy' | 'goal' | 'habit' | 'repeat'
   const menuRef = useRef(null);
 
   const parsed = useMemo(() => parseNaturalTask(title, goals, habits), [title, goals, habits]);
@@ -382,28 +390,60 @@ export default function QuickAddModal({
 
   const isTimeActive = Boolean(startTime || isFlexible || (hasSetDuration && durationMinutes));
 
+  const collisionAlert = useMemo(() => {
+    if (!startTime) return null;
+    const targetDate = plannedDate || todayPlanDate();
+    const candidate = {
+      title: title.trim() || (mode === 'schedule' ? 'New Schedule' : 'New Task'),
+      startTime,
+      durationMinutes: Number(durationMinutes) || 45,
+      energy,
+      areas,
+      isSchedule: mode === 'schedule'
+    };
+    return detectScheduleCollisions({ candidate, tasks, schedules, date: targetDate });
+  }, [startTime, durationMinutes, plannedDate, title, energy, areas, mode, tasks, schedules]);
+
+  const collisionOptimalTime = useMemo(() => {
+    if (!collisionAlert?.hasCollision || !startTime) return null;
+    const targetDate = plannedDate || todayPlanDate();
+    const candidate = {
+      title: title.trim() || 'New Item',
+      startTime,
+      durationMinutes: Number(durationMinutes) || 45,
+      energy,
+      areas,
+      isSchedule: mode === 'schedule'
+    };
+    const res = findOptimalTimeGap({ candidate, tasks, schedules, date: targetDate });
+    return res?.suggestedTime && res.suggestedTime !== startTime ? res.suggestedTime : null;
+  }, [collisionAlert, startTime, durationMinutes, plannedDate, title, energy, areas, mode, tasks, schedules]);
+
   const repeatPillLabel = useMemo(() => {
-    if (repeatType === 'none') return 'Repeat: Never';
-    if (repeatType === 'daily') return 'Repeat: Daily';
-    if (repeatType === 'weekly') return 'Repeat: Weekly';
-    if (repeatType === 'monthly') return 'Repeat: Monthly';
-    if (repeatType === 'yearly') return 'Repeat: Yearly';
-    if (repeatType === 'custom') {
+    let base = 'Repeat: Never';
+    if (repeatType === 'daily') base = 'Repeat: Daily';
+    else if (repeatType === 'weekly') base = 'Repeat: Weekly';
+    else if (repeatType === 'monthly') base = 'Repeat: Monthly';
+    else if (repeatType === 'yearly') base = 'Repeat: Yearly';
+    else if (repeatType === 'custom') {
       const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      if (!repeatDays || repeatDays.length === 0) return 'Repeat: Custom';
-      if (repeatDays.length === 7) return 'Repeat: Every day';
-      if (repeatDays.length === 5 && [1, 2, 3, 4, 5].every(d => repeatDays.includes(d))) return 'Repeat: Weekdays';
-      if (repeatDays.length === 2 && [0, 6].every(d => repeatDays.includes(d))) return 'Repeat: Weekends';
-      return `Repeat: ${repeatDays.map(d => WEEKDAY_NAMES[d]).join(', ')}`;
+      if (!repeatDays || repeatDays.length === 0) base = 'Repeat: Custom';
+      else if (repeatDays.length === 7) base = 'Repeat: Every day';
+      else if (repeatDays.length === 5 && [1, 2, 3, 4, 5].every(d => repeatDays.includes(d))) base = 'Repeat: Weekdays';
+      else if (repeatDays.length === 2 && [0, 6].every(d => repeatDays.includes(d))) base = 'Repeat: Weekends';
+      else base = `Repeat: ${repeatDays.map(d => WEEKDAY_NAMES[d]).join(', ')}`;
     }
-    return 'Repeat: Never';
-  }, [repeatType, repeatDays]);
+    if (repeatType !== 'none' && recurrenceEndDate) {
+      return `${base} (till ${planDateLabel(recurrenceEndDate)})`;
+    }
+    return base;
+  }, [repeatType, repeatDays, recurrenceEndDate]);
 
   // Sync on modal open
   useEffect(() => {
     if (!isOpen) return;
-    const date = initialDate || '';
-    setPlannedDate(date === 'Tomorrow' ? tomorrowPlanDate() : date === 'Today' ? todayPlanDate() : date === 'Someday' ? '' : date ? date : '');
+    const date = initialDate !== undefined && initialDate !== null && initialDate !== '' ? initialDate : todayPlanDate();
+    setPlannedDate(date === 'Tomorrow' ? tomorrowPlanDate() : date === 'Today' ? todayPlanDate() : date === 'Someday' ? '' : date ? date : todayPlanDate());
     setDeadlineDate('');
     setDeadlineTime('');
     setStartTime(initialTime || '');
@@ -416,15 +456,26 @@ export default function QuickAddModal({
     setHabitId(initialHabitId || '');
     setRepeatType('none');
     setRepeatDays([1, 2, 3, 4, 5]);
+    setRecurrenceEndDate('');
     setAreas([]);
     setEnergy('Low');
+    setImpact('low');
     setSubtasks([]);
     setShowSubtasks(false);
     setNewSubtaskInput('');
     setActiveMenu(null);
     setAiFeedback(null);
     setShowApiKeyModal(false);
-  }, [isOpen, initialDate, initialGoalId, initialHabitId, initialTime]);
+
+    const initTitle = initialTitle || '';
+    setTitle(initTitle);
+    if (initTitle.trim()) {
+      const initParsed = parseNaturalTask(initTitle, goals, habits);
+      if (initParsed.hasDetected) {
+        applyExtractedDetails(initParsed.extracted, false);
+      }
+    }
+  }, [isOpen, initialDate, initialGoalId, initialHabitId, initialTime, initialTitle]);
 
   // Click outside to close popovers
   useEffect(() => {
@@ -494,6 +545,8 @@ export default function QuickAddModal({
       setAreas([data.category]);
     }
     if (data.energy) setEnergy(data.energy);
+    else if (data.effort) setEnergy(data.effort.charAt(0).toUpperCase() + data.effort.slice(1).toLowerCase());
+    if (data.impact) setImpact(data.impact);
     if (data.goalId) {
       setGoalId(data.goalId);
       if (!data.areas || data.areas.length === 0) {
@@ -504,6 +557,9 @@ export default function QuickAddModal({
       }
     }
     if (data.habitId || data.linkedHabitId) setHabitId(data.habitId || data.linkedHabitId);
+    if (data.recurrence) setRepeatType(data.recurrence);
+    if (Array.isArray(data.repeatDays) && data.repeatDays.length > 0) setRepeatDays(data.repeatDays);
+    if (data.recurrenceEndDate) setRecurrenceEndDate(data.recurrenceEndDate);
     if (Array.isArray(data.suggestedSubtasks) && data.suggestedSubtasks.length > 0) {
       setSubtasks(data.suggestedSubtasks.map((text, i) => ({
         id: `${Date.now()}-${i}`,
@@ -516,7 +572,7 @@ export default function QuickAddModal({
 
   const handleTitleChange = (val) => {
     setTitle(val);
-    const local = parseNaturalTask(val, goals);
+    const local = parseNaturalTask(val, goals, habits);
     if (local.hasDetected && local.confidence >= 0.5) {
       applyExtractedDetails(local.extracted, false);
     }
@@ -583,11 +639,50 @@ export default function QuickAddModal({
 
     const finalTitle = (latest.hasDetected && latest.cleanTitle) ? latest.cleanTitle : title.trim();
 
+    const untilExclusive = recurrenceEndDate ? (() => {
+      const d = new Date(`${recurrenceEndDate}T12:00:00`);
+      d.setDate(d.getDate() + 1);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    })() : null;
+
+    if (mode === 'schedule') {
+      const schedulePayload = {
+        id: `sched-${Date.now()}`,
+        title: finalTitle,
+        plannedDate: plannedDate || todayPlanDate(),
+        startTime: startTime || '09:00',
+        endTime: endTime || (startTime ? calculateEndTime(startTime, Number(durationMinutes) || 60) : '10:00'),
+        durationMinutes: Number(durationMinutes) || 60,
+        recurrence: repeatType !== 'none' ? repeatType : null,
+        repeatDays: repeatType === 'custom' ? repeatDays : null,
+        recurrenceEndDate: recurrenceEndDate || null,
+        recurrenceUntil: untilExclusive,
+        category: areas.length > 0 ? (LIFE_AREAS.find(a => a.label === areas[0] || a.id === areas[0])?.shortLabel || areas[0]) : 'College',
+        areas: areas.length > 0 ? areas : ['College'],
+        type: 'schedule'
+      };
+
+      if (onAddSchedule) {
+        onAddSchedule(schedulePayload);
+      } else if (onAddTask) {
+        onAddTask({ ...schedulePayload, isEvent: true });
+      }
+
+      setTitle('');
+      setActiveMenu(null);
+      onClose();
+      return;
+    }
+
     onAddTask({
       id: Date.now(),
       title: finalTitle,
       urgency: urgencyFromPlan(plannedDate),
       impact,
+      effort: energy ? energy.toLowerCase() : 'medium',
       priority: priorityFromImpact(impact),
       category: areas.length > 0 ? (LIFE_AREAS.find(a => a.label === areas[0] || a.id === areas[0])?.shortLabel || areas[0]) : '',
       areas: areas.length > 0 ? areas : [],
@@ -606,6 +701,8 @@ export default function QuickAddModal({
       habitId: habitId || null,
       recurrence: repeatType !== 'none' ? repeatType : null,
       repeatDays: repeatType === 'custom' ? repeatDays : null,
+      recurrenceEndDate: recurrenceEndDate || null,
+      recurrenceUntil: untilExclusive,
       completed: false,
       subtasks: subtasks.map((st, i) => ({ id: st.id || `${Date.now()}-${i}`, title: st.title, completed: false }))
     });
@@ -624,7 +721,6 @@ export default function QuickAddModal({
     ? 'Tomorrow'
     : plannedDate ? planDateLabel(plannedDate) : 'Pick a Date';
 
-  const currentEnergyObj = ENERGY_OPTIONS.find(e => e.id === energy) || ENERGY_OPTIONS[0];
   const matchedGoal = goals.find(g => g.id === goalId);
   const matchedHabit = habits.find(h => h.id === habitId);
 
@@ -645,15 +741,21 @@ export default function QuickAddModal({
         {/* ── Refined Apple-Style Header ── */}
         <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-black/[0.06] bg-[#FAFAFC]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#0A84FF] to-[#5E5CE6] flex items-center justify-center text-white shadow-xs">
-              <span className="material-symbols-outlined text-[17px]">add_task</span>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-xs transition-all ${
+              mode === 'schedule'
+                ? 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                : 'bg-gradient-to-br from-[#0A84FF] to-[#5E5CE6]'
+            }`}>
+              <span className="material-symbols-outlined text-[17px]">
+                {mode === 'schedule' ? 'calendar_month' : 'add_task'}
+              </span>
             </div>
             <div>
               <h3 id="quick-add-title" className="text-[15px] font-semibold text-[#1A1B1F] tracking-tight">
-                Quick Add
+                {mode === 'schedule' ? 'New Schedule Block' : 'Quick Add'}
               </h3>
               <p className="text-[11px] text-[#64748B]">
-                Capture and slot into your Momentum flow
+                {mode === 'schedule' ? 'Define recurring classes & fixed routine blocks' : 'Capture and slot into your Momentum flow'}
               </p>
             </div>
           </div>
@@ -664,6 +766,42 @@ export default function QuickAddModal({
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
+        </div>
+
+        {/* ── Mode Switcher: Action Task vs Fixed Schedule ── */}
+        <div className="px-4 sm:px-6 pt-3 pb-1 bg-[#FAFAFC] border-b border-black/[0.04]">
+          <div className="flex p-1 bg-[#EBEBF0] rounded-xl">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('task');
+                setActiveMenu(null);
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                mode === 'task'
+                  ? 'bg-white text-[#1A1B1F] shadow-xs'
+                  : 'text-[#64748B] hover:text-[#1A1B1F]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px] text-[#0A84FF]">task_alt</span>
+              <span>Action Task</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('schedule');
+                setActiveMenu(null);
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                mode === 'schedule'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-[#64748B] hover:text-indigo-700'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px] text-indigo-600">calendar_month</span>
+              <span>Fixed Schedule / Class</span>
+            </button>
+          </div>
         </div>
 
         {/* ── Form Body ── */}
@@ -683,39 +821,54 @@ export default function QuickAddModal({
           )}
           <div className="space-y-4">
             {/* Main Hero Input Card */}
-          <div className="rounded-2xl bg-[#F5F4FA] border border-black/[0.06] p-3.5 focus-within:bg-white focus-within:border-[#0A84FF]/60 focus-within:shadow-[0_0_0_3px_rgba(10,132,255,0.12)] transition-all">
+          <div className={`rounded-2xl bg-[#F5F4FA] border border-black/[0.06] p-3.5 focus-within:bg-white transition-all ${
+            mode === 'schedule'
+              ? 'focus-within:border-indigo-500/60 focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.12)]'
+              : 'focus-within:border-[#0A84FF]/60 focus-within:shadow-[0_0_0_3px_rgba(10,132,255,0.12)]'
+          }`}>
             <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-[#0A84FF]">
-                edit_note
+              <span className={`material-symbols-outlined text-[20px] ${mode === 'schedule' ? 'text-indigo-600' : 'text-[#0A84FF]'}`}>
+                {mode === 'schedule' ? 'school' : 'edit_note'}
               </span>
               <input
                 type="text"
                 autoFocus
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="What needs to happen? (e.g. Design hero tomorrow 2pm 45m)"
+                placeholder={mode === 'schedule' ? "What class or routine? (e.g. Operating Systems Lecture, Math Lab)" : "What needs to happen? (e.g. Design hero tomorrow 2pm 45m)"}
                 className="min-w-0 flex-1 text-[15px] font-semibold text-[#1A1B1F] placeholder:text-[#94A3B8] placeholder:font-normal bg-transparent outline-none tracking-tight"
               />
-              <button
-                type="button"
-                onClick={() => handleAiBreakdown()}
-                disabled={isAiParsing || !title.trim()}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold shadow-xs active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
-                  aiFeedback?.type === 'success'
-                    ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80'
-                    : aiFeedback?.type === 'error'
-                    ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80'
-                    : 'text-[#0A84FF] bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60'
-                }`}
-                title="Auto-fill details and break down subtasks"
-              >
-                <span className={`material-symbols-outlined text-[15px] ${isAiParsing ? 'animate-spin' : ''}`}>
-                  {isAiParsing ? 'progress_activity' : aiFeedback?.type === 'success' ? 'check' : aiFeedback?.type === 'error' ? 'error' : 'auto_awesome'}
-                </span>
-                <span>{isAiParsing ? 'Thinking…' : aiFeedback?.type === 'success' ? 'AI Filled' : 'AI Fill'}</span>
-              </button>
+              {mode === 'task' && (
+                <button
+                  type="button"
+                  onClick={() => handleAiBreakdown()}
+                  disabled={isAiParsing || !title.trim()}
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold shadow-xs active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                    aiFeedback?.type === 'success'
+                      ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80'
+                      : aiFeedback?.type === 'error'
+                      ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80'
+                      : 'text-[#0A84FF] bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60'
+                  }`}
+                  title="Auto-fill details and break down subtasks"
+                >
+                  <span className={`material-symbols-outlined text-[15px] ${isAiParsing ? 'animate-spin' : ''}`}>
+                    {isAiParsing ? 'progress_activity' : aiFeedback?.type === 'success' ? 'check' : aiFeedback?.type === 'error' ? 'error' : 'auto_awesome'}
+                  </span>
+                  <span>{isAiParsing ? 'Thinking…' : aiFeedback?.type === 'success' ? 'AI Filled' : 'AI Fill'}</span>
+                </button>
+              )}
             </div>
           </div>
+
+          {mode === 'schedule' && (
+            <div className="p-3 bg-indigo-50/75 border border-indigo-100/80 rounded-2xl flex items-center gap-2.5 text-xs text-indigo-900">
+              <span className="material-symbols-outlined text-[18px] text-indigo-600 shrink-0">info</span>
+              <span>
+                Fixed timetable blocks appear on your day timeline as dedicated routine blocks and won't count toward actionable tasks or completion metrics.
+              </span>
+            </div>
+          )}
 
           {/* AI Status Notification (Success / Failure feedback) */}
           {aiFeedback && (
@@ -755,7 +908,7 @@ export default function QuickAddModal({
           )}
 
           {/* Harmonious Detected Tags */}
-          {parsed.hasDetected && (
+          {mode === 'task' && parsed.hasDetected && (
             <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-0.5 animate-fadeIn">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-0.5">
                 Detected:
@@ -806,6 +959,225 @@ export default function QuickAddModal({
                 </button>
               )}
             </div>
+          )}
+
+          {/* ── Direct Interactive Sliders: Effort & Impact ── */}
+          {mode === 'task' && (
+          <div className="rounded-2xl bg-[#F8F9FC] border border-black/[0.06] p-3 sm:p-3.5 space-y-3 shadow-xs">
+            {/* Effort Slider (Low / Medium / High Strain) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`material-symbols-outlined text-[16px] ${
+                    energy === 'High' ? 'text-violet-600' : energy === 'Medium' ? 'text-blue-600' : 'text-emerald-600'
+                  }`}>
+                    {energy === 'High' ? 'psychology' : energy === 'Medium' ? 'bolt' : 'eco'}
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Effort</span>
+                </div>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                  energy === 'High'
+                    ? 'bg-violet-100 text-violet-700'
+                    : energy === 'Medium'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {energy}
+                </span>
+              </div>
+
+              {/* 3-Step Effort Slider */}
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="1"
+                value={energy === 'High' ? 3 : energy === 'Medium' ? 2 : 1}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setEnergy(val === 3 ? 'High' : val === 2 ? 'Medium' : 'Low');
+                }}
+                className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
+                  energy === 'High'
+                    ? 'accent-violet-600 bg-violet-100'
+                    : energy === 'Medium'
+                    ? 'accent-blue-600 bg-blue-100'
+                    : 'accent-emerald-600 bg-emerald-100'
+                }`}
+              />
+
+              {/* Effort Level Buttons */}
+              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                {[
+                  { id: 'Low', label: 'Low (1)', icon: 'eco' },
+                  { id: 'Medium', label: 'Medium (2)', icon: 'bolt' },
+                  { id: 'High', label: 'High (3)', icon: 'psychology' }
+                ].map((tier) => {
+                  const isSelected = energy === tier.id;
+                  return (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      onClick={() => setEnergy(tier.id)}
+                      className={`py-1.5 px-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                        isSelected
+                          ? tier.id === 'High'
+                            ? 'bg-violet-600 text-white shadow-xs'
+                            : tier.id === 'Medium'
+                            ? 'bg-[#0A84FF] text-white shadow-xs'
+                            : 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-white text-slate-600 hover:bg-slate-100 border border-black/[0.06]'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[14px]">{tier.icon}</span>
+                      <span>{tier.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Decoupled Duration Row (Time needed for this task) */}
+              <div className="pt-1.5 border-t border-black/[0.04] space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px] text-slate-400">schedule</span>
+                    Time Allocated
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-[#1A1B1F]">
+                      {isFlexible ? '~ Flexible (Untimed)' : formatDurationLabel(durationMinutes)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isFlexible) {
+                          setIsFlexible(false);
+                          setDurationMinutes(durationMinutes || 45);
+                          setHasSetDuration(true);
+                        } else {
+                          setIsFlexible(true);
+                          setDurationMinutes(null);
+                          setEndTime('');
+                          setHasSetDuration(true);
+                        }
+                      }}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition flex items-center gap-1 cursor-pointer ${
+                        isFlexible
+                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                          : 'bg-white text-[#64748B] hover:text-[#1A1B1F] border border-black/[0.06]'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[11px]">all_inclusive</span>
+                      <span>{isFlexible ? 'Flexible' : 'Flex'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1">
+                  {[15, 30, 45, 60, 90, 120].map((min) => {
+                    const isSelected = !isFlexible && durationMinutes === min;
+                    return (
+                      <button
+                        key={min}
+                        type="button"
+                        onClick={() => {
+                          setDurationMinutes(min);
+                          setIsFlexible(false);
+                          setHasSetDuration(true);
+                          if (startTime) setEndTime(calculateEndTime(startTime, min));
+                        }}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#0A84FF] text-white shadow-xs'
+                            : 'bg-white text-[#64748B] hover:bg-slate-100 border border-black/[0.06]'
+                        }`}
+                      >
+                        {min < 60 ? `${min}m` : min % 60 === 0 ? `${min / 60}h` : `${(min / 60).toFixed(1)}h`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px bg-black/[0.05]" />
+
+            {/* Impact Slider */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`material-symbols-outlined text-[16px] ${
+                    impact === 'high' ? 'text-rose-500' : impact === 'medium' ? 'text-amber-500' : 'text-slate-400'
+                  }`}>
+                    {impact === 'high' ? 'local_fire_department' : impact === 'medium' ? 'equalizer' : 'eco'}
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Impact</span>
+                </div>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                  impact === 'high'
+                    ? 'bg-rose-100 text-rose-700'
+                    : impact === 'medium'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-slate-100 text-slate-700'
+                }`}>
+                  {impact}
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="1"
+                value={impact === 'high' ? 3 : impact === 'medium' ? 2 : 1}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  const nextImpact = v === 3 ? 'high' : v === 2 ? 'medium' : 'low';
+                  setImpact(nextImpact);
+                  setEnergy(nextImpact === 'high' ? 'High' : nextImpact === 'medium' ? 'Medium' : 'Low');
+                }}
+                className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
+                  impact === 'high'
+                    ? 'accent-rose-500 bg-rose-100'
+                    : impact === 'medium'
+                    ? 'accent-amber-500 bg-amber-100'
+                    : 'accent-slate-500 bg-slate-200'
+                }`}
+              />
+
+              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                {[
+                  { id: 'low', label: 'Low (1)', icon: 'eco' },
+                  { id: 'medium', label: 'Medium (2)', icon: 'equalizer' },
+                  { id: 'high', label: 'High (3)', icon: 'local_fire_department' }
+                ].map((tier) => {
+                  const isSelected = impact === tier.id;
+                  return (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      onClick={() => {
+                        setImpact(tier.id);
+                        setEnergy(tier.id === 'high' ? 'High' : tier.id === 'medium' ? 'Medium' : 'Low');
+                      }}
+                      className={`py-1.5 px-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                        isSelected
+                          ? tier.id === 'high'
+                            ? 'bg-rose-500 text-white shadow-xs'
+                            : tier.id === 'medium'
+                            ? 'bg-amber-500 text-white shadow-xs'
+                            : 'bg-slate-700 text-white shadow-xs'
+                          : 'bg-white text-slate-600 hover:bg-slate-100 border border-black/[0.06]'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[14px]">{tier.icon}</span>
+                      <span>{tier.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
           )}
 
           {/* ── Lively & Mature Smart Pills Toolbar ── */}
@@ -954,10 +1326,50 @@ export default function QuickAddModal({
                     </span>
                   </div>
 
+                  {/* Interactive Effort / Duration Slider */}
+                  <div className="space-y-2 py-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px] text-indigo-500">timer</span>
+                        Effort Slider
+                      </span>
+                      <span className="text-[12px] font-bold text-indigo-600">
+                        {isFlexible ? '~ Flexible (Untimed)' : formatDurationLabel(durationMinutes)}
+                      </span>
+                    </div>
+
+                    <input
+                      type="range"
+                      min="15"
+                      max="240"
+                      step="15"
+                      disabled={isFlexible}
+                      value={isFlexible ? 45 : (durationMinutes || 45)}
+                      onChange={(e) => {
+                        const mins = Number(e.target.value);
+                        setDurationMinutes(mins);
+                        setIsFlexible(false);
+                        setHasSetDuration(true);
+                        if (startTime) {
+                          setEndTime(calculateEndTime(startTime, mins));
+                        }
+                      }}
+                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 disabled:opacity-40"
+                    />
+
+                    <div className="flex justify-between text-[10px] text-slate-400 font-medium px-0.5">
+                      <span>15m</span>
+                      <span>45m</span>
+                      <span>1.5h</span>
+                      <span>2.5h</span>
+                      <span>4h</span>
+                    </div>
+                  </div>
+
                   {/* Duration Presets */}
                   <div>
                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                      Duration Presets
+                      Quick Presets
                     </span>
                     <div className="grid grid-cols-4 gap-1.5">
                       {[15, 30, 45, 60, 90, 120, 180].map((min) => {
@@ -1114,8 +1526,12 @@ export default function QuickAddModal({
               )}
             </div>
 
-            {/* Area of Life Pill (Multi-select) */}
-            <div className="relative">
+
+            {/* Area of Life, Goal, and Habit Pills (Task only) */}
+            {mode === 'task' && (
+              <>
+                {/* Area of Life Pill (Multi-select) */}
+                <div className="relative">
               <button
                 type="button"
                 onClick={() => setActiveMenu(activeMenu === 'areas' ? null : 'areas')}
@@ -1189,36 +1605,6 @@ export default function QuickAddModal({
               )}
             </div>
 
-            {/* Energy Pill (Emerald Hue) */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setActiveMenu(activeMenu === 'energy' ? null : 'energy')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium bg-emerald-50/80 text-emerald-800 border border-emerald-200/80 hover:bg-emerald-100 shadow-xs transition"
-              >
-                <span className="material-symbols-outlined text-[15px] text-emerald-600">{currentEnergyObj.icon}</span>
-                <span>{currentEnergyObj.label}</span>
-                <span className="material-symbols-outlined text-[13px] opacity-60">expand_more</span>
-              </button>
-
-              {activeMenu === 'energy' && (
-                <div className="fixed inset-x-0 bottom-0 z-[70] max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-t-[28px] border border-black/[0.08] bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-16px_56px_rgba(0,0,0,0.2)] space-y-0.5 animate-fadeIn sm:absolute sm:left-0 sm:right-auto sm:top-full sm:bottom-auto sm:z-20 sm:mt-1.5 sm:w-40 sm:max-h-none sm:rounded-xl sm:p-1 sm:shadow-xl">
-                  {ENERGY_OPTIONS.map(opt => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => { setEnergy(opt.id); setActiveMenu(null); }}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[12px] flex items-center gap-2 ${
-                        energy === opt.id ? 'bg-[#0A84FF] text-white font-medium' : 'text-[#1A1B1F] hover:bg-[#F5F4FA]'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[15px]">{opt.icon}</span>
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Goal Pill (Purple Hue) */}
             <div className="relative">
@@ -1321,6 +1707,8 @@ export default function QuickAddModal({
                 </div>
               )}
             </div>
+            </>
+            )}
 
             {/* Repeat / Recurrence Pill */}
             <div className="relative">
@@ -1494,6 +1882,7 @@ export default function QuickAddModal({
           </div>
 
           {/* ── Optional Subtasks Section ── */}
+          {mode === 'task' && (
           <div className="pt-1">
             {!showSubtasks && subtasks.length === 0 ? (
               <button
@@ -1567,27 +1956,61 @@ export default function QuickAddModal({
               </div>
             )}
           </div>
+          )}
         </div>
+
+        {/* ── Schedule Collision Guard Warning Banner ── */}
+        {collisionAlert?.hasCollision && (
+          <div className={`mt-2 mb-1 p-2.5 rounded-xl border flex items-center justify-between text-[11px] transition-all animate-fadeIn ${
+            collisionAlert.riskLevel === 'hard'
+              ? 'bg-rose-50/90 border-rose-200/80 text-rose-800'
+              : 'bg-amber-50/90 border-amber-200/80 text-amber-900'
+          }`}>
+            <div className="flex items-center gap-1.5 min-w-0 pr-2">
+              <span className="material-symbols-outlined text-[16px] shrink-0">
+                {collisionAlert.riskLevel === 'hard' ? 'warning' : 'timelapse'}
+              </span>
+              <span className="truncate font-medium">{collisionAlert.explanation}</span>
+            </div>
+            {collisionOptimalTime && (
+              <button
+                type="button"
+                onClick={() => setStartTime(collisionOptimalTime)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold shrink-0 cursor-pointer transition shadow-xs ${
+                  collisionAlert.riskLevel === 'hard'
+                    ? 'bg-rose-600 text-white hover:bg-rose-700'
+                    : 'bg-amber-600 text-white hover:bg-amber-700'
+                }`}
+              >
+                Shift to {collisionOptimalTime}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ── Footer ── */}
         <div className="pt-3 flex items-center justify-between border-t border-black/[0.05] mt-auto">
             <span className="text-[11px] text-[#94A3B8] font-medium hidden sm:inline">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-[#F5F4FA] border border-black/[0.08] font-mono text-[10px] text-slate-600">↵</kbd> to add task
+              Press <kbd className="px-1.5 py-0.5 rounded bg-[#F5F4FA] border border-black/[0.08] font-mono text-[10px] text-slate-600">↵</kbd> to {mode === 'schedule' ? 'add schedule' : 'add task'}
             </span>
             <div className="flex items-center gap-2 ml-auto">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3.5 py-1.5 rounded-xl text-[13px] font-medium text-[#64748B] hover:text-[#1A1B1F] hover:bg-black/5 transition"
+                className="px-3.5 py-1.5 rounded-xl text-[13px] font-medium text-[#64748B] hover:text-[#1A1B1F] hover:bg-black/5 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!title.trim()}
-                className="px-5 py-2 rounded-xl text-[13px] font-semibold bg-[#0A84FF] hover:bg-[#0071E3] text-white shadow-sm shadow-blue-500/25 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`px-5 py-2 rounded-xl text-[13px] font-semibold text-white shadow-sm active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                  mode === 'schedule'
+                    ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/25'
+                    : 'bg-[#0A84FF] hover:bg-[#0071E3] shadow-blue-500/25'
+                }`}
               >
-                Add Task
+                {mode === 'schedule' ? 'Add Schedule Block' : 'Add Task'}
               </button>
             </div>
           </div>

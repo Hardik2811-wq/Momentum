@@ -5,3 +5,6 @@ dist/
 !.env.example
 mcp_config.local.json
 graphify-out/
+*.ps1
+patch_dashboard*.py
+test_ollama.js

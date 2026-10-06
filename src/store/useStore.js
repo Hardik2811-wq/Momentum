@@ -1,8 +1,13 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js';
 import { purgeLegacyGroqKey } from '../lib/groqClient.js';
-import { resetNlpMemory } from '../lib/nlpMemory.js';
+import { resetNlpMemory, learnFromTaskSave, learnFromGoalSave, learnFromHabitSave } from '../lib/nlpMemory.js';
 import { planDateLabel, taskPlanDate, todayPlanDate } from '../lib/taskMetadata.js';
+import { detectScheduleCollisions, findOptimalTimeGap } from '../lib/scheduleCollisionGuard.js';
+import { computeHabitDecayMetrics, getHabitsAtRisk } from '../lib/habitDecayGuard.js';
+import { evaluateCapacityLoad } from '../lib/capacityOverloadGuard.js';
+import { buildLifeGraph } from '../lib/lifeGraph.js';
+import { getCavemanMetrics } from '../lib/cavemanCompressor.js';
 
 /* ── localStorage wrapper ── */
 function useLocalStorage(key, defaultValue) {
@@ -386,6 +391,7 @@ export default function useStore() {
   const [reflections, setReflections] = useLocalStorage('momentum_reflections', DEFAULT_REFLECTIONS);
   const [settings, setSettings] = useLocalStorage('momentum_settings', DEFAULT_SETTINGS);
   const [focusSessions, setFocusSessions] = useLocalStorage('momentum_focus_sessions', []);
+  const [schedules, setSchedules] = useLocalStorage('momentum_schedules', []);
   const [cloudUserId, setCloudUserId] = useState(null);
   const [cloudReady, setCloudReady] = useState(!isSupabaseConfigured);
   const cloudLoadRef = useRef(false);
@@ -642,7 +648,9 @@ export default function useStore() {
   /* Tasks Actions */
   const addTask = useCallback((task) => {
     const newId = task.id || Date.now();
-    setTasks(prev => [{ ...task, id: newId, createdAt: task.createdAt || Date.now() }, ...prev]);
+    const fullTask = { ...task, id: newId, createdAt: task.createdAt || Date.now() };
+    setTasks(prev => [fullTask, ...prev]);
+    learnFromTaskSave(fullTask);
     showToast(`Task added: "${task.title}"`);
     return newId;
   }, [setTasks, showToast]);
@@ -738,7 +746,17 @@ export default function useStore() {
   }, [tasks, setTasks, showToast]);
 
   const updateTask = useCallback((id, patch) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
+    setTasks(prev => {
+      const updated = prev.map(t => {
+        if (t.id === id) {
+          const merged = { ...t, ...patch };
+          learnFromTaskSave(merged);
+          return merged;
+        }
+        return t;
+      });
+      return updated;
+    });
     showToast('Task updated');
   }, [setTasks, showToast]);
 
@@ -766,6 +784,67 @@ export default function useStore() {
     });
   }, [setTasks]);
 
+  const moveTaskToBacklog = useCallback((id) => {
+    setTasks(prev => {
+      const updated = prev.map(t => {
+        if (String(t.id) === String(id)) {
+          const merged = {
+            ...t,
+            plannedDate: null,
+            date: null,
+            dueDate: 'Someday',
+            startTime: null,
+            endTime: null,
+            isBacklog: true
+          };
+          learnFromTaskSave(merged);
+          return merged;
+        }
+        return t;
+      });
+      return updated;
+    });
+    showToast('Task moved to backlog');
+  }, [setTasks, showToast]);
+
+  const sweepMissedTasksToBacklog = useCallback((taskIds = []) => {
+    if (!taskIds.length) return;
+    const targetSet = new Set(taskIds.map(String));
+    setTasks(prev => prev.map(t => targetSet.has(String(t.id)) ? {
+      ...t,
+      plannedDate: null,
+      date: null,
+      dueDate: 'Someday',
+      startTime: null,
+      endTime: null,
+      isBacklog: true
+    } : t));
+    showToast(`${taskIds.length} tasks moved to backlog`);
+  }, [setTasks, showToast]);
+
+  /* Schedule / Timetable Actions */
+  const addSchedule = useCallback((sched) => {
+    const newId = sched.id || `sched-${Date.now()}`;
+    const fullSched = {
+      ...sched,
+      id: newId,
+      createdAt: sched.createdAt || Date.now(),
+      type: 'schedule'
+    };
+    setSchedules(prev => [fullSched, ...prev]);
+    showToast(`Schedule added: "${sched.title}"`);
+    return newId;
+  }, [setSchedules, showToast]);
+
+  const updateSchedule = useCallback((id, patch) => {
+    setSchedules(prev => prev.map(s => String(s.id) === String(id) ? { ...s, ...patch } : s));
+  }, [setSchedules]);
+
+  const deleteSchedule = useCallback((id) => {
+    setSchedules(prev => prev.filter(s => String(s.id) !== String(id)));
+    showToast('Schedule block removed');
+  }, [setSchedules, showToast]);
+
   /* Goals Actions */
   const addGoal = useCallback((goalData) => {
     const newId = 'g' + Date.now();
@@ -781,6 +860,7 @@ export default function useStore() {
     };
 
     setGoals(prev => [...prev, createdGoal]);
+    learnFromGoalSave(createdGoal);
 
     // If initial tasks provided, auto-create linked tasks in Planner
     if (Array.isArray(initialTasks) && initialTasks.length > 0) {
@@ -802,6 +882,7 @@ export default function useStore() {
         });
       if (formattedTasks.length > 0) {
         setTasks(prev => [...formattedTasks, ...prev]);
+        formattedTasks.forEach(ft => learnFromTaskSave(ft));
       }
     }
 
@@ -811,6 +892,9 @@ export default function useStore() {
 
   const updateGoal = useCallback((id, patch) => {
     const target = goals.find(g => String(g.id) === String(id));
+    if (target) {
+      learnFromGoalSave({ ...target, ...patch });
+    }
     setGoals(prev => prev.map(g => String(g.id) === String(id) ? { ...g, ...patch } : g));
     if (patch.title && target && patch.title !== target.title) {
       setHabits(prev => prev.map(h => {
@@ -878,18 +962,24 @@ export default function useStore() {
 
   const addHabit = useCallback((habit) => {
     const newId = habit.id || ('h' + Date.now());
-    setHabits(prev => [...prev, {
+    const newHabit = {
       completedDays: [],
       graceDays: habit.graceDays ?? 1,
       colorToken: habit.colorToken || 'primary',
       ...habit,
       id: newId
-    }]);
+    };
+    setHabits(prev => [...prev, newHabit]);
+    learnFromHabitSave(newHabit);
     showToast(`Habit added: "${habit.title}"`);
     return newId;
   }, [setHabits, showToast]);
 
   const updateHabit = useCallback((id, patch) => {
+    const target = habits.find(h => h.id === id);
+    if (target) {
+      learnFromHabitSave({ ...target, ...patch });
+    }
     setHabits(prev => prev.map(h => h.id === id ? { ...h, ...patch } : h));
     showToast('Habit updated');
   }, [setHabits, showToast]);
@@ -1022,16 +1112,18 @@ export default function useStore() {
     setTasks(DEFAULT_TASKS);
     setGoals(DEFAULT_GOALS);
     setHabits(DEFAULT_HABITS);
+    setSchedules([]);
     setReflections(DEFAULT_REFLECTIONS);
     setSettings(DEFAULT_SETTINGS);
     setFocusSessions([]);
     showToast('All data reset to initial baseline');
-  }, [setTasks, setGoals, setHabits, setReflections, setSettings, setFocusSessions, showToast]);
+  }, [setTasks, setGoals, setHabits, setSchedules, setReflections, setSettings, setFocusSessions, showToast]);
 
   const clearAllData = useCallback(() => {
     setTasks([]);
     setGoals([]);
     setHabits([]);
+    setSchedules([]);
     setFocusSessions([]);
     setReflections({
       currentWeek: '2026-W37',
@@ -1245,8 +1337,36 @@ export default function useStore() {
     };
   }, [tasks, reactiveGoals, habits, focusSessions]);
 
+  // Advanced Intelligence Graphs & Guards
+  const lifeGraph = useMemo(() => {
+    return buildLifeGraph({ tasks, goals: reactiveGoals, habits, schedules });
+  }, [tasks, reactiveGoals, habits, schedules]);
+
+  const capacityLoad = useMemo(() => {
+    return evaluateCapacityLoad({
+      tasks,
+      schedules,
+      date: todayPlanDate(),
+      dailyTargetHours: settings.dailyTarget || 6.0
+    });
+  }, [tasks, schedules, settings.dailyTarget]);
+
+  const habitsAtRisk = useMemo(() => {
+    return getHabitsAtRisk(habits, todayPlanDate());
+  }, [habits]);
+
+  const checkScheduleCollisions = useCallback((candidate, date = todayPlanDate()) => {
+    return detectScheduleCollisions({ candidate, tasks, schedules, date });
+  }, [tasks, schedules]);
+
+  const getSuggestedTimeGap = useCallback((candidate, date = todayPlanDate()) => {
+    return findOptimalTimeGap({ candidate, tasks, schedules, date });
+  }, [tasks, schedules]);
+
   return {
     tasks, addTask, updateTask, toggleTask, deleteTask, toggleSubtask, reorderTasks,
+    moveTaskToBacklog, sweepMissedTasksToBacklog,
+    schedules, addSchedule, updateSchedule, deleteSchedule,
     goals: reactiveGoals, addGoal, updateGoal, updateGoalProgress, deleteGoal,
     habits, checkInHabit, addHabit, updateHabit, deleteHabit, useGraceDay,
     reflections, updateReflection, saveWeeklyReview,
@@ -1263,9 +1383,28 @@ export default function useStore() {
       resetTimer,
       switchTimerMode,
       setTimerTaskId
-    }
+    },
+    // Quantum Intelligence Guards & Engines
+    lifeGraph,
+    capacityLoad,
+    habitsAtRisk,
+    checkScheduleCollisions,
+    getSuggestedTimeGap,
+    getCavemanMetrics
   };
 }
 
 /* Re-export helpers */
-export { calcStreak, last7Days, todayKey, DAY_LABELS };
+export {
+  calcStreak,
+  last7Days,
+  todayKey,
+  DAY_LABELS,
+  detectScheduleCollisions,
+  findOptimalTimeGap,
+  computeHabitDecayMetrics,
+  getHabitsAtRisk,
+  evaluateCapacityLoad,
+  buildLifeGraph,
+  getCavemanMetrics
+};

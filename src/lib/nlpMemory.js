@@ -38,6 +38,12 @@ const DEFAULT_MEMORY = {
     'workout': { areas: ['Health & Vitality', 'Habit Consistency'], energy: 'High', durationMinutes: 45, count: 1 }
   },
   learnedExemplars: [],
+  learnedGoalAssociations: {},
+  learnedHabitAssociations: {},
+  learnedAreaAssociations: {},
+  learnedImpactAssociations: {},
+  learnedEffortAssociations: {},
+  learnedHabitMetadata: {},
   metrics: {
     totalQueries: 0,
     localHits: 0,
@@ -125,6 +131,9 @@ export function queryLearnedMemory(text = '') {
       if (entry.areas) inferred.areas = entry.areas;
       if (entry.energy) inferred.energy = entry.energy;
       if (entry.durationMinutes && !inferred.durationMinutes) inferred.durationMinutes = entry.durationMinutes;
+      if (entry.impact && !inferred.impact) inferred.impact = entry.impact;
+      if (entry.goalId && !inferred.goalId) inferred.goalId = entry.goalId;
+      if (entry.habitId && !inferred.habitId) inferred.habitId = entry.habitId;
       matched = true;
       source = 'verb';
       confidenceBoost = Math.max(confidenceBoost, 0.45);
@@ -132,8 +141,104 @@ export function queryLearnedMemory(text = '') {
     }
   }
 
-  // 2. Check learned exemplars
-  if (!matched && memory.learnedExemplars && memory.learnedExemplars.length > 0) {
+  // 2. Check learned goal associations
+  if (memory.learnedGoalAssociations) {
+    for (const candidate of candidates) {
+      if (memory.learnedGoalAssociations[candidate]) {
+        const goalEntry = memory.learnedGoalAssociations[candidate];
+        if (!inferred.goalId && goalEntry.goalId) {
+          inferred.goalId = goalEntry.goalId;
+          inferred.goalTitle = goalEntry.goalTitle;
+          if (goalEntry.category && !inferred.areas) {
+            inferred.areas = [goalEntry.category];
+          }
+          matched = true;
+          source = source || 'goal_association';
+          confidenceBoost = Math.max(confidenceBoost, 0.4);
+        }
+      }
+    }
+  }
+
+  // 3. Check learned habit associations
+  if (memory.learnedHabitAssociations) {
+    for (const candidate of candidates) {
+      if (memory.learnedHabitAssociations[candidate]) {
+        const habitEntry = memory.learnedHabitAssociations[candidate];
+        if (!inferred.habitId && habitEntry.habitId) {
+          inferred.habitId = habitEntry.habitId;
+          inferred.linkedHabitId = habitEntry.habitId;
+          inferred.habitTitle = habitEntry.habitTitle;
+          matched = true;
+          source = source || 'habit_association';
+          confidenceBoost = Math.max(confidenceBoost, 0.4);
+        }
+      }
+    }
+  }
+
+  // 4. Check learned area associations
+  if (memory.learnedAreaAssociations && !inferred.areas) {
+    for (const candidate of candidates) {
+      if (memory.learnedAreaAssociations[candidate]) {
+        inferred.areas = [memory.learnedAreaAssociations[candidate].area];
+        matched = true;
+        source = source || 'area_association';
+        confidenceBoost = Math.max(confidenceBoost, 0.35);
+        break;
+      }
+    }
+  }
+
+  // 5. Check learned impact associations
+  if (memory.learnedImpactAssociations && !inferred.impact) {
+    for (const candidate of candidates) {
+      if (memory.learnedImpactAssociations[candidate]) {
+        inferred.impact = memory.learnedImpactAssociations[candidate].impact;
+        matched = true;
+        source = source || 'impact_association';
+        confidenceBoost = Math.max(confidenceBoost, 0.3);
+        break;
+      }
+    }
+  }
+
+  // 6. Check learned effort associations
+  if (memory.learnedEffortAssociations) {
+    for (const candidate of candidates) {
+      if (memory.learnedEffortAssociations[candidate]) {
+        const effEntry = memory.learnedEffortAssociations[candidate];
+        if (!inferred.durationMinutes && effEntry.durationMinutes) {
+          inferred.durationMinutes = effEntry.durationMinutes;
+        }
+        if (!inferred.energy && effEntry.energy) {
+          inferred.energy = effEntry.energy;
+        }
+        matched = true;
+        source = source || 'effort_association';
+        confidenceBoost = Math.max(confidenceBoost, 0.3);
+        break;
+      }
+    }
+  }
+
+  // 7. Check learned habit metadata (icon, cadence, duration)
+  if (memory.learnedHabitMetadata) {
+    for (const candidate of candidates) {
+      if (memory.learnedHabitMetadata[candidate]) {
+        const hMeta = memory.learnedHabitMetadata[candidate];
+        if (hMeta.icon) inferred.habitIcon = hMeta.icon;
+        if (hMeta.cadence) inferred.habitCadence = hMeta.cadence;
+        if (hMeta.duration) inferred.habitDuration = hMeta.duration;
+        matched = true;
+        source = source || 'habit_metadata';
+        break;
+      }
+    }
+  }
+
+  // 8. Check learned exemplars
+  if (memory.learnedExemplars && memory.learnedExemplars.length > 0) {
     const inputWords = new Set(candidates);
     for (const exemplar of memory.learnedExemplars) {
       const exemplarWords = exemplar.keywords || [];
@@ -141,12 +246,15 @@ export function queryLearnedMemory(text = '') {
       const overlapRatio = exemplarWords.length > 0 ? common.length / exemplarWords.length : 0;
 
       if (overlapRatio >= 0.5) {
-        if (exemplar.areas) inferred.areas = exemplar.areas;
-        if (exemplar.energy) inferred.energy = exemplar.energy;
-        if (exemplar.durationMinutes) inferred.durationMinutes = exemplar.durationMinutes;
-        if (exemplar.urgency) inferred.urgency = exemplar.urgency;
+        if (!inferred.areas && exemplar.areas) inferred.areas = exemplar.areas;
+        if (!inferred.energy && exemplar.energy) inferred.energy = exemplar.energy;
+        if (!inferred.durationMinutes && exemplar.durationMinutes) inferred.durationMinutes = exemplar.durationMinutes;
+        if (!inferred.urgency && exemplar.urgency) inferred.urgency = exemplar.urgency;
+        if (!inferred.impact && exemplar.impact) inferred.impact = exemplar.impact;
+        if (!inferred.goalId && exemplar.goalId) inferred.goalId = exemplar.goalId;
+        if (!inferred.habitId && exemplar.habitId) inferred.habitId = exemplar.habitId;
         matched = true;
-        source = 'exemplar';
+        source = source || 'exemplar';
         confidenceBoost = Math.max(confidenceBoost, 0.55);
         break;
       }
@@ -159,6 +267,162 @@ export function queryLearnedMemory(text = '') {
     inferred,
     source
   };
+}
+
+export function learnFromTaskSave(task = {}) {
+  if (!task || !task.title || typeof task.title !== 'string') return;
+  const memory = getNlpMemory();
+  const candidates = extractActionCandidates(task.title);
+  const words = candidates.filter(w => !['the', 'and', 'for', 'with', 'before', 'after', 'today', 'tomorrow'].includes(w));
+  if (words.length === 0) return;
+
+  const bestAction = words[0];
+  const existing = memory.learnedVerbs[bestAction] || {};
+  const areas = Array.isArray(task.areas) && task.areas.length ? task.areas : (task.category ? [task.category] : existing.areas);
+
+  memory.learnedVerbs[bestAction] = {
+    areas: areas || existing.areas || ['Career & Craft'],
+    energy: task.energy || existing.energy || 'Medium',
+    durationMinutes: task.durationMinutes || existing.durationMinutes || 45,
+    impact: task.impact || existing.impact || 'medium',
+    goalId: task.goalId || existing.goalId || null,
+    habitId: task.linkedHabitId || task.habitId || existing.habitId || null,
+    count: (existing.count || 0) + 1
+  };
+
+  // Associate keywords with area if present
+  if (areas && areas.length > 0) {
+    if (!memory.learnedAreaAssociations) memory.learnedAreaAssociations = {};
+    for (const w of words.slice(0, 4)) {
+      memory.learnedAreaAssociations[w] = {
+        area: areas[0],
+        count: ((memory.learnedAreaAssociations[w]?.count) || 0) + 1
+      };
+    }
+  }
+
+  // Associate keywords with impact if set
+  if (task.impact) {
+    if (!memory.learnedImpactAssociations) memory.learnedImpactAssociations = {};
+    for (const w of words.slice(0, 4)) {
+      memory.learnedImpactAssociations[w] = {
+        impact: task.impact,
+        count: ((memory.learnedImpactAssociations[w]?.count) || 0) + 1
+      };
+    }
+  }
+
+  // Associate keywords with effort/energy & duration if set
+  const taskEnergy = task.energy || (task.effort ? (task.effort.charAt(0).toUpperCase() + task.effort.slice(1).toLowerCase()) : null);
+  if (task.durationMinutes || taskEnergy) {
+    if (!memory.learnedEffortAssociations) memory.learnedEffortAssociations = {};
+    for (const w of words.slice(0, 4)) {
+      const prev = memory.learnedEffortAssociations[w];
+      const prevCount = prev?.count || 0;
+      const newDur = task.durationMinutes ? (prev && prev.durationMinutes ? Math.round((prev.durationMinutes * prevCount + task.durationMinutes) / (prevCount + 1)) : task.durationMinutes) : (prev?.durationMinutes || null);
+      memory.learnedEffortAssociations[w] = {
+        durationMinutes: newDur,
+        energy: taskEnergy || prev?.energy || 'Medium',
+        count: prevCount + 1
+      };
+    }
+  }
+
+  // Associate keywords with goal if goal is linked
+  if (task.goalId) {
+    if (!memory.learnedGoalAssociations) memory.learnedGoalAssociations = {};
+    for (const w of words.slice(0, 4)) {
+      memory.learnedGoalAssociations[w] = {
+        goalId: task.goalId,
+        count: ((memory.learnedGoalAssociations[w]?.count) || 0) + 1
+      };
+    }
+  }
+
+  // Associate keywords with habit if habit is linked
+  if (task.linkedHabitId || task.habitId) {
+    const hId = task.linkedHabitId || task.habitId;
+    if (!memory.learnedHabitAssociations) memory.learnedHabitAssociations = {};
+    for (const w of words.slice(0, 4)) {
+      memory.learnedHabitAssociations[w] = {
+        habitId: hId,
+        count: ((memory.learnedHabitAssociations[w]?.count) || 0) + 1
+      };
+    }
+  }
+
+  // Update exemplar
+  if (words.length >= 2) {
+    const keywords = words.slice(0, 4);
+    const exemplar = {
+      keywords,
+      areas: areas || null,
+      energy: task.energy || 'Medium',
+      durationMinutes: task.durationMinutes || 45,
+      impact: task.impact || 'medium',
+      goalId: task.goalId || null,
+      habitId: task.linkedHabitId || task.habitId || null,
+      learnedAt: Date.now()
+    };
+    if (!memory.learnedExemplars) memory.learnedExemplars = [];
+    memory.learnedExemplars.unshift(exemplar);
+    if (memory.learnedExemplars.length > 100) memory.learnedExemplars.pop();
+  }
+
+  memory.metrics.learnedCount = Object.keys(memory.learnedVerbs).length;
+  saveNlpMemory(memory);
+}
+
+export function learnFromGoalSave(goal = {}) {
+  if (!goal || !goal.title || !goal.id) return;
+  const memory = getNlpMemory();
+  const candidates = extractActionCandidates(goal.title);
+  const words = candidates.filter(w => !['the', 'and', 'for', 'with', 'goal', 'project'].includes(w));
+  if (!memory.learnedGoalAssociations) memory.learnedGoalAssociations = {};
+  if (!memory.learnedAreaAssociations) memory.learnedAreaAssociations = {};
+
+  const cat = goal.category || (Array.isArray(goal.categories) ? goal.categories[0] : null);
+  const areaName = cat === 'health' ? 'Health & Vitality' : cat === 'creative' ? 'Creative & Expression' : cat === 'finance' ? 'Personal & Life' : 'Career & Craft';
+
+  for (const w of words) {
+    memory.learnedGoalAssociations[w] = {
+      goalId: goal.id,
+      goalTitle: goal.title,
+      category: cat,
+      count: ((memory.learnedGoalAssociations[w]?.count) || 0) + 2
+    };
+    if (cat) {
+      memory.learnedAreaAssociations[w] = {
+        area: areaName,
+        count: ((memory.learnedAreaAssociations[w]?.count) || 0) + 2
+      };
+    }
+  }
+  saveNlpMemory(memory);
+}
+
+export function learnFromHabitSave(habit = {}) {
+  if (!habit || !habit.title || !habit.id) return;
+  const memory = getNlpMemory();
+  const candidates = extractActionCandidates(habit.title);
+  const words = candidates.filter(w => !['the', 'and', 'for', 'with', 'habit', 'daily'].includes(w));
+  if (!memory.learnedHabitAssociations) memory.learnedHabitAssociations = {};
+  if (!memory.learnedHabitMetadata) memory.learnedHabitMetadata = {};
+
+  for (const w of words) {
+    memory.learnedHabitAssociations[w] = {
+      habitId: habit.id,
+      habitTitle: habit.title,
+      count: ((memory.learnedHabitAssociations[w]?.count) || 0) + 2
+    };
+    memory.learnedHabitMetadata[w] = {
+      icon: habit.icon || 'repeat',
+      cadence: habit.cadence || 'Anytime',
+      duration: habit.duration || '30 mins',
+      count: ((memory.learnedHabitMetadata[w]?.count) || 0) + 2
+    };
+  }
+  saveNlpMemory(memory);
 }
 
 export function harvestApiResult(rawInput = '', apiOutput = {}, options = {}) {

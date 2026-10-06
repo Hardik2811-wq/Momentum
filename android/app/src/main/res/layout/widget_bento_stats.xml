@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_bento_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_industrial"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/label_momentum"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:text="MOMENTUM_INDEX"
+        android:fontFamily="sans-serif-condensed"
+        android:textColor="#777777"
+        android:textSize="8sp"
+        android:letterSpacing="0.2"
+        android:textStyle="bold" />
+
+    <!-- Circular progress ring (bitmap drawn in Java) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/label_momentum"
+        android:layout_above="@+id/bento_subtext"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp">
+
+        <ImageView
+            android:id="@+id/bento_ring"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter" />
+
+        <TextView
+            android:id="@+id/bento_stats_percent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="80%"
+            android:fontFamily="sans-serif-black"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:includeFontPadding="false" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/bento_subtext"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:text="STATUS: NOMINAL"
+        android:fontFamily="sans-serif-condensed"
+        android:textColor="#555555"
+        android:letterSpacing="0.1"
+        android:textSize="8sp"
+        android:textStyle="bold" />
+</RelativeLayout>

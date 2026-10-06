@@ -42,7 +42,10 @@ import {
   legacyDueDateForPlan,
   isTaskScheduledForDate
 } from '../lib/taskMetadata';
+import { parseNaturalTask } from '../lib/nlpParser';
 import { LIFE_AREAS } from '../lib/lifeAreas';
+import { evaluateCapacityLoad } from '../lib/capacityOverloadGuard';
+import { getHabitsAtRisk } from '../lib/habitDecayGuard';
 
 /* ── Date Helpers ── */
 function shiftDateStr(dateStr, days) {
@@ -111,7 +114,10 @@ const TodayView = React.memo(function TodayView({
   onOpenQuickAdd,
   goals = [],
   habits = [],
-  onStartFocus
+  schedules = [],
+  onDeleteSchedule,
+  onStartFocus,
+  onCheckInHabit
 }) {
   const [viewDate, setViewDate] = useState(() => todayPlanDate());
   const [scope, setScope] = useState('day'); // 'day' | '3day' | 'week'
@@ -369,6 +375,11 @@ const TodayView = React.memo(function TodayView({
     setNewTrayTaskTitle('');
   };
 
+  const trayNlpPreview = useMemo(() => {
+    if (!newTrayTaskTitle.trim() || newTrayTaskTitle.trim().length < 3) return null;
+    return parseNaturalTask(newTrayTaskTitle, goals, habits);
+  }, [newTrayTaskTitle, goals, habits]);
+
   /* ── Tray Tasks Filter ── */
   const trayTasks = useMemo(() => {
     const today = todayPlanDate();
@@ -527,6 +538,21 @@ const TodayView = React.memo(function TodayView({
 
   const targetMinutesInView = columnDates.length * 360; // 6h budget per day
   const capacityPercent = Math.min(100, Math.round((totalScheduledMinutesInView / (targetMinutesInView || 1)) * 100));
+
+  // Advanced Cognitive Capacity Load (Kingman Queuing & Thermodynamic entropy)
+  const capacityAnalytics = useMemo(() => {
+    return evaluateCapacityLoad({
+      tasks,
+      schedules,
+      date: viewDate,
+      dailyTargetHours: 6.0
+    });
+  }, [tasks, schedules, viewDate]);
+
+  // Habit Decay Guard: identify habits at risk of decaying
+  const habitsAtRiskList = useMemo(() => {
+    return getHabitsAtRisk(habits, viewDate);
+  }, [habits, viewDate]);
 
   /* ── Live Laser Ruler Coordinates ── */
   const startDayMinutes = START_HOUR * 60;
@@ -773,6 +799,64 @@ const TodayView = React.memo(function TodayView({
           )}
         </div>
 
+        {/* ── Habit Decay Warning Alert ── */}
+        {habitsAtRiskList.length > 0 && (
+          <div className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 text-[12px] shadow-2xs animate-fadeIn">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[15px]">trending_down</span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-amber-950">Habit Decay Warning:</span>
+                  <span className="font-semibold text-amber-900">"{habitsAtRiskList[0].title}"</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200/80 text-amber-900 font-mono">
+                    {Math.round(habitsAtRiskList[0].survivalProb * 100)}% survival
+                  </span>
+                </div>
+                <div className="text-[11px] text-amber-800/90 truncate">
+                  <span className="font-medium">Minimum Viable Recovery: </span>
+                  <span>{habitsAtRiskList[0].mvrSuggestion}</span>
+                </div>
+              </div>
+            </div>
+            {onCheckInHabit && (
+              <button
+                type="button"
+                onClick={() => onCheckInHabit(habitsAtRiskList[0].id, viewDate)}
+                className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-amber-600 text-white hover:bg-amber-700 transition active:scale-95 shrink-0 shadow-xs cursor-pointer"
+              >
+                Log 2m Micro-rep
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Capacity Overload Guard Alert ── */}
+        {capacityAnalytics.isOverloaded && (
+          <div className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-rose-50/90 border border-rose-200/80 text-[12px] text-rose-950 shadow-2xs animate-fadeIn">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[15px]">speed</span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-rose-900">Capacity Saturation Alert:</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-200/80 text-rose-900 font-mono">
+                    {capacityAnalytics.utilizationPct}% Cognitive Load
+                  </span>
+                  <span className="text-[11px] text-rose-800 font-medium">
+                    ({capacityAnalytics.effectiveHours}h load • {capacityAnalytics.switchCount} context switches)
+                  </span>
+                </div>
+                <div className="text-[11px] text-rose-800/90 truncate">
+                  {capacityAnalytics.message}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Editor Mode Instruction & Save Bar ── */}
         {isEditorMode && (
           <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-950 text-[12px] shadow-2xs animate-fadeIn">
@@ -857,6 +941,46 @@ const TodayView = React.memo(function TodayView({
                   >
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
+                )}
+                {trayNlpPreview && trayNlpPreview.hasDetected && (
+                  <div className="flex flex-wrap items-center gap-1 pt-1.5 px-0.5 animate-fadeIn">
+                    <span className="text-[9.5px] font-bold text-[#0A84FF] flex items-center gap-0.5">
+                      <span className="material-symbols-outlined text-[11px]">auto_awesome</span>
+                      Detected:
+                    </span>
+                    {trayNlpPreview.extracted.dueDate && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9.5px] font-semibold border border-blue-200/60">
+                        {trayNlpPreview.extracted.dueDate}
+                      </span>
+                    )}
+                    {trayNlpPreview.extracted.startTime && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[9.5px] font-semibold border border-indigo-200/60">
+                        {trayNlpPreview.extracted.startTime}
+                      </span>
+                    )}
+                    {trayNlpPreview.extracted.durationMinutes && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[9.5px] font-semibold border border-amber-200/60">
+                        {trayNlpPreview.extracted.durationMinutes}m
+                      </span>
+                    )}
+                    {trayNlpPreview.extracted.impact && (
+                      <span className={`px-1.5 py-0.5 rounded-md text-[9.5px] font-semibold border ${
+                        trayNlpPreview.extracted.impact === 'high' ? 'bg-rose-50 text-rose-700 border-rose-200/60' : 'bg-slate-50 text-slate-700 border-slate-200/60'
+                      }`}>
+                        {trayNlpPreview.extracted.impact} impact
+                      </span>
+                    )}
+                    {trayNlpPreview.extracted.areas && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-700 text-[9.5px] font-semibold border border-slate-200/60">
+                        {trayNlpPreview.extracted.areas[0]}
+                      </span>
+                    )}
+                    {trayNlpPreview.extracted.goalTitle && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[9.5px] font-semibold border border-purple-200/60">
+                        {trayNlpPreview.extracted.goalTitle}
+                      </span>
+                    )}
+                  </div>
                 )}
               </form>
 
@@ -1254,6 +1378,70 @@ const TodayView = React.memo(function TodayView({
 
                       {/* Blocks & Smart Buffer Gaps Container */}
                       <div className="absolute inset-0 pointer-events-none p-1.5">
+                        {/* Fixed Timetable & Class Blocks Layer (Background containers) */}
+                        {(schedules || [])
+                          .filter(sched => isTaskScheduledForDate(sched, colDate) && sched.startTime)
+                          .map(sched => {
+                            const startMin = minutesFromStartOfDay(sched.startTime);
+                            if (startMin === null) return null;
+                            let dur = Number(sched.durationMinutes);
+                            if (!dur || isNaN(dur)) {
+                              if (sched.startTime && sched.endTime) {
+                                const diff = calculateDuration(sched.startTime, sched.endTime);
+                                if (diff > 0) dur = diff;
+                              }
+                            }
+                            if (!dur || isNaN(dur)) dur = 60;
+                            const endMin = startMin + dur;
+                            const topPx = Math.max(0, ((startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                            const heightPx = Math.max(34, (dur / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+
+                            return (
+                              <div
+                                key={sched.id}
+                                style={{
+                                  top: `${topPx}px`,
+                                  height: `${heightPx}px`,
+                                  left: '6px',
+                                  right: '6px'
+                                }}
+                                className="absolute rounded-xl pointer-events-auto border border-indigo-200/90 bg-indigo-50/85 hover:bg-indigo-100/90 transition-all p-2 flex flex-col justify-between shadow-xs z-10 group"
+                              >
+                                <div className="flex items-center justify-between gap-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="material-symbols-outlined text-[13px] text-indigo-600 shrink-0">school</span>
+                                    <span className="text-[11px] font-bold text-indigo-950 truncate tracking-tight">
+                                      {sched.title}
+                                    </span>
+                                    <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/90 text-indigo-700 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                      Class
+                                    </span>
+                                  </div>
+                                  {onDeleteSchedule && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteSchedule(sched.id);
+                                      }}
+                                      title="Remove schedule block"
+                                      className="p-0.5 rounded text-indigo-400 hover:text-red-500 hover:bg-white/80 transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                                    >
+                                      <span className="material-symbols-outlined text-[14px]">close</span>
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 text-[10px] font-mono text-indigo-700 font-medium">
+                                  <span className="material-symbols-outlined text-[11px]">schedule</span>
+                                  <span>
+                                    {format12Hour(startMin)} – {format12Hour(endMin % 1440)}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        }
+
                         {colScheduled.map(({ task, startMin, endMin, duration, lane, totalLanes, isNested, nestedLane, nestedTotalLanes, containerTask, hasNestedChildren }) => {
                           const isFlexible = Boolean(task.isFlexible || task.durationMinutes === null);
 

@@ -22,6 +22,7 @@ import GoalModal from './components/GoalModal';
 import HabitModal from './components/HabitModal';
 import AiCopilotModal from './components/AiCopilotModal';
 import ApiKeyModal from './components/ApiKeyModal';
+import AndroidWidgetSync from './components/AndroidWidgetSync';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -73,6 +74,11 @@ export default function App() {
             onCheckInHabit={store.checkInHabit}
             goals={store.goals}
             habits={store.habits}
+            schedules={store.schedules}
+            onUpdateSchedule={store.updateSchedule}
+            onDeleteSchedule={store.deleteSchedule}
+            moveTaskToBacklog={store.moveTaskToBacklog}
+            sweepMissedTasksToBacklog={store.sweepMissedTasksToBacklog}
           />
         );
       case 'today':
@@ -82,6 +88,8 @@ export default function App() {
             onUpdateTask={store.updateTask}
             goals={store.goals}
             habits={store.habits}
+            schedules={store.schedules}
+            onDeleteSchedule={store.deleteSchedule}
             onStartFocus={startFocusForTask}
             onCheckInHabit={store.checkInHabit}
           />
@@ -166,14 +174,25 @@ export default function App() {
             onCheckInHabit={store.checkInHabit}
             goals={store.goals}
             habits={store.habits}
+            schedules={store.schedules}
+            onUpdateSchedule={store.updateSchedule}
+            onDeleteSchedule={store.deleteSchedule}
+            moveTaskToBacklog={store.moveTaskToBacklog}
+            sweepMissedTasksToBacklog={store.sweepMissedTasksToBacklog}
           />
         );
     }
   };
 
   return (
-    <AuthGate>
-    <div className="min-h-screen font-sans bg-[#EFEFF5] text-[#1A1B1F]">
+    <>
+      <AndroidWidgetSync
+        tasks={store.tasks}
+        onToggleTask={store.toggleTask}
+        onOpenQuickAdd={openQuickAdd}
+      />
+      <AuthGate>
+      <div className="min-h-screen font-sans bg-[#EFEFF5] text-[#1A1B1F]">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -223,6 +242,7 @@ export default function App() {
         goals={store.goals}
         habits={store.habits}
         tasks={store.tasks}
+        schedules={store.schedules}
         stats={store.stats}
         addGoal={store.addGoal}
         addHabit={store.addHabit}
@@ -259,9 +279,13 @@ export default function App() {
         isOpen={isQuickAddOpen}
         onClose={closeQuickAdd}
         onAddTask={store.addTask}
+        onAddSchedule={store.addSchedule}
         onUpdateSettings={store.updateSettings}
         goals={store.goals}
         habits={store.habits}
+        tasks={store.tasks}
+        schedules={store.schedules}
+        initialTitle={quickAddProps.initialTitle || ''}
         initialTime={quickAddProps.initialTime || ''}
         initialDate={quickAddProps.initialDate ?? ''}
         initialGoalId={quickAddProps.initialGoalId || ''}
@@ -298,5 +322,6 @@ export default function App() {
       />
     </div>
     </AuthGate>
+    </>
   );
 }

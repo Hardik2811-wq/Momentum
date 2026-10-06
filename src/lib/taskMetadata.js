@@ -44,7 +44,12 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
     return false;
   }
 
-  // 2. Check if recurrence was capped (e.g. "This and following events" deleted)
+  // 2. Check if recurrence was capped by inclusive end date
+  if (task.recurrenceEndDate && dateStr > task.recurrenceEndDate) {
+    return false;
+  }
+
+  // 3. Check if recurrence was capped (e.g. "This and following events" deleted)
   if (task.recurrenceUntil && dateStr >= task.recurrenceUntil) {
     return false;
   }
@@ -52,13 +57,13 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
   const pDate = taskPlanDate(task);
   if (pDate === dateStr) return true;
 
-  // 3. Handle recurring tasks
+  // 4. Handle recurring tasks
   if (task.recurrence && task.recurrence !== 'none') {
     // If task has a base plannedDate, don't show before base date
     if (pDate && dateStr < pDate) return false;
 
     // Fast-path: daily recurrence does not require Date instantiation
-    if (task.recurrence === 'daily') return true;
+    if (task.recurrence === 'daily' || task.recurrence === 'everyday') return true;
 
     // Fast-path: yearly recurrence does not require Date instantiation
     if (task.recurrence === 'yearly') {
@@ -69,6 +74,9 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
     if (Number.isNaN(targetDate.getTime())) return false;
     const dayOfWeek = targetDate.getDay(); // 0: Sun, 1: Mon, ...
 
+    if (task.recurrence === 'weekdays') {
+      return dayOfWeek >= 1 && dayOfWeek <= 5;
+    }
     if (task.recurrence === 'weekly') {
       if (pDate) {
         const baseDay = new Date(`${pDate}T12:00:00`).getDay();

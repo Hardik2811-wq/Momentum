@@ -129,10 +129,10 @@ export default function MobileTabBar({
               <button
                 key={item.id}
                 onClick={() => handleTabClick(item.id)}
-                className={`flex-1 min-w-[56px] min-h-[44px] flex flex-col items-center justify-center py-0.5 rounded-xl transition-all ${
+                className={`flex-1 min-w-[56px] min-h-[44px] flex flex-col items-center justify-center py-0.5 rounded-xl transition-all duration-300 ${
                   isActive
-                    ? 'text-[#0A84FF] font-bold'
-                    : 'text-[#8E8E93] hover:text-[#1A1B1F] dark:hover:text-white font-medium'
+                    ? 'text-[#0A84FF] font-bold scale-[1.08] bg-[#0A84FF]/[0.06] dark:bg-[#0A84FF]/10'
+                    : 'text-[#8E8E93] hover:text-[#1A1B1F] dark:hover:text-white font-medium hover:scale-105'
                 }`}
               >
                 <span
@@ -155,7 +155,22 @@ export default function MobileTabBar({
           <div className="flex items-center justify-center px-1">
             <button
               type="button"
-              onClick={() => setIsOpen((prev) => !prev)}
+              onClick={() => {
+                if (isOpen) {
+                  setIsOpen(false);
+                  return;
+                }
+                if (activeTab === 'dashboard') {
+                  onOpenQuickAdd?.();
+                } else if (activeTab === 'goals') {
+                  onOpenNewGoal?.();
+                } else if (activeTab === 'habits') {
+                  onOpenNewHabit?.();
+                } else {
+                  // In Planner (activeTab === 'today'), open multi-option speed dial
+                  setIsOpen(true);
+                }
+              }}
               aria-label={isOpen ? 'Close creation menu' : 'Open creation menu'}
               aria-expanded={isOpen}
               className={`w-12 h-12 rounded-full text-white flex items-center justify-center shadow-[0_4px_16px_rgba(10,132,255,0.4)] active:scale-90 transition-all duration-200 -mt-2.5 cursor-pointer ${
@@ -175,10 +190,10 @@ export default function MobileTabBar({
               <button
                 key={item.id}
                 onClick={() => handleTabClick(item.id)}
-                className={`flex-1 min-w-[56px] min-h-[44px] flex flex-col items-center justify-center py-0.5 rounded-xl transition-all ${
+                className={`flex-1 min-w-[56px] min-h-[44px] flex flex-col items-center justify-center py-0.5 rounded-xl transition-all duration-300 ${
                   isActive
-                    ? 'text-[#0A84FF] font-bold'
-                    : 'text-[#8E8E93] hover:text-[#1A1B1F] dark:hover:text-white font-medium'
+                    ? 'text-[#0A84FF] font-bold scale-[1.08] bg-[#0A84FF]/[0.06] dark:bg-[#0A84FF]/10'
+                    : 'text-[#8E8E93] hover:text-[#1A1B1F] dark:hover:text-white font-medium hover:scale-105'
                 }`}
               >
                 <span

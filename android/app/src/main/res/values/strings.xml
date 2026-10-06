@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Momentum</string>
+    <string name="title_activity_main">Momentum</string>
+    <string name="today_widget_description">Today’s Momentum tasks</string>
+    <string name="package_name">com.hardik.momentum</string>
+    <string name="custom_url_scheme">com.hardik.momentum</string>
+</resources>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { queryLearnedMemory } from '../lib/nlpMemory';
 
 const DURATION_PRESETS = ['Open / Flex', '15 mins', '30 mins', '45 mins', '60 mins'];
 
@@ -159,6 +160,7 @@ export default function HabitModal({
   const [isGoalMenuOpen, setIsGoalMenuOpen] = useState(false);
   const [graceDays, setGraceDays] = useState(1);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [nlpDetected, setNlpDetected] = useState(null);
 
   const toggleCustomDay = (dayId) => {
     setCustomDays(prev => {
@@ -168,6 +170,110 @@ export default function HabitModal({
       }
       return [...prev, dayId];
     });
+  };
+
+  const handleTitleChange = (val) => {
+    setTitle(val);
+    const lower = val.toLowerCase();
+    const detected = {};
+
+    // Auto-detect duration
+    if (/\b15\s*(?:m|min|mins)\b/i.test(lower)) {
+      setDuration('15 mins');
+      setIsCustomDuration(false);
+      detected.duration = '15 mins';
+    } else if (/\b30\s*(?:m|min|mins)\b/i.test(lower)) {
+      setDuration('30 mins');
+      setIsCustomDuration(false);
+      detected.duration = '30 mins';
+    } else if (/\b45\s*(?:m|min|mins)\b/i.test(lower)) {
+      setDuration('45 mins');
+      setIsCustomDuration(false);
+      detected.duration = '45 mins';
+    } else if (/\b60\s*(?:m|min|mins|hour|hr)\b/i.test(lower)) {
+      setDuration('60 mins');
+      setIsCustomDuration(false);
+      detected.duration = '60 mins';
+    } else if (/\b(flex|flexible|open)\b/i.test(lower)) {
+      setDuration('Open / Flex');
+      setIsCustomDuration(false);
+      detected.duration = 'Flex';
+    }
+
+    // Auto-detect Cadence
+    if (/\b(morning|sunrise|am|wake\s*up)\b/i.test(lower)) {
+      setCadence('Morning Ritual');
+      detected.cadence = 'Morning';
+    } else if (/\b(evening|night|bed|sleep|wind\s*down|pm)\b/i.test(lower)) {
+      setCadence('Evening Wind-down');
+      detected.cadence = 'Evening';
+    } else if (/\b(afternoon|lunch|midday)\b/i.test(lower)) {
+      setCadence('Afternoon Flow');
+      detected.cadence = 'Afternoon';
+    }
+
+    // Auto-detect Icon & Theme
+    let matchedIcon = null;
+    if (/\b(code|terminal|dev|program|debug|script)\b/i.test(lower)) matchedIcon = 'terminal';
+    else if (/\b(run|cardio|jog|sprint|marathon)\b/i.test(lower)) matchedIcon = 'directions_run';
+    else if (/\b(gym|lift|strength|workout|pushup|weights)\b/i.test(lower)) matchedIcon = 'fitness_center';
+    else if (/\b(read|book|study|pages|chapter)\b/i.test(lower)) matchedIcon = 'auto_stories';
+    else if (/\b(meditate|zen|breathe|mindful|calm|yoga)\b/i.test(lower)) matchedIcon = 'self_improvement';
+    else if (/\b(water|hydrate|drink)\b/i.test(lower)) matchedIcon = 'water_drop';
+    else if (/\b(guitar|music|piano|sing|instrument)\b/i.test(lower)) matchedIcon = 'music_note';
+    else if (/\b(draw|sketch|paint|art|design)\b/i.test(lower)) matchedIcon = 'brush';
+    else if (/\b(sleep|bedtime|rest)\b/i.test(lower)) matchedIcon = 'bedtime';
+    else if (/\b(eat|diet|nutrition|meal|cook)\b/i.test(lower)) matchedIcon = 'restaurant';
+    else if (/\b(hike|walk|outdoors|nature)\b/i.test(lower)) matchedIcon = 'hiking';
+
+    if (matchedIcon) {
+      setIcon(matchedIcon);
+      const catEntry = ICONS_CATALOG.find(i => i.icon === matchedIcon);
+      if (catEntry) setColorToken(catEntry.colorToken);
+      detected.icon = matchedIcon;
+    }
+
+    // Auto-detect linked goal if goals present
+    if (Array.isArray(goals) && goals.length > 0 && !linkedGoal) {
+      for (const g of goals) {
+        if (!g.title) continue;
+        const gTokens = g.title.toLowerCase().split(/\s+/).filter(w => w.length >= 4);
+        if (gTokens.some(token => lower.includes(token))) {
+          setLinkedGoal(g.title);
+          detected.goal = g.title;
+          break;
+        }
+      }
+    }
+
+    // Check learned memory for habit metadata
+    const mem = queryLearnedMemory(val);
+    if (mem.matched) {
+      if (mem.inferred.habitIcon && !matchedIcon) {
+        setIcon(mem.inferred.habitIcon);
+        const catEntry = ICONS_CATALOG.find(i => i.icon === mem.inferred.habitIcon);
+        if (catEntry) setColorToken(catEntry.colorToken);
+        detected.icon = mem.inferred.habitIcon;
+      }
+      if (mem.inferred.habitCadence && !detected.cadence) {
+        setCadence(mem.inferred.habitCadence);
+        detected.cadence = mem.inferred.habitCadence;
+      }
+      if (mem.inferred.habitDuration && !detected.duration) {
+        setDuration(mem.inferred.habitDuration);
+        detected.duration = mem.inferred.habitDuration;
+      }
+      if (mem.inferred.goalTitle && !linkedGoal) {
+        setLinkedGoal(mem.inferred.goalTitle);
+        detected.goal = mem.inferred.goalTitle;
+      }
+    }
+
+    if (Object.keys(detected).length > 0) {
+      setNlpDetected(detected);
+    } else {
+      setNlpDetected(null);
+    }
   };
 
   useEffect(() => {
@@ -199,6 +305,7 @@ export default function HabitModal({
     }
     setConfirmDelete(false);
     setIsGoalMenuOpen(false);
+    setNlpDetected(null);
   }, [habit, goals, isOpen]);
 
   if (!isOpen) return null;
@@ -311,14 +418,22 @@ export default function HabitModal({
 
           {/* 2. Habit Title Input (Clean Minimalist) */}
           <div className="space-y-1">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
-              Habit Title
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                Habit Title
+              </label>
+              {nlpDetected && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0A84FF] bg-blue-50 px-2 py-0.5 rounded-full animate-fadeIn">
+                  <span className="material-symbols-outlined text-[12px]">auto_awesome</span>
+                  <span>NLP auto-set {nlpDetected.cadence || ''} {nlpDetected.duration || ''}</span>
+                </span>
+              )}
+            </div>
             <input
               type="text"
               required
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => handleTitleChange(e.target.value)}
               placeholder="e.g. Morning Deep Work, Zone 2 Cardio, Evening Reading"
               className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50/70 hover:bg-neutral-50 focus:bg-white border border-neutral-200/90 text-sm font-semibold text-neutral-900 placeholder:text-neutral-400/60 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus:outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/[0.04] transition-all"
               autoFocus
