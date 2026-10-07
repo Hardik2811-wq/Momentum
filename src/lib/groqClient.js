@@ -346,13 +346,13 @@ export function serializeDenseMemory({
 
   // 1. Goals Memory (compact ID, title, target, progress)
   const goalItems = (goals || [])
-    .slice(0, 12)
+    .slice(0, 30)
     .map(g => `[g:${g.id}|"${g.title}"|due:${g.targetDate || 'open'}|prog:${Math.round(g.progress || 0)}%]`);
   const goalsLine = goalItems.length > 0 ? `GOALS:\n${goalItems.join(' ')}` : 'GOALS: none';
 
   // 2. Habits Memory (compact ID, title, streak, cadence, linked goal)
   const habitItems = (habits || [])
-    .slice(0, 12)
+    .slice(0, 30)
     .map(h => `[h:${h.id}|"${h.title}"|streak:${h.streak || 0}d|cadence:${h.cadence || 'Daily'}${h.linkedGoal ? `|goal:"${h.linkedGoal}"` : ''}]`);
   const habitsLine = habitItems.length > 0 ? `HABITS:\n${habitItems.join(' ')}` : 'HABITS: none';
 
@@ -401,13 +401,18 @@ T=[t:ID|"Title"|DATE TIME|DURATIONm|g:GOAL_ID|h:HABIT_ID|status]
 ANALYTICS=[compRate:%|streak:Nd|habitsToday:X/Y|focusToday:Nm|momentum:%|pending:N]
 
 CRITICAL PLANNING PRINCIPLES:
-1. NEVER produce lazy, tiny sample plans (e.g. 3 generic tasks). When user shares an exam strategy, syllabus, timetable, or project mission:
-   - HORIZONS (Goals): Create 5-8 distinct anchors covering ALL academic subjects, creative passions, and behavioral discipline commitments.
-   - DAILY RITUALS (Habits): Create 6-12 specific, recurring rituals (e.g. subject-specific deep work blocks, pre-class previews, post-class review, evening daily check-ins, Sunday weekly reviews).
-   - EXECUTION TIMELINE (Tasks): Schedule every specific study block, in-person lecture attendance anchor, lab build, and checkpoint across the upcoming timeline with concrete time slots (startTime "HH:MM", durationMinutes), areas, and 2-4 subtasks with clear outputs (e.g. "Concept sheet", "5 problems solved").
-2. Ultra-Compact Efficiency: Use concise titles and compact representations so full multi-day plans fit effortlessly in JSON.
-3. Link items: Connect tasks and habits to goals via goalIndex (0-based) or existingGoalId.
-4. If the user only asks a general conversational question without requesting scheduling, set "hasPlan": false, "plan": null.
+1. NEVER DUPLICATE EXISTING ITEMS:
+   - Check the GOALS and HABITS memory context carefully before proposing anything.
+   - If user asks to add tasks to an existing goal, DO NOT recreate that goal! Set "goals": [] or omit that goal from "goals", and set "existingGoalId": "<existing_goal_id>" on the task.
+   - If a habit or goal with the same or very similar title already exists in memory, REUSE its ID ('existingGoalId' / 'existingHabitId') instead of proposing a new one in 'goals' or 'habits'.
+   - Never create a duplicate task that is already scheduled or open for that date.
+2. Full Multi-Vector Horizon Formulation: When formulating an entirely NEW plan or topic:
+   - HORIZONS (Goals): Create 5-8 distinct anchors covering subjects, creative passions, and discipline commitments only if they do not already exist in memory.
+   - DAILY RITUALS (Habits): Create 6-12 specific recurring rituals only if not already active in memory.
+   - EXECUTION TIMELINE (Tasks): Schedule specific study blocks, builds, lectures with concrete time slots (startTime "HH:MM", durationMinutes), areas, and subtasks. Link to existingGoalId/existingHabitId whenever matching items exist in memory!
+3. Ultra-Compact Efficiency: Use concise titles and compact representations so plans fit cleanly in JSON.
+4. Link items: Connect tasks and habits to goals via existingGoalId (preferred if goal exists) or goalIndex (0-based for NEW goals in plan.goals).
+5. If the user only asks a conversational question without requesting scheduling, set "hasPlan": false, "plan": null.
 
 Return ONLY raw JSON object (no markdown code blocks):
 {

@@ -256,69 +256,110 @@ export default function AiCopilotModal({
     const goalIdMap = new Map();
     const habitIdMap = new Map();
 
-    // 1. Create Goals with distinct collision-free IDs
+    // 1. Process Goals (re-use existing goal if title matches closely, avoiding duplicates)
     if (Array.isArray(plan.goals)) {
       plan.goals.forEach((g, idx) => {
-        const id = `g-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
-        addGoal({
-          id,
-          title: g.title,
-          categories: [g.category || 'career'],
-          why: g.why || '',
-          targetDate: g.targetDate || null,
-          dateType: g.targetDate ? 'custom' : 'open',
-          color: g.category === 'health' ? 'secondary' : g.category === 'creative' ? 'tertiary' : 'primary'
-        });
-        goalIdMap.set(idx, id);
+        if (!g.title) return;
+        const cleanTitle = g.title.trim().toLowerCase();
+        const existingGoal = goals.find(eg => eg.title && eg.title.trim().toLowerCase() === cleanTitle);
+
+        if (existingGoal) {
+          goalIdMap.set(idx, existingGoal.id);
+        } else {
+          const id = `g-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
+          addGoal({
+            id,
+            title: g.title,
+            categories: [g.category || 'career'],
+            why: g.why || '',
+            targetDate: g.targetDate || null,
+            dateType: g.targetDate ? 'custom' : 'open',
+            color: g.category === 'health' ? 'secondary' : g.category === 'creative' ? 'tertiary' : 'primary'
+          });
+          goalIdMap.set(idx, id);
+        }
       });
     }
 
-    // 2. Create Habits
+    // 2. Process Habits (re-use existing habit if title matches closely)
     if (Array.isArray(plan.habits)) {
       plan.habits.forEach((h, idx) => {
-        const id = `h-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
+        if (!h.title) return;
+        const cleanTitle = h.title.trim().toLowerCase();
+        const existingHabit = habits.find(eh => eh.title && eh.title.trim().toLowerCase() === cleanTitle);
+
         const linkedGoalId = (h.goalIndex !== undefined && h.goalIndex !== null && goalIdMap.has(h.goalIndex))
           ? goalIdMap.get(h.goalIndex)
           : h.linkedGoalId || null;
 
         const linkedGoalTitle = linkedGoalId
-          ? (plan.goals?.[h.goalIndex]?.title || h.linkedGoal || '')
+          ? (plan.goals?.[h.goalIndex]?.title || goals.find(g => String(g.id) === String(linkedGoalId))?.title || h.linkedGoal || '')
           : (h.linkedGoal || '');
 
-        addHabit({
-          id,
-          title: h.title,
-          cadence: h.cadence || 'Morning',
-          targetFrequency: h.frequency || 'Every Day',
-          duration: h.duration || '30 mins',
-          icon: h.icon || 'cached',
-          colorToken: h.colorToken || 'primary',
-          linkedGoal: linkedGoalTitle,
-          linkedGoalId: linkedGoalId || null
-        });
-        habitIdMap.set(idx, id);
+        if (existingHabit) {
+          habitIdMap.set(idx, existingHabit.id);
+        } else {
+          const id = `h-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
+          addHabit({
+            id,
+            title: h.title,
+            cadence: h.cadence || 'Morning',
+            targetFrequency: h.frequency || 'Every Day',
+            duration: h.duration || '30 mins',
+            icon: h.icon || 'cached',
+            colorToken: h.colorToken || 'primary',
+            linkedGoal: linkedGoalTitle,
+            linkedGoalId: linkedGoalId || null
+          });
+          habitIdMap.set(idx, id);
+        }
       });
     }
 
-    // 3. Create & Schedule Tasks
+    // 3. Create & Schedule Tasks (deduplicate identical task titles on same date)
     if (Array.isArray(plan.tasks)) {
       plan.tasks.forEach((t, idx) => {
+        if (!t.title) return;
+        const cleanTitle = t.title.trim().toLowerCase();
+        const taskDate = t.plannedDate || todayPlanDate();
+
+        // Check if identical task already exists on this planned date
+        const isDuplicateTask = tasks.some(et => 
+          et.title && et.title.trim().toLowerCase() === cleanTitle &&
+          (et.plannedDate === taskDate || (!et.plannedDate && taskDate === todayPlanDate()))
+        );
+        if (isDuplicateTask) return;
+
+        // Resolve goal ID (from goalIndex, existingGoalId, or matching existing goal title)
+        let linkedGoalId = null;
+        if (t.goalIndex !== undefined && t.goalIndex !== null && goalIdMap.has(t.goalIndex)) {
+          linkedGoalId = goalIdMap.get(t.goalIndex);
+        } else if (t.existingGoalId) {
+          linkedGoalId = t.existingGoalId;
+        } else if (t.goalTitle) {
+          const matched = goals.find(g => g.title?.trim().toLowerCase() === t.goalTitle.trim().toLowerCase());
+          if (matched) linkedGoalId = matched.id;
+        }
+
+        // Resolve habit ID (from habitIndex, existingHabitId, or matching existing habit title)
+        let linkedHabitId = null;
+        if (t.habitIndex !== undefined && t.habitIndex !== null && habitIdMap.has(t.habitIndex)) {
+          linkedHabitId = habitIdMap.get(t.habitIndex);
+        } else if (t.existingHabitId) {
+          linkedHabitId = t.existingHabitId;
+        } else if (t.habitTitle) {
+          const matched = habits.find(h => h.title?.trim().toLowerCase() === t.habitTitle.trim().toLowerCase());
+          if (matched) linkedHabitId = matched.id;
+        }
+
         const id = `t-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
-        const linkedGoalId = (t.goalIndex !== undefined && t.goalIndex !== null && goalIdMap.has(t.goalIndex))
-          ? goalIdMap.get(t.goalIndex)
-          : t.existingGoalId || null;
-
-        const linkedHabitId = (t.habitIndex !== undefined && t.habitIndex !== null && habitIdMap.has(t.habitIndex))
-          ? habitIdMap.get(t.habitIndex)
-          : t.existingHabitId || null;
-
         const durMins = Number(t.durationMinutes) || 60;
         const endTime = t.startTime ? calculateEndTime(t.startTime, durMins) : (t.endTime || null);
 
         addTask({
           id,
           title: t.title,
-          plannedDate: t.plannedDate || todayPlanDate(),
+          plannedDate: taskDate,
           startTime: t.startTime || null,
           endTime,
           durationMinutes: durMins,
