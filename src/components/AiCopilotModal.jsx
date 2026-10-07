@@ -316,8 +316,21 @@ export default function AiCopilotModal({
       });
     }
 
-    // 3. Create & Schedule Tasks (deduplicate identical task titles on same date)
+    // 3. Create & Schedule Tasks with intelligent time-slot collision avoidance
     if (Array.isArray(plan.tasks)) {
+      // Build index of already booked time intervals for the targeted dates
+      const bookedSlots = [];
+      tasks.forEach(t => {
+        if (!t.completed && t.plannedDate && t.startTime) {
+          const dur = Number(t.durationMinutes) || 45;
+          const [sh, sm] = t.startTime.split(':').map(Number);
+          if (!isNaN(sh) && !isNaN(sm)) {
+            const startM = sh * 60 + sm;
+            bookedSlots.push({ date: t.plannedDate, startM, endM: startM + dur });
+          }
+        }
+      });
+
       plan.tasks.forEach((t, idx) => {
         if (!t.title) return;
         const cleanTitle = t.title.trim().toLowerCase();
@@ -352,15 +365,45 @@ export default function AiCopilotModal({
           if (matched) linkedHabitId = matched.id;
         }
 
+        const durMins = Number(t.durationMinutes) || 45;
+        let resolvedStartTime = t.startTime || null;
+
+        // Smart Conflict Resolution: if requested startTime clashes with an existing booking, slide to next free slot
+        if (resolvedStartTime) {
+          const [sh, sm] = resolvedStartTime.split(':').map(Number);
+          if (!isNaN(sh) && !isNaN(sm)) {
+            let startM = sh * 60 + sm;
+            let collision = true;
+            let attempts = 0;
+            while (collision && attempts < 16) {
+              const endM = startM + durMins;
+              const hasOverlap = bookedSlots.some(slot => 
+                slot.date === taskDate && Math.max(startM, slot.startM) < Math.min(endM, slot.endM)
+              );
+              if (hasOverlap) {
+                startM = endM + 15; // Push 15 min buffer after previous block
+                attempts++;
+              } else {
+                collision = false;
+              }
+            }
+            if (!collision) {
+              const finalH = Math.floor(startM / 60) % 24;
+              const finalM = startM % 60;
+              resolvedStartTime = `${String(finalH).padStart(2, '0')}:${String(finalM).padStart(2, '0')}`;
+              bookedSlots.push({ date: taskDate, startM, endM: startM + durMins });
+            }
+          }
+        }
+
         const id = `t-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
-        const durMins = Number(t.durationMinutes) || 60;
-        const endTime = t.startTime ? calculateEndTime(t.startTime, durMins) : (t.endTime || null);
+        const endTime = resolvedStartTime ? calculateEndTime(resolvedStartTime, durMins) : (t.endTime || null);
 
         addTask({
           id,
           title: t.title,
           plannedDate: taskDate,
-          startTime: t.startTime || null,
+          startTime: resolvedStartTime,
           endTime,
           durationMinutes: durMins,
           duration: durMins,

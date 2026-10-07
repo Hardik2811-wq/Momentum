@@ -99,8 +99,8 @@ async function callAiService(messages, { temperature, maxTokens, jsonMode = true
   if (localKey) {
     // Dynamic candidate models: try fastest production model first, then standard alternatives
     const candidateModels = [
-      'llama-3.1-8b-instant',
       'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
       'openai/gpt-oss-120b',
       'openai/gpt-oss-20b'
     ];
@@ -448,6 +448,52 @@ Return ONLY raw JSON object (no markdown code blocks):
   }
 }`;
 
+// Helper to parse loose or relative date strings to ISO YYYY-MM-DD
+function normalizeIsoDate(rawDate, baseToday = '') {
+  if (!rawDate) return baseToday;
+  const s = String(rawDate).trim().toLowerCase();
+  if (s === 'today') return baseToday;
+  if (s === 'tomorrow') {
+    const d = new Date(`${baseToday}T12:00:00`);
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+  // Standard YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Parse natural date like "May 12", "12 Oct 2026"
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear() > 1970 ? parsed.getFullYear() : new Date().getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return baseToday;
+}
+
+// Helper to sanitize any subtask representation (string, nested object, text/name property)
+function normalizeSubtasks(rawSubtasks) {
+  if (!Array.isArray(rawSubtasks)) return [];
+  const normalized = [];
+  rawSubtasks.forEach((s, idx) => {
+    if (!s) return;
+    if (typeof s === 'string') {
+      const clean = s.trim();
+      if (clean) normalized.push({ id: `st-${Date.now()}-${idx}`, title: clean, completed: false });
+    } else if (typeof s === 'object') {
+      const title = s.title || s.text || s.name || s.step || s.task || '';
+      if (title && typeof title === 'string' && title.trim()) {
+        normalized.push({
+          id: s.id || `st-${Date.now()}-${idx}`,
+          title: title.trim(),
+          completed: Boolean(s.completed || s.done)
+        });
+      }
+    }
+  });
+  return normalized;
+}
+
 /**
  * Normalizes Copilot plans supporting both verbose JSON objects and ultra-compact
  * delta tuples ["title", "YYYY-MM-DD", "HH:MM", dur, goalRef, habitRef, pri]
@@ -467,10 +513,13 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
           title: g[0] || `Goal ${idx + 1}`,
           category: g[1] || 'career',
           why: g[2] || '',
-          targetDate: g[3] || null
+          targetDate: g[3] ? normalizeIsoDate(g[3], today) : null
         };
       }
-      return g;
+      return {
+        ...g,
+        targetDate: g.targetDate ? normalizeIsoDate(g.targetDate, today) : null
+      };
     });
   }
 
@@ -498,7 +547,7 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
         const habitRef = t[5];
         return {
           title: t[0] || 'Scheduled Task',
-          plannedDate: t[1] || today,
+          plannedDate: normalizeIsoDate(t[1], today),
           startTime: t[2] || null,
           durationMinutes: typeof t[3] === 'number' ? t[3] : 45,
           goalIndex: typeof goalRef === 'number' ? goalRef : null,
@@ -507,30 +556,23 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
           existingHabitId: typeof habitRef === 'string' ? habitRef : null,
           impact: t[6] === 'high' ? 'high' : 'medium',
           priority: t[6] || 'normal',
-          areas: ['Career & Craft']
+          areas: ['Career & Craft'],
+          subtasks: []
         };
       }
-      const rawSubtasks = Array.isArray(t.subtasks) ? t.subtasks : [];
-      const formattedSubtasks = rawSubtasks.map((s, sIdx) => {
-        if (typeof s === 'string') {
-          return { id: `st-${Date.now()}-${sIdx}`, title: s.trim(), completed: false };
-        }
-        if (s && typeof s === 'object') {
-          return { id: s.id || `st-${Date.now()}-${sIdx}`, title: s.title || String(s), completed: Boolean(s.completed) };
-        }
-        return null;
-      }).filter(Boolean);
+
+      const formattedSubtasks = normalizeSubtasks(t.subtasks || t.steps || t.checklist || []);
 
       return {
         title: t.title || 'Scheduled Task',
-        plannedDate: t.plannedDate || t.date || today,
+        plannedDate: normalizeIsoDate(t.plannedDate || t.date, today),
         startTime: t.startTime || t.time || null,
         durationMinutes: t.durationMinutes || t.dur || 45,
         impact: t.impact || 'medium',
         priority: t.priority || (t.impact === 'high' ? 'high' : 'normal'),
         energy: t.energy || (t.impact === 'high' ? 'High' : t.impact === 'low' ? 'Low' : 'Normal'),
         recurrence: t.recurrence || 'none',
-        deadlineDate: t.deadlineDate || null,
+        deadlineDate: t.deadlineDate ? normalizeIsoDate(t.deadlineDate, today) : null,
         deadlineTime: t.deadlineTime || null,
         areas: Array.isArray(t.areas) ? t.areas : ['Career & Craft'],
         goalIndex: typeof t.goalIndex === 'number' ? t.goalIndex : null,
