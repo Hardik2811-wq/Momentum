@@ -78,6 +78,7 @@ self.addEventListener('fetch', (event) => {
 export default defineConfig({
   plugins: [react(), serviceWorkerPrecache()],
   server: {
+    host: true,
     port: 3000,
     open: false
   }

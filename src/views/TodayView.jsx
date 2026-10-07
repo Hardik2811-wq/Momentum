@@ -29,6 +29,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import TaskDetailModal from '../components/TaskDetailModal';
+import ScheduleDetailModal from '../components/ScheduleDetailModal';
 import DeleteRecurringModal from '../components/DeleteRecurringModal';
 import {
   taskPlanDate,
@@ -116,6 +117,8 @@ const TodayView = React.memo(function TodayView({
   goals = [],
   habits = [],
   schedules = [],
+  onUpdateSchedule,
+  onAddSchedule,
   onDeleteSchedule,
   onStartFocus,
   onCheckInHabit
@@ -131,6 +134,7 @@ const TodayView = React.memo(function TodayView({
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragOverSlot, setDragOverSlot] = useState(null); // { date, hour }
   const [editingTask, setEditingTask] = useState(null);
+  const [editingSchedule, setEditingSchedule] = useState(null);
   const [recurringDeleteTarget, setRecurringDeleteTarget] = useState(null); // { task, date }
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
@@ -414,6 +418,25 @@ const TodayView = React.memo(function TodayView({
       return true;
     });
   }, [tasks, trayFilterMode, trayAreaFilter, traySearch]);
+
+  /* ── Tray Schedules Filter ── */
+  const filteredSchedules = useMemo(() => {
+    let list = schedules || [];
+    if (traySearch.trim()) {
+      const q = traySearch.toLowerCase();
+      list = list.filter(s =>
+        (s.title || '').toLowerCase().includes(q) ||
+        (s.category || '').toLowerCase().includes(q)
+      );
+    }
+    if (trayAreaFilter !== 'all') {
+      list = list.filter(s =>
+        s.category === trayAreaFilter ||
+        (Array.isArray(s.areas) && s.areas.includes(trayAreaFilter))
+      );
+    }
+    return list;
+  }, [schedules, traySearch, trayAreaFilter]);
 
   /* ── Multi-Column Memoized Layout Generator (O(C * N^2) isolated to data changes) ── */
   const columnsData = useMemo(() => {
@@ -986,11 +1009,12 @@ const TodayView = React.memo(function TodayView({
               </form>
 
               {/* Tray Tabs */}
-              <div className="grid grid-cols-4 gap-1 bg-[#F5F4FA] p-0.5 rounded-xl border border-black/[0.04]">
+              <div className="grid grid-cols-5 gap-1 bg-[#F5F4FA] p-0.5 rounded-xl border border-black/[0.04]">
                 {[
                   { id: 'unscheduled', label: 'Open' },
                   { id: 'rituals', label: 'Rituals' },
-                  { id: 'all', label: 'All Tasks' },
+                  { id: 'schedules', label: 'Timetable' },
+                  { id: 'all', label: 'All' },
                   { id: 'backlog', label: 'Backlog' }
                 ].map(t => (
                   <button
@@ -1057,7 +1081,84 @@ const TodayView = React.memo(function TodayView({
 
               {/* Task Cards Stream (Expanded to full column height) */}
               <div className="space-y-2 flex-1 overflow-y-auto pr-0.5 min-h-0">
-                {trayFilterMode === 'rituals' ? (
+                {trayFilterMode === 'schedules' ? (
+                  filteredSchedules.length === 0 ? (
+                    <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-2 my-4">
+                      <span className="material-symbols-outlined text-[28px] text-indigo-500 mx-auto block">school</span>
+                      <p className="text-[12px] font-semibold text-[#1A1B1F]">No timetable schedules found</p>
+                      <p className="text-[10px] text-[#64748B]">Set up fixed classes, labs, and recurring routines.</p>
+                      <button
+                        type="button"
+                        onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 text-xs font-semibold hover:bg-indigo-100 transition cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Class / Schedule</span>
+                      </button>
+                    </div>
+                  ) : (
+                    filteredSchedules.map(sched => {
+                      const isActiveToday = isTaskScheduledForDate(sched, viewDate);
+                      const startLabel = sched.startTime ? formatTimeString(sched.startTime) : 'Flexible';
+                      const endLabel = sched.endTime ? formatTimeString(sched.endTime) : (sched.startTime ? formatTimeString(calculateEndTime(sched.startTime, sched.durationMinutes || 60)) : '');
+                      const recLabel = sched.recurrence === 'custom' && Array.isArray(sched.repeatDays)
+                        ? (sched.repeatDays.length === 5 && [1, 2, 3, 4, 5].every(d => sched.repeatDays.includes(d)) ? 'Weekdays'
+                          : sched.repeatDays.length === 3 && [1, 3, 5].every(d => sched.repeatDays.includes(d)) ? 'MWF'
+                          : sched.repeatDays.length === 7 ? 'Every day'
+                          : sched.repeatDays.map(d => ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d]).join(', '))
+                        : (sched.recurrence || 'Once');
+
+                      return (
+                        <div
+                          key={`tray-s-${sched.id}`}
+                          onClick={() => setEditingSchedule(sched)}
+                          className="p-3 rounded-xl border border-indigo-100/80 bg-white hover:bg-indigo-50/40 transition-all flex items-center justify-between gap-2.5 cursor-pointer group shadow-2xs"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-[16px]">school</span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-[12px] font-bold text-indigo-950 truncate group-hover:text-indigo-600 transition">
+                                  {sched.title}
+                                </p>
+                                {isActiveToday && (
+                                  <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 text-[9px] font-bold border border-emerald-200/60 shrink-0">
+                                    Today
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono mt-0.5">
+                                <span>{startLabel} – {endLabel}</span>
+                                <span className="text-slate-300">•</span>
+                                <span className="text-indigo-600 font-semibold">{recLabel}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {sched.category && (
+                              <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[9.5px] font-bold uppercase tracking-wider">
+                                {sched.category}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingSchedule(sched);
+                              }}
+                              className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition opacity-0 group-hover:opacity-100"
+                              title="Edit schedule"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )
+                ) : trayFilterMode === 'rituals' ? (
                   habits.length === 0 ? (
                     <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-1.5 my-4">
                       <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
@@ -1451,13 +1552,17 @@ const TodayView = React.memo(function TodayView({
                             return (
                               <div
                                 key={sched.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingSchedule(sched);
+                                }}
                                 style={{
                                   top: `${topPx}px`,
                                   height: `${heightPx}px`,
                                   left: '6px',
                                   right: '6px'
                                 }}
-                                className="absolute rounded-xl pointer-events-auto border border-indigo-200/90 bg-indigo-50/85 hover:bg-indigo-100/90 transition-all p-2 flex flex-col justify-between shadow-xs z-10 group"
+                                className="absolute rounded-xl pointer-events-auto border border-indigo-200/90 bg-indigo-50/85 hover:bg-indigo-100/90 transition-all p-2 flex flex-col justify-between shadow-xs z-10 group cursor-pointer"
                               >
                                 <div className="flex items-center justify-between gap-1 min-w-0">
                                   <div className="flex items-center gap-1.5 min-w-0">
@@ -2049,6 +2154,17 @@ const TodayView = React.memo(function TodayView({
           goals={goals}
           habits={habits}
           onStartFocus={onStartFocus}
+        />
+      )}
+
+      {/* Schedule Detail Edit Modal */}
+      {editingSchedule && (
+        <ScheduleDetailModal
+          schedule={editingSchedule}
+          isOpen={Boolean(editingSchedule)}
+          onClose={() => setEditingSchedule(null)}
+          onUpdateSchedule={onUpdateSchedule}
+          onDeleteSchedule={onDeleteSchedule}
         />
       )}
 

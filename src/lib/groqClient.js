@@ -285,16 +285,20 @@ export function setCustomCopilotDirective(directive = '') {
   }
 }
 
-const SYSTEM_PROMPT = `You are a precision productivity task assistant for Momentum OS.
-Given a user's task input, extract structured task metadata in JSON format.
+const SYSTEM_PROMPT = `You are a precision productivity and timetable schedule assistant for Momentum OS.
+Given a user's task or class/timetable input, extract structured metadata in JSON format.
 Output schema:
 {
-  "cleanTitle": "Core task action without clutter or raw time tags (string)",
+  "cleanTitle": "Core action or class name without clutter or raw time tags (string)",
   "dueDate": "Today" | "Tomorrow" | "This Week" | "Someday",
-  "urgency": "today" | "week" | "later",
-  "startTime": "HH:MM" in 24h format if mentioned/implied (e.g. "14:30"), else null,
-  "durationMinutes": number (default 45),
-  "areas": ["Career & Craft" | "Creative & Expression" | "Deep Focus" | "Habit Consistency" | "Health & Vitality" | "Personal & Life"],
+  "plannedDate": "YYYY-MM-DD" if specific date mentioned, else null,
+  "startTime": "HH:MM" in 24h format if mentioned/implied (e.g. "10:00"), else null,
+  "endTime": "HH:MM" in 24h format if mentioned/implied (e.g. "11:30"), else null,
+  "durationMinutes": number (e.g. 60 or calculate from times, default 45),
+  "recurrence": "none" | "daily" | "weekly" | "custom",
+  "repeatDays": [0, 1, 2, 3, 4, 5, 6] (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat. e.g. MWF is [1, 3, 5], weekdays is [1, 2, 3, 4, 5]),
+  "category": "College" | "Academics" | "Deep Focus" | "Work" | "Personal",
+  "areas": ["Career & Craft" | "Creative & Expression" | "Deep Focus" | "Habit Consistency" | "Health & Vitality" | "Personal & Life" | "College"],
   "energy": "High" | "Medium" | "Low",
   "impact": "high" | "medium" | "low",
   "priority": "high" | "normal" | "low",
@@ -302,7 +306,7 @@ Output schema:
 }
 Respond ONLY with a valid JSON object. No conversational filler, no code fences.`;
 
-export async function parseWithGroq(input = '', goals = []) {
+export async function parseWithGroq(input = '', goals = [], options = {}) {
   if (!input || typeof input !== 'string' || !input.trim()) {
     return { success: false, error: 'Empty input query' };
   }
@@ -316,7 +320,11 @@ export async function parseWithGroq(input = '', goals = []) {
     ? `Available goals: ${goals.map(g => `"${g.title}" (id: ${g.id})`).join(', ')}`
     : '';
 
-  const userPrompt = `Extract task metadata into a JSON object: "${cleanInput}"\n${goalsContext}`;
+  const modeHint = options?.mode === 'schedule'
+    ? '\nNote: User is specifically defining a recurring timetable class or fixed routine block.'
+    : '';
+
+  const userPrompt = `Extract task or schedule metadata into a JSON object: "${cleanInput}"\n${goalsContext}${modeHint}`;
 
   try {
     const result = await callAiService([
@@ -339,6 +347,7 @@ export function serializeDenseMemory({
   goals = [],
   habits = [],
   tasks = [],
+  schedules = [],
   stats = null,
   todayDate = ''
 }) {
@@ -356,7 +365,19 @@ export function serializeDenseMemory({
     .map(h => `[h:${h.id}|"${h.title}"|streak:${h.streak || 0}d|cadence:${h.cadence || 'Daily'}${h.linkedGoal ? `|goal:"${h.linkedGoal}"` : ''}]`);
   const habitsLine = habitItems.length > 0 ? `HABITS:\n${habitItems.join(' ')}` : 'HABITS: none';
 
-  // 3. Calendar Tasks Memory (active window: today - 1 to today + 7, + overdue open tasks)
+  // 3. Fixed Timetable Schedules Memory (classes & routine blocks)
+  const scheduleItems = (schedules || [])
+    .slice(0, 20)
+    .map(s => {
+      const time = s.startTime ? `${s.startTime}${s.endTime ? `-${s.endTime}` : ''}` : '';
+      const rec = s.recurrence === 'custom' && Array.isArray(s.repeatDays)
+        ? `days:[${s.repeatDays.join(',')}]`
+        : (s.recurrence || 'custom');
+      return `[s:${s.id}|"${s.title}"|${time}|${rec}|cat:${s.category || 'General'}]`;
+    });
+  const schedulesLine = scheduleItems.length > 0 ? `SCHEDULES (Fixed Timetable/Classes):\n${scheduleItems.join(' ')}` : 'SCHEDULES: none';
+
+  // 4. Calendar Tasks Memory (active window: today - 1 to today + 7, + overdue open tasks)
   const horizonEnd = new Date(Date.parse(today) + 7 * 86400000).toISOString().slice(0, 10);
   const relevantTasks = (tasks || [])
     .filter(t => {
@@ -380,15 +401,15 @@ export function serializeDenseMemory({
     const st = t.completed ? 'done' : 'open';
     return `[t:${t.id}|"${t.title}"|${d}${time}|${dur}m${gRef}${hRef}|${st}]`;
   });
-  const tasksLine = taskItems.length > 0 ? `SCHEDULE (Active Horizon):\n${taskItems.join(' ')}` : 'SCHEDULE: empty';
+  const tasksLine = taskItems.length > 0 ? `SCHEDULE (Active Horizon Tasks):\n${taskItems.join(' ')}` : 'SCHEDULE: empty';
 
-  // 4. Analytics Digest (pre-computed personal capacity & velocity)
+  // 5. Analytics Digest (pre-computed personal capacity & velocity)
   let analyticsLine = '';
   if (stats) {
     analyticsLine = `ANALYTICS: compRate:${stats.completionRate || 0}% | streak:${stats.longestStreak || 0}d | habitsToday:${stats.habitsCompletedToday || 0}/${stats.totalHabits || 0} | focusToday:${stats.completedFocusMinutes || 0}m | momentum:${stats.momentumScore || 0}% | pendingTasks:${stats.pending || 0}`;
   }
 
-  return [goalsLine, habitsLine, tasksLine, analyticsLine].filter(Boolean).join('\n\n');
+  return [goalsLine, habitsLine, schedulesLine, tasksLine, analyticsLine].filter(Boolean).join('\n\n');
 }
 
 const COPILOT_SYSTEM_PROMPT = `You are Momentum Executive Copilot.
@@ -397,12 +418,19 @@ Formulate deep, rigorous, realistic operational execution plans balancing the us
 Memory notation:
 G=[g:ID|"Title"|due:DATE|prog:%]
 H=[h:ID|"Title"|streak:Nd|cadence:TIME]
+S=[s:ID|"Title"|START-END|RECURRENCE|cat:CATEGORY]
 T=[t:ID|"Title"|DATE TIME|DURATIONm|g:GOAL_ID|h:HABIT_ID|status]
 ANALYTICS=[compRate:%|streak:Nd|habitsToday:X/Y|focusToday:Nm|momentum:%|pending:N]
 
 CRITICAL PLANNING PRINCIPLES:
-1. NEVER DUPLICATE EXISTING ITEMS:
-   - Check the GOALS and HABITS memory context carefully before proposing anything.
+1. WORKSPACE TRUTH & DELETIONS:
+   - The GOALS, HABITS, SCHEDULES, and SCHEDULE (Tasks) blocks represent the EXACT live state of the user's workspace right now.
+   - If ANY goal, habit, schedule, or task previously mentioned in prior chat messages or earlier plans is ABSENT from the memory blocks, it means the user has EXPLICITLY DELETED, COMPLETED, or REMOVED it from their workspace.
+   - NEVER assume deleted items still exist.
+   - NEVER refer to deleted items as active, and NEVER propose tasks or habits referencing deleted goal/habit IDs.
+   - If the user asks about an item that was removed from memory, acknowledge directly that it is no longer in their workspace (deleted/removed).
+2. NEVER DUPLICATE EXISTING ITEMS:
+   - Check the GOALS, HABITS, and SCHEDULES memory context carefully before proposing anything.
    - If user asks to add tasks to an existing goal, DO NOT recreate that goal! Set "goals": [] or omit that goal from "goals", and set "existingGoalId": "<existing_goal_id>" on the task.
    - If a habit or goal with the same or very similar title already exists in memory, REUSE its ID ('existingGoalId' / 'existingHabitId') instead of proposing a new one in 'goals' or 'habits'.
    - Never create a duplicate task that is already scheduled or open for that date.
@@ -594,6 +622,7 @@ export async function generateExecutivePlanWithAI({
   goals = [],
   habits = [],
   tasks = [],
+  schedules = [],
   stats = null,
   todayDate = ''
 }) {
@@ -611,6 +640,7 @@ export async function generateExecutivePlanWithAI({
     goals,
     habits,
     tasks,
+    schedules,
     stats,
     todayDate: currentDateStr
   });

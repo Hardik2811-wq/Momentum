@@ -89,6 +89,8 @@ export default function App() {
             goals={store.goals}
             habits={store.habits}
             schedules={store.schedules}
+            onUpdateSchedule={store.updateSchedule}
+            onAddSchedule={store.addSchedule}
             onDeleteSchedule={store.deleteSchedule}
             onStartFocus={startFocusForTask}
             onCheckInHabit={store.checkInHabit}

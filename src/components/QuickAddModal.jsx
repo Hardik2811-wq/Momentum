@@ -589,7 +589,7 @@ export default function QuickAddModal({
     setAiFeedback(null);
     setIsAiParsing(true);
     try {
-      const res = await parseWithGroq(title, goals);
+      const res = await parseWithGroq(title, goals, { mode });
       if (res.success && res.data) {
         applyExtractedDetails(res.data, true);
         harvestApiResult(title, res.data, { alreadyCounted: true });
@@ -597,7 +597,7 @@ export default function QuickAddModal({
         const modelName = res.model ? res.model.split('/').pop() : 'Groq';
         setAiFeedback({
           type: 'success',
-          message: `Auto-filled via Groq (${modelName})`
+          message: mode === 'schedule' ? `Class/schedule extracted via Groq (${modelName})` : `Auto-filled via Groq (${modelName})`
         });
       } else {
         const errorMsg = res.error || 'Groq request failed';
@@ -835,29 +835,29 @@ export default function QuickAddModal({
                 autoFocus
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder={mode === 'schedule' ? "What class or routine? (e.g. Operating Systems Lecture, Math Lab)" : "What needs to happen? (e.g. Design hero tomorrow 2pm 45m)"}
+                placeholder={mode === 'schedule' ? "What class or routine? (e.g. Operating Systems Lecture MWF 10am to 11:30am)" : "What needs to happen? (e.g. Design hero tomorrow 2pm 45m)"}
                 className="min-w-0 flex-1 text-[15px] font-semibold text-[#1A1B1F] placeholder:text-[#94A3B8] placeholder:font-normal bg-transparent outline-none tracking-tight"
               />
-              {mode === 'task' && (
-                <button
-                  type="button"
-                  onClick={() => handleAiBreakdown()}
-                  disabled={isAiParsing || !title.trim()}
-                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold shadow-xs active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
-                    aiFeedback?.type === 'success'
-                      ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80'
-                      : aiFeedback?.type === 'error'
-                      ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80'
-                      : 'text-[#0A84FF] bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60'
-                  }`}
-                  title="Auto-fill details and break down subtasks"
-                >
-                  <span className={`material-symbols-outlined text-[15px] ${isAiParsing ? 'animate-spin' : ''}`}>
-                    {isAiParsing ? 'progress_activity' : aiFeedback?.type === 'success' ? 'check' : aiFeedback?.type === 'error' ? 'error' : 'auto_awesome'}
-                  </span>
-                  <span>{isAiParsing ? 'Thinking…' : aiFeedback?.type === 'success' ? 'AI Filled' : 'AI Fill'}</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => handleAiBreakdown()}
+                disabled={isAiParsing || !title.trim()}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold shadow-xs active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                  aiFeedback?.type === 'success'
+                    ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80'
+                    : aiFeedback?.type === 'error'
+                    ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80'
+                    : mode === 'schedule'
+                    ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60'
+                    : 'text-[#0A84FF] bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60'
+                }`}
+                title={mode === 'schedule' ? "Auto-extract class timings, days & details" : "Auto-fill details and break down subtasks"}
+              >
+                <span className={`material-symbols-outlined text-[15px] ${isAiParsing ? 'animate-spin' : ''}`}>
+                  {isAiParsing ? 'progress_activity' : aiFeedback?.type === 'success' ? 'check' : aiFeedback?.type === 'error' ? 'error' : 'auto_awesome'}
+                </span>
+                <span>{isAiParsing ? 'Thinking…' : aiFeedback?.type === 'success' ? 'AI Filled' : 'AI Fill'}</span>
+              </button>
             </div>
           </div>
 
@@ -2021,10 +2021,6 @@ export default function QuickAddModal({
       <ApiKeyModal
         isOpen={showApiKeyModal}
         onClose={() => setShowApiKeyModal(false)}
-        onSuccess={() => {
-          setShowApiKeyModal(false);
-          handleAiBreakdown();
-        }}
       />
     </div>
   );

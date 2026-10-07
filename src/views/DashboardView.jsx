@@ -39,6 +39,7 @@ import { todayKey } from '../store/useStore';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
 import TaskCard from '../components/TaskCard';
 import TaskDetailModal from '../components/TaskDetailModal';
+import ScheduleDetailModal from '../components/ScheduleDetailModal';
 import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanDate, todayPlanDate, isTaskScheduledForDate, calculateEndTime } from '../lib/taskMetadata';
 import { classifyDayItems, findIntelligentRecoverySlot, buildBacklogTaskPatch } from '../lib/missedScheduleEngine';
 
@@ -82,8 +83,16 @@ const DashboardView = React.memo(function DashboardView({
 }) {
   const [filter, setFilter] = useState('all');
   const [editingTask, setEditingTask] = useState(null);
+  const [editingSchedule, setEditingSchedule] = useState(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  const todaySchedules = useMemo(() => {
+    const today = todayPlanDate();
+    return (schedules || [])
+      .filter(s => isTaskScheduledForDate(s, today))
+      .sort((a, b) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99'));
+  }, [schedules]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 20000);
@@ -798,6 +807,85 @@ const DashboardView = React.memo(function DashboardView({
                 )}
               </div>
             </div>
+
+            {/* Today's Timetable & Schedule Card */}
+            <div data-block-id="dashboard-today-schedules-card" className="rounded-3xl bg-surface-container-lowest p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_24px_rgba(0,0,0,0.05)] border border-black/[0.04]">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-display font-bold text-on-surface">Today's Schedule</h2>
+                    <p className="text-[11px] text-on-surface-variant">
+                      <span className="font-mono tabular-nums font-semibold">{todaySchedules.length}</span> {todaySchedules.length === 1 ? 'block' : 'blocks'} scheduled today
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
+                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:underline cursor-pointer"
+                  title="Add timetable class block"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add</span>
+                </button>
+              </div>
+
+              {todaySchedules.length > 0 ? (
+                <div className="relative pl-3 space-y-3 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-[1.5px] before:bg-indigo-100">
+                  {todaySchedules.map(sched => {
+                    const startLabel = sched.startTime ? formatTime(sched.startTime) : 'Flexible';
+                    const endLabel = sched.endTime ? formatTime(sched.endTime) : (sched.startTime ? formatTime(calculateEndTime(sched.startTime, sched.durationMinutes || 60)) : '');
+                    return (
+                      <div
+                        key={sched.id}
+                        onClick={() => setEditingSchedule(sched)}
+                        className="group relative flex items-start gap-3.5 rounded-2xl bg-indigo-50/40 hover:bg-indigo-50/80 border border-indigo-100/70 p-3 transition-all cursor-pointer hover:shadow-2xs active:scale-[0.99]"
+                      >
+                        {/* Timeline Node */}
+                        <div className="relative z-10 -ml-[18px] mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-indigo-600 shadow-2xs">
+                          <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                        </div>
+
+                        {/* Schedule Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-indigo-950 truncate group-hover:text-indigo-700 transition">
+                              {sched.title}
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-indigo-600/90 shrink-0">
+                              {sched.durationMinutes || 60}m
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[11px] font-medium text-slate-500 font-mono tabular-nums">
+                              {startLabel}{endLabel ? ` – ${endLabel}` : ''}
+                            </span>
+                            {sched.category && (
+                              <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/80 text-indigo-700 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                {sched.category}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-5 px-3 rounded-2xl bg-surface-container-low/40 border border-dashed border-black/[0.06] space-y-2">
+                  <p className="text-xs text-on-surface-variant">No classes or timetable routines today</p>
+                  <button
+                    onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 text-xs font-semibold hover:bg-indigo-100 transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Schedule a Class</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </aside>
         </section>
 
@@ -859,6 +947,13 @@ const DashboardView = React.memo(function DashboardView({
       </div>
 
       <TaskDetailModal task={editingTask} isOpen={!!editingTask} onClose={() => setEditingTask(null)} onUpdateTask={onUpdateTask} onDeleteTask={onDeleteTask} goals={goals} habits={habits} onStartFocus={onStartFocus} />
+      <ScheduleDetailModal
+        schedule={editingSchedule}
+        isOpen={Boolean(editingSchedule)}
+        onClose={() => setEditingSchedule(null)}
+        onUpdateSchedule={onUpdateSchedule}
+        onDeleteSchedule={onDeleteSchedule}
+      />
     </main>
   );
 });

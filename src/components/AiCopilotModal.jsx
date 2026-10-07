@@ -207,6 +207,7 @@ export default function AiCopilotModal({
         goals,
         habits,
         tasks,
+        schedules,
         stats,
         todayDate: todayPlanDate()
       });
