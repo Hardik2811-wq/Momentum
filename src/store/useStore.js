@@ -320,22 +320,22 @@ const DEFAULT_GOALS = [
 
 const DEFAULT_HABITS = [
   {
-    id: 'h1', title: 'Morning Deep Work', duration: '90 mins', icon: 'terminal',
+    id: 'h1', title: 'Morning Deep Work', duration: '90 mins', durationMinutes: 90, startTime: '07:30', isTimeBlocked: true, icon: 'terminal',
     linkedGoal: 'Ship Portfolio', description: 'Autonomous creative focus before notification windows unlock.',
     completedDays: [], graceDays: 1, colorToken: 'primary',
   },
   {
-    id: 'h2', title: 'Zone 2 Cardio / Running', duration: '45 mins', icon: 'directions_run',
+    id: 'h2', title: 'Zone 2 Cardio / Running', duration: '45 mins', durationMinutes: 45, startTime: '16:30', isTimeBlocked: true, icon: 'directions_run',
     linkedGoal: 'Half Marathon', description: 'Sub-lactate threshold endurance builder at ~138 bpm.',
     completedDays: [], graceDays: 0, colorToken: 'secondary',
   },
   {
-    id: 'h3', title: 'Evening Reading', duration: '30 mins', icon: 'auto_stories',
+    id: 'h3', title: 'Evening Reading', duration: '30 mins', durationMinutes: 30, startTime: '21:30', isTimeBlocked: true, icon: 'auto_stories',
     linkedGoal: 'Knowledge System', description: 'Non-fiction synthesis and spaced repetition review.',
     completedDays: [], graceDays: 2, colorToken: 'tertiary',
   },
   {
-    id: 'h4', title: 'Guitar Practice', duration: '25 mins', icon: 'music_note',
+    id: 'h4', title: 'Guitar Practice', duration: '25 mins', durationMinutes: 25, startTime: '18:30', isTimeBlocked: true, icon: 'music_note',
     linkedGoal: 'Classical Guitar', description: 'Deliberate fingerstyle etude practice with metronome.',
     completedDays: [], graceDays: 1, colorToken: 'secondary',
   },
@@ -633,10 +633,32 @@ export default function useStore() {
         daysLeft = null;
       }
 
-      // Work progress: derived from tasks or manual progress
-      const workProgress = totalLinked > 0
-        ? Math.round((completedCount / totalLinked) * 100)
-        : (g.workProgress ?? g.progress ?? 0);
+      // Compute habit consistency score for linked habits (completed past 7 days)
+      let habitAdherence = 100;
+      if (linkedHabits.length > 0) {
+        const todayStr = todayKey();
+        let checkedCount = 0;
+        for (let i = 0; i < linkedHabits.length; i++) {
+          const lh = linkedHabits[i];
+          if (Array.isArray(lh.completedDays) && lh.completedDays.includes(todayStr)) {
+            checkedCount++;
+          }
+        }
+        habitAdherence = Math.round((checkedCount / linkedHabits.length) * 100);
+      }
+
+      // Work progress: blended between deliverables (tasks) and rituals (habits)
+      let workProgress = g.progress ?? 0;
+      if (totalLinked > 0 && linkedHabits.length > 0) {
+        const taskRate = Math.round((completedCount / totalLinked) * 100);
+        workProgress = Math.round((taskRate * 0.7) + (habitAdherence * 0.3));
+      } else if (totalLinked > 0) {
+        workProgress = Math.round((completedCount / totalLinked) * 100);
+      } else if (linkedHabits.length > 0) {
+        workProgress = habitAdherence;
+      } else {
+        workProgress = g.workProgress ?? g.progress ?? 0;
+      }
 
       // Dynamic velocity engine
       let velocity = g.velocity || 'on-track';

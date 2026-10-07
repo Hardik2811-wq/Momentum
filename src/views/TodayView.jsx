@@ -39,6 +39,7 @@ import {
   calculateDuration,
   calculateEndTime,
   parseTimeString,
+  parseCompoundDuration,
   legacyDueDateForPlan,
   isTaskScheduledForDate
 } from '../lib/taskMetadata';
@@ -985,9 +986,10 @@ const TodayView = React.memo(function TodayView({
               </form>
 
               {/* Tray Tabs */}
-              <div className="grid grid-cols-3 gap-1 bg-[#F5F4FA] p-0.5 rounded-xl border border-black/[0.04]">
+              <div className="grid grid-cols-4 gap-1 bg-[#F5F4FA] p-0.5 rounded-xl border border-black/[0.04]">
                 {[
-                  { id: 'unscheduled', label: 'Unscheduled' },
+                  { id: 'unscheduled', label: 'Open' },
+                  { id: 'rituals', label: 'Rituals' },
                   { id: 'all', label: 'All Tasks' },
                   { id: 'backlog', label: 'Backlog' }
                 ].map(t => (
@@ -995,9 +997,9 @@ const TodayView = React.memo(function TodayView({
                     key={t.id}
                     type="button"
                     onClick={() => setTrayFilterMode(t.id)}
-                    className={`py-1 rounded-lg text-[11px] font-semibold transition text-center ${
+                    className={`py-1 rounded-lg text-[10px] font-semibold transition text-center truncate ${
                       trayFilterMode === t.id
-                        ? 'bg-white text-[#1A1B1F] shadow-xs'
+                        ? 'bg-white text-[#1A1B1F] shadow-xs font-bold'
                         : 'text-[#8E8E93] hover:text-[#1A1B1F]'
                     }`}
                   >
@@ -1055,7 +1057,57 @@ const TodayView = React.memo(function TodayView({
 
               {/* Task Cards Stream (Expanded to full column height) */}
               <div className="space-y-2 flex-1 overflow-y-auto pr-0.5 min-h-0">
-                {trayTasks.length === 0 ? (
+                {trayFilterMode === 'rituals' ? (
+                  habits.length === 0 ? (
+                    <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-1.5 my-4">
+                      <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
+                      <p className="text-[12px] font-semibold text-[#1A1B1F]">No habits created</p>
+                      <p className="text-[10px] text-[#64748B]">Create daily rituals to establish baseline consistency.</p>
+                    </div>
+                  ) : (
+                    habits.map(h => {
+                      const isChecked = Array.isArray(h.completedDays) && h.completedDays.includes(viewDate);
+                      return (
+                        <div
+                          key={`tray-h-${h.id}`}
+                          className={`p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 ${
+                            isChecked
+                              ? 'bg-emerald-50/70 border-emerald-200 opacity-80'
+                              : 'bg-white hover:bg-emerald-50/30 border-black/[0.06]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => onCheckInHabit?.(h.id, viewDate)}
+                              className={`w-5 h-5 rounded-full flex items-center justify-center transition shrink-0 ${
+                                isChecked
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'border-2 border-emerald-500 hover:bg-emerald-50 text-transparent'
+                              }`}
+                            >
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </button>
+                            <div className="min-w-0">
+                              <p className={`text-[12px] font-semibold truncate ${isChecked ? 'line-through text-emerald-800' : 'text-[#1A1B1F]'}`}>
+                                {h.title}
+                              </p>
+                              <div className="flex items-center gap-1.5 text-[10px] text-[#64748B]">
+                                <span>{h.duration || '30 mins'}</span>
+                                {h.startTime && <span className="text-emerald-600 font-bold">• At {formatTimeString(h.startTime)}</span>}
+                              </div>
+                            </div>
+                          </div>
+                          {h.linkedGoal && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-800 truncate max-w-[80px]">
+                              {h.linkedGoal}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })
+                  )
+                ) : trayTasks.length === 0 ? (
                   <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-1.5 my-4">
                     <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
                     <p className="text-[12px] font-semibold text-[#1A1B1F]">
@@ -1431,12 +1483,90 @@ const TodayView = React.memo(function TodayView({
                                     </button>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1 text-[10px] font-mono text-indigo-700 font-medium">
-                                  <span className="material-symbols-outlined text-[11px]">schedule</span>
-                                  <span>
-                                    {format12Hour(startMin)} – {format12Hour(endMin % 1440)}
-                                  </span>
+                              </div>
+                            );
+                          })
+                        }
+
+                        {/* Scheduled Habits & Ritual Blocks Layer */}
+                        {(habits || [])
+                          .filter(h => {
+                            if (!h.startTime) return false;
+                            const targetFreq = h.targetFrequency || 'Every Day';
+                            if (targetFreq === 'Every Day') return true;
+                            const targetD = new Date(`${colDate}T12:00:00`);
+                            const dayOfWeek = targetD.getDay(); // 0 Sun, 1 Mon..
+                            if (targetFreq === 'Weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5;
+                            if (targetFreq === 'Custom' && Array.isArray(h.customDays)) {
+                              const dayShorts = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                              return h.customDays.includes(dayShorts[dayOfWeek]);
+                            }
+                            return true;
+                          })
+                          .map(habit => {
+                            const startMin = minutesFromStartOfDay(habit.startTime);
+                            if (startMin === null) return null;
+                            const dur = Number(habit.durationMinutes) || parseCompoundDuration(habit.duration) || 30;
+                            const endMin = startMin + dur;
+                            const topPx = Math.max(0, ((startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                            const heightPx = Math.max(34, (dur / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                            const isChecked = Array.isArray(habit.completedDays) && habit.completedDays.includes(colDate);
+
+                            return (
+                              <div
+                                key={`cal-habit-${habit.id}`}
+                                style={{
+                                  top: `${topPx}px`,
+                                  height: `${heightPx}px`,
+                                  left: '6px',
+                                  right: '6px'
+                                }}
+                                className={`absolute rounded-xl pointer-events-auto border transition-all p-2 flex items-center justify-between shadow-xs z-15 group ${
+                                  isChecked
+                                    ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 opacity-80'
+                                    : 'bg-emerald-50/60 hover:bg-emerald-50/95 border-emerald-200/90 text-emerald-950'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onCheckInHabit?.(habit.id, colDate);
+                                    }}
+                                    className={`w-5 h-5 rounded-full flex items-center justify-center transition shrink-0 ${
+                                      isChecked
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'border-2 border-emerald-500 hover:bg-emerald-100 text-transparent'
+                                    }`}
+                                    title={isChecked ? 'Checked in! Click to uncheck' : 'Click to check in ritual'}
+                                  >
+                                    <Check className="w-3 h-3 stroke-[3]" />
+                                  </button>
+
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="material-symbols-outlined text-[13px] text-emerald-600 shrink-0">
+                                        {habit.icon || 'cached'}
+                                      </span>
+                                      <span className={`text-[11px] font-bold truncate ${isChecked ? 'line-through text-emerald-700' : 'text-emerald-950'}`}>
+                                        {habit.title}
+                                      </span>
+                                      <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                        Ritual
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] font-mono text-emerald-700">
+                                      {format12Hour(startMin)} – {format12Hour(endMin % 1440)} ({dur}m)
+                                    </div>
+                                  </div>
                                 </div>
+
+                                {habit.linkedGoal && (
+                                  <span className="text-[10px] font-semibold text-emerald-600 truncate max-w-[120px] hidden sm:inline">
+                                    ⚓ {habit.linkedGoal}
+                                  </span>
+                                )}
                               </div>
                             );
                           })

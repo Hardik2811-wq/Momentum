@@ -424,7 +424,7 @@ Return ONLY raw JSON object (no markdown code blocks):
       {"title": "Goal Title", "category": "career"|"health"|"creative"|"finance", "why": "Why this matters", "targetDate": "YYYY-MM-DD"|null}
     ],
     "habits": [
-      {"title": "Habit Title", "cadence": "Morning"|"Afternoon"|"Evening"|"Anytime", "frequency": "Every Day"|"Weekdays"|"3x / week", "duration": "15 mins"|"30 mins"|"45 mins"|"60 mins"|"90 mins"|"120 mins", "icon": "cached"|"terminal"|"fitness_center"|"auto_stories"|"palette"|"menu_book", "colorToken": "primary"|"secondary"|"tertiary", "goalIndex": 0|null}
+      {"title": "Habit Title", "cadence": "Morning"|"Afternoon"|"Evening"|"Anytime", "startTime": "HH:MM"|null, "frequency": "Every Day"|"Weekdays"|"3x / week", "duration": "15 mins"|"30 mins"|"45 mins"|"60 mins"|"90 mins"|"120 mins", "icon": "cached"|"terminal"|"fitness_center"|"auto_stories"|"palette"|"menu_book", "colorToken": "primary"|"secondary"|"tertiary", "goalIndex": 0|null}
     ],
     "tasks": [
       {

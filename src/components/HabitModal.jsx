@@ -154,6 +154,8 @@ export default function HabitModal({
   const [icon, setIcon] = useState('terminal');
   const [colorToken, setColorToken] = useState('primary');
   const [cadence, setCadence] = useState('Anytime');
+  const [startTime, setStartTime] = useState('');
+  const [isTimeBlocked, setIsTimeBlocked] = useState(false);
   const [targetFrequency, setTargetFrequency] = useState('Every Day');
   const [customDays, setCustomDays] = useState(['Mon', 'Wed', 'Fri']);
   const [linkedGoal, setLinkedGoal] = useState('');
@@ -287,6 +289,8 @@ export default function HabitModal({
       const matched = ICONS_CATALOG.find(i => i.icon === foundIcon);
       setColorToken(habit.colorToken || matched?.colorToken || 'primary');
       setCadence(habit.cadence || 'Anytime');
+      setStartTime(habit.startTime || '');
+      setIsTimeBlocked(Boolean(habit.isTimeBlocked || habit.startTime));
       setTargetFrequency(habit.targetFrequency || 'Every Day');
       setCustomDays(habit.customDays || ['Mon', 'Wed', 'Fri']);
       setLinkedGoal(habit.linkedGoal || '');
@@ -298,6 +302,8 @@ export default function HabitModal({
       setIcon('terminal');
       setColorToken('primary');
       setCadence('Anytime');
+      setStartTime('');
+      setIsTimeBlocked(false);
       setTargetFrequency('Every Day');
       setCustomDays(['Mon', 'Wed', 'Fri']);
       setLinkedGoal('');
@@ -316,10 +322,15 @@ export default function HabitModal({
     e.preventDefault();
     if (!title.trim()) return;
 
+    const durMins = parseCompoundDuration(duration) || 30;
+
     onSave({
       ...(habit || {}),
       title: title.trim(),
       duration: duration.trim() || 'Open / Flex',
+      durationMinutes: durMins,
+      startTime: isTimeBlocked && startTime ? startTime : null,
+      isTimeBlocked: Boolean(isTimeBlocked && startTime),
       icon,
       colorToken: colorToken || activeSignpost.colorToken || 'primary',
       cadence,
@@ -626,6 +637,50 @@ export default function HabitModal({
                   })}
                 </div>
               )}
+
+              {/* Schedule Time Block on Calendar Timeline */}
+              <div className="pt-2 border-t border-black/[0.04]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-primary">schedule</span>
+                    <span className="text-[11px] font-bold text-on-surface">Schedule on Calendar Timeline</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !isTimeBlocked;
+                      setIsTimeBlocked(next);
+                      if (next && !startTime) setStartTime(cadence === 'Evening' ? '21:00' : cadence === 'Afternoon' ? '14:00' : '07:30');
+                    }}
+                    className={`relative w-8 h-4.5 rounded-full transition-colors cursor-pointer ${
+                      isTimeBlocked ? 'bg-primary' : 'bg-neutral-300'
+                    }`}
+                  >
+                    <span
+                      className={`block w-3.5 h-3.5 rounded-full bg-white shadow-xs transform transition-transform ${
+                        isTimeBlocked ? 'translate-x-3.5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {isTimeBlocked && (
+                  <div className="mt-2.5 flex items-center gap-2 animate-fadeIn bg-surface-container-lowest p-2 rounded-xl border border-black/[0.06]">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 shrink-0">
+                      Start Time:
+                    </label>
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="px-2 py-1 rounded-lg bg-neutral-50 border border-black/[0.08] text-xs font-semibold text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <span className="text-[10px] text-outline">
+                      Repeats on scheduled days automatically
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

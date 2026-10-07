@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { parseDocumentFile } from '../lib/documentParser';
 import { generateExecutivePlanWithAI, hasAiService } from '../lib/groqClient';
-import { todayPlanDate, calculateEndTime } from '../lib/taskMetadata';
+import { todayPlanDate, calculateEndTime, parseCompoundDuration } from '../lib/taskMetadata';
 import { resolveLocalCopilotIntent } from '../lib/copilotIntentRouter';
 import { harvestCopilotPlan } from '../lib/nlpMemory';
 import LifeGraphVisualizer from './LifeGraphVisualizer';
@@ -300,12 +300,16 @@ export default function AiCopilotModal({
           habitIdMap.set(idx, existingHabit.id);
         } else {
           const id = `h-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
+          const durMins = Number(h.durationMinutes) || parseCompoundDuration(h.duration) || 30;
           addHabit({
             id,
             title: h.title,
             cadence: h.cadence || 'Morning',
             targetFrequency: h.frequency || 'Every Day',
             duration: h.duration || '30 mins',
+            durationMinutes: durMins,
+            startTime: h.startTime || null,
+            isTimeBlocked: Boolean(h.startTime),
             icon: h.icon || 'cached',
             colorToken: h.colorToken || 'primary',
             linkedGoal: linkedGoalTitle,
