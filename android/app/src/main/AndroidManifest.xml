@@ -41,6 +41,7 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.hardik.momentum.ACTION_COMPLETE_TASK" />
+                <action android:name="com.hardik.momentum.ACTION_TOGGLE_HABIT" />
                 <action android:name="com.hardik.momentum.ACTION_QUICK_ADD" />
             </intent-filter>
             <meta-data
@@ -80,6 +81,30 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/habit_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.QuickActionsWidgetProvider"
+            android:exported="true"
+            android:label="Momentum Quick Add">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_actions_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.UpcomingPillWidgetProvider"
+            android:exported="true"
+            android:label="Momentum Next Pill">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/upcoming_pill_widget_info" />
         </receiver>
     </application>
 

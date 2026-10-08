@@ -917,6 +917,22 @@ export default function useStore() {
     });
   }, [tasks, setTasks, showToast]);
 
+  const deleteTasks = useCallback((ids) => {
+    if (!Array.isArray(ids) || ids.length === 0) return;
+    const idSet = new Set(ids.map(String));
+    const toDelete = tasks.filter(t => idSet.has(String(t.id)));
+    if (toDelete.length === 0) return;
+
+    setTasks(prev => prev.filter(t => !idSet.has(String(t.id))));
+    showToast(`Deleted ${toDelete.length} task${toDelete.length === 1 ? '' : 's'}`, {
+      actionLabel: 'Undo',
+      onAction: () => {
+        setTasks(prev => [...toDelete, ...prev]);
+        showToast('Restored tasks');
+      }
+    });
+  }, [tasks, setTasks, showToast]);
+
   const updateTask = useCallback((id, patch) => {
     setTasks(prev => {
       const updated = prev.map(t => {
@@ -1016,6 +1032,22 @@ export default function useStore() {
     setSchedules(prev => prev.filter(s => String(s.id) !== String(id)));
     showToast('Schedule block removed');
   }, [setSchedules, showToast]);
+
+  const deleteSchedules = useCallback((ids) => {
+    if (!Array.isArray(ids) || ids.length === 0) return;
+    const idSet = new Set(ids.map(String));
+    const toDelete = schedules.filter(s => idSet.has(String(s.id)));
+    if (toDelete.length === 0) return;
+
+    setSchedules(prev => prev.filter(s => !idSet.has(String(s.id))));
+    showToast(`Deleted ${toDelete.length} schedule${toDelete.length === 1 ? '' : 's'}`, {
+      actionLabel: 'Undo',
+      onAction: () => {
+        setSchedules(prev => [...toDelete, ...prev]);
+        showToast('Restored schedules');
+      }
+    });
+  }, [schedules, setSchedules, showToast]);
 
   /* Goals Actions */
   const addGoal = useCallback((goalData) => {
@@ -1568,9 +1600,9 @@ export default function useStore() {
   }, [tasks, schedules]);
 
   return {
-    tasks, addTask, updateTask, toggleTask, deleteTask, toggleSubtask, reorderTasks,
+    tasks, addTask, updateTask, toggleTask, deleteTask, deleteTasks, toggleSubtask, reorderTasks,
     moveTaskToBacklog, sweepMissedTasksToBacklog,
-    schedules, addSchedule, updateSchedule, deleteSchedule,
+    schedules, addSchedule, updateSchedule, deleteSchedule, deleteSchedules,
     goals: reactiveGoals, addGoal, updateGoal, updateGoalProgress, deleteGoal,
     habits, checkInHabit, addHabit, updateHabit, deleteHabit, useGraceDay,
     reflections, updateReflection, saveWeeklyReview,

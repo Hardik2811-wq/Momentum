@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import {
   syncAndroidTodayWidget,
   getPendingWidgetCompletedTasks,
+  getPendingWidgetCompletedHabits,
   getPendingWidgetAction,
 } from '../lib/androidWidget';
 import { isTaskScheduledForDate, todayPlanDate } from '../lib/taskMetadata';
@@ -49,31 +50,44 @@ function calculatePriorityScore(task, currentMinutes) {
   return score;
 }
 
-export default function AndroidWidgetSync({ tasks = [], onToggleTask, onOpenQuickAdd }) {
+export default function AndroidWidgetSync({
+  tasks = [],
+  habits = [],
+  onToggleTask,
+  onCheckInHabit,
+  onOpenQuickAdd,
+  onOpenNewGoal,
+  onOpenNewHabit
+}) {
   const onToggleRef = useRef(onToggleTask);
+  const onCheckInHabitRef = useRef(onCheckInHabit);
   const onOpenQuickAddRef = useRef(onOpenQuickAdd);
+  const onOpenNewGoalRef = useRef(onOpenNewGoal);
+  const onOpenNewHabitRef = useRef(onOpenNewHabit);
   const tasksRef = useRef(tasks);
+  const habitsRef = useRef(habits);
 
   useEffect(() => {
     onToggleRef.current = onToggleTask;
+    onCheckInHabitRef.current = onCheckInHabit;
     onOpenQuickAddRef.current = onOpenQuickAdd;
+    onOpenNewGoalRef.current = onOpenNewGoal;
+    onOpenNewHabitRef.current = onOpenNewHabit;
     tasksRef.current = tasks;
-  }, [onToggleTask, onOpenQuickAdd, tasks]);
+    habitsRef.current = habits;
+  }, [onToggleTask, onCheckInHabit, onOpenQuickAdd, onOpenNewGoal, onOpenNewHabit, tasks, habits]);
 
-  // Sync snapshot to Android widget
+  // Sync snapshot to Android widgets (Today Hub, Bento Dial, Pill, Quick Add)
   useEffect(() => {
-    if (!Array.isArray(tasks) || tasks.length === 0) return;
-
     const today = todayPlanDate();
-    let todayTasks = tasks.filter(
+    let todayTasks = (tasks || []).filter(
       (task) =>
         isTaskScheduledForDate(task, today) ||
         (!task.completed && task.plannedDate && task.plannedDate < today) ||
         (!task.plannedDate && (task.dueDate === 'Today' || !task.dueDate))
     );
 
-    // Graceful fallback to any pending tasks if no date-specific tasks exist
-    if (todayTasks.length === 0) {
+    if (todayTasks.length === 0 && Array.isArray(tasks) && tasks.length > 0) {
       const pending = tasks.filter((t) => !t.completed);
       todayTasks = pending.length > 0 ? pending.slice(0, 6) : tasks.slice(0, 6);
     }
@@ -99,13 +113,21 @@ export default function AndroidWidgetSync({ tasks = [], onToggleTask, onOpenQuic
     const totalCount = todayTasks.length;
     const completionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
+    // Serialize habits for today
+    const habitItems = (habits || []).map((h) => ({
+      id: String(h.id),
+      title: String(h.title || '').slice(0, 80),
+      isDone: Array.isArray(h.completedDays) ? h.completedDays.includes(today) : false,
+      streakCount: Array.isArray(h.completedDays) ? h.completedDays.length : 0,
+    }));
+
     const snapshot = {
       date: today,
       pendingCount,
       completedCount,
       totalCount,
       completionPercentage,
-      tasks: sorted.slice(0, 6).map((task) => ({
+      tasks: sorted.slice(0, 10).map((task) => ({
         id: String(task.id),
         title: String(task.title || '').slice(0, 100),
         completed: Boolean(task.completed),
@@ -118,12 +140,13 @@ export default function AndroidWidgetSync({ tasks = [], onToggleTask, onOpenQuic
           ? task.subtasks.filter((s) => s.completed).length
           : 0,
       })),
+      habits: habitItems.slice(0, 8),
     };
 
     syncAndroidTodayWidget(snapshot).catch(() => {});
-  }, [tasks]);
+  }, [tasks, habits]);
 
-  // Handle widget actions & pending completed task sync
+  // Handle widget actions & pending completed task and habit sync
   useEffect(() => {
     let isCancelled = false;
 
@@ -140,9 +163,28 @@ export default function AndroidWidgetSync({ tasks = [], onToggleTask, onOpenQuic
           });
         }
 
+        const completedHabitIds = await getPendingWidgetCompletedHabits();
+        if (!isCancelled && completedHabitIds && completedHabitIds.length > 0) {
+          const currentHabits = habitsRef.current || [];
+          const today = todayPlanDate();
+          completedHabitIds.forEach((id) => {
+            const match = currentHabits.find((h) => String(h.id) === String(id));
+            const isDone = match && Array.isArray(match.completedDays) && match.completedDays.includes(today);
+            if (match && !isDone && onCheckInHabitRef.current) {
+              onCheckInHabitRef.current(id);
+            }
+          });
+        }
+
         const action = await getPendingWidgetAction();
-        if (!isCancelled && action === 'quick_add' && onOpenQuickAddRef.current) {
-          onOpenQuickAddRef.current();
+        if (!isCancelled && action) {
+          if ((action === 'quick_add' || action === 'quick_add_task') && onOpenQuickAddRef.current) {
+            onOpenQuickAddRef.current();
+          } else if (action === 'quick_add_goal' && onOpenNewGoalRef.current) {
+            onOpenNewGoalRef.current();
+          } else if (action === 'quick_add_habit' && onOpenNewHabitRef.current) {
+            onOpenNewHabitRef.current();
+          }
         }
       } catch {}
     };
@@ -150,7 +192,6 @@ export default function AndroidWidgetSync({ tasks = [], onToggleTask, onOpenQuic
     // Check immediately
     checkWidgetEvents();
 
-    // Listen on window focus & document visibility change
     const onFocus = () => checkWidgetEvents();
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -161,7 +202,6 @@ export default function AndroidWidgetSync({ tasks = [], onToggleTask, onOpenQuic
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibilityChange);
 
-    // Polling interval while app is in foreground
     const interval = setInterval(checkWidgetEvents, 1500);
 
     return () => {

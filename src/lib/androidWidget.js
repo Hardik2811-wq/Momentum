@@ -17,6 +17,16 @@ export async function getPendingWidgetCompletedTasks() {
   }
 }
 
+export async function getPendingWidgetCompletedHabits() {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return [];
+  try {
+    const res = await WidgetBridge.getPendingCompletedHabits();
+    return Array.isArray(res?.habitIds) ? res.habitIds : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function getPendingWidgetAction() {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return null;
   try {

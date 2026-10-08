@@ -16,6 +16,7 @@ import {
 import { LIFE_AREAS, getGoalAreas, saveGoalAreas } from '../lib/lifeAreas';
 import { CupertinoTimeInput, MiniCalendarPicker } from './QuickAddModal';
 import DeleteRecurringModal from './DeleteRecurringModal';
+import ConfirmModal from './ConfirmModal';
 
 const IMPACT_CONFIG = {
   high: { label: 'High', dot: 'bg-red-500', active: 'bg-red-50 text-red-700 border-red-200 ring-1 ring-red-200' },
@@ -63,6 +64,7 @@ export default function TaskDetailModal({
   const [showDeadline, setShowDeadline] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null); // 'goal' | 'habit' | null
   const [showDeleteRecurring, setShowDeleteRecurring] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   const goalMenuRef = useRef(null);
   const habitMenuRef = useRef(null);
@@ -199,9 +201,8 @@ export default function TaskDetailModal({
   const triggerDelete = () => {
     if (task.recurrence && task.recurrence !== 'none') {
       setShowDeleteRecurring(true);
-    } else if (window.confirm('Delete this task?')) {
-      onDeleteTask?.(task.id);
-      onClose();
+    } else {
+      setShowConfirmDelete(true);
     }
   };
 
@@ -1252,6 +1253,23 @@ export default function TaskDetailModal({
             setShowDeleteRecurring(false);
             onClose();
           }}
+        />
+      )}
+
+      {showConfirmDelete && (
+        <ConfirmModal
+          isOpen={showConfirmDelete}
+          title="Delete Deliverable?"
+          message={`Are you sure you want to delete "${task?.title}"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          isDanger={true}
+          onConfirm={() => {
+            onDeleteTask?.(task.id);
+            setShowConfirmDelete(false);
+            onClose();
+          }}
+          onCancel={() => setShowConfirmDelete(false)}
         />
       )}
     </div>

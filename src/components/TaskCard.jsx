@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanLabel, taskPlanDate, todayPlanDate } from '../lib/taskMetadata';
 import DeleteRecurringModal from './DeleteRecurringModal';
+import ConfirmModal from './ConfirmModal';
 
 const TaskCard = React.memo(function TaskCard({
   task,
@@ -27,6 +28,7 @@ const TaskCard = React.memo(function TaskCard({
   habits = []
 }) {
   const [showDeleteRecurring, setShowDeleteRecurring] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [subtasksOpen, setSubtasksOpen] = useState(false);
   const linkedGoal = goals.find(g => g.id === task.goalId || g.id === task.linkedGoalId);
   const linkedHabit = habits.find(h => h.id === task.linkedHabitId || h.id === task.habitId);
@@ -166,8 +168,8 @@ const TaskCard = React.memo(function TaskCard({
                   e.stopPropagation();
                   if (task.recurrence && task.recurrence !== 'none') {
                     setShowDeleteRecurring(true);
-                  } else if (window.confirm('Delete this task?')) {
-                    onDeleteTask(task.id);
+                  } else {
+                    setShowConfirmDelete(true);
                   }
                 }}
                 className="p-1 rounded-full text-outline hover:text-error hover:bg-error-container/30 transition-colors opacity-0 group-hover:opacity-100"
@@ -305,6 +307,22 @@ const TaskCard = React.memo(function TaskCard({
             onDeleteTask?.(task.id, { mode, targetDate });
             setShowDeleteRecurring(false);
           }}
+        />
+      )}
+
+      {showConfirmDelete && (
+        <ConfirmModal
+          isOpen={showConfirmDelete}
+          title="Delete Deliverable?"
+          message={`Are you sure you want to delete "${task?.title}"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          isDanger={true}
+          onConfirm={() => {
+            onDeleteTask?.(task.id);
+            setShowConfirmDelete(false);
+          }}
+          onCancel={() => setShowConfirmDelete(false)}
         />
       )}
     </div>

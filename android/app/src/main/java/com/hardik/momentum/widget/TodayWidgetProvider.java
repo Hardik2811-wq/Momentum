@@ -32,9 +32,12 @@ import java.util.Locale;
 
 public class TodayWidgetProvider extends AppWidgetProvider {
   public static final String ACTION_COMPLETE_TASK = "com.hardik.momentum.ACTION_COMPLETE_TASK";
+  public static final String ACTION_TOGGLE_HABIT = "com.hardik.momentum.ACTION_TOGGLE_HABIT";
   public static final String ACTION_QUICK_ADD = "com.hardik.momentum.ACTION_QUICK_ADD";
   public static final String EXTRA_TASK_ID = "extra_task_id";
-  private static final int MAX_ROWS = 4;
+  public static final String EXTRA_HABIT_ID = "extra_habit_id";
+  private static final int MAX_TASK_ROWS = 3;
+  private static final int MAX_HABIT_ROWS = 2;
 
   public static void refresh(Context context) {
     AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -61,6 +64,15 @@ public class TodayWidgetProvider extends AppWidgetProvider {
       if (taskId != null && !taskId.isEmpty()) {
         triggerHaptic(context);
         toggleTaskCompletionInSnapshot(context, taskId);
+        refresh(context);
+        BentoStatsWidgetProvider.refresh(context);
+        UpcomingPillWidgetProvider.refresh(context);
+      }
+    } else if (ACTION_TOGGLE_HABIT.equals(intent.getAction())) {
+      String habitId = intent.getStringExtra(EXTRA_HABIT_ID);
+      if (habitId != null && !habitId.isEmpty()) {
+        triggerHaptic(context);
+        toggleHabitCompletionInSnapshot(context, habitId);
         refresh(context);
       }
     }
@@ -100,7 +112,6 @@ public class TodayWidgetProvider extends AppWidgetProvider {
         }
 
         if (toggled) {
-          // Recalculate pendingCount
           int pending = 0;
           for (int i = 0; i < tasks.length(); i++) {
             JSONObject item = tasks.optJSONObject(i);
@@ -111,10 +122,40 @@ public class TodayWidgetProvider extends AppWidgetProvider {
           snapshot.put("pendingCount", pending);
           preferences.edit().putString(WidgetBridgePlugin.SNAPSHOT, snapshot.toString()).apply();
 
-          // Record taskId in pending_completed_ids for sync with React
           String pendingList = preferences.getString(WidgetBridgePlugin.PENDING_COMPLETED, "");
           String updated = pendingList.isEmpty() ? taskId : pendingList + "," + taskId;
           preferences.edit().putString(WidgetBridgePlugin.PENDING_COMPLETED, updated).apply();
+        }
+      }
+    } catch (Exception ignored) {}
+  }
+
+  private static void toggleHabitCompletionInSnapshot(Context context, String habitId) {
+    SharedPreferences preferences = context.getSharedPreferences(WidgetBridgePlugin.PREFERENCES, Context.MODE_PRIVATE);
+    String raw = preferences.getString(WidgetBridgePlugin.SNAPSHOT, "");
+    if (raw == null || raw.isEmpty()) return;
+
+    try {
+      JSONObject snapshot = new JSONObject(raw);
+      JSONArray habits = snapshot.optJSONArray("habits");
+      if (habits != null) {
+        boolean toggled = false;
+        for (int i = 0; i < habits.length(); i++) {
+          JSONObject item = habits.optJSONObject(i);
+          if (item != null && habitId.equals(item.optString("id", ""))) {
+            boolean current = item.optBoolean("isDone", false);
+            item.put("isDone", !current);
+            toggled = true;
+            break;
+          }
+        }
+
+        if (toggled) {
+          preferences.edit().putString(WidgetBridgePlugin.SNAPSHOT, snapshot.toString()).apply();
+
+          String pendingList = preferences.getString(WidgetBridgePlugin.PENDING_COMPLETED_HABITS, "");
+          String updated = pendingList.isEmpty() ? habitId : pendingList + "," + habitId;
+          preferences.edit().putString(WidgetBridgePlugin.PENDING_COMPLETED_HABITS, updated).apply();
         }
       }
     } catch (Exception ignored) {}
@@ -133,6 +174,13 @@ public class TodayWidgetProvider extends AppWidgetProvider {
     int priorityScore;
   }
 
+  static class HabitItem {
+    String id;
+    String title;
+    boolean isDone;
+    int streakCount;
+  }
+
   private static void update(Context context, AppWidgetManager manager, int appWidgetId) {
     RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_today);
     SharedPreferences preferences = context.getSharedPreferences(WidgetBridgePlugin.PREFERENCES, Context.MODE_PRIVATE);
@@ -142,14 +190,16 @@ public class TodayWidgetProvider extends AppWidgetProvider {
     int currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
 
     List<TaskItem> allTasks = new ArrayList<>();
-    int reportedPending = 0;
+    List<HabitItem> allHabits = new ArrayList<>();
+    int totalTaskCount = 0;
+    int totalHabitCount = 0;
 
     try {
       if (saved != null && !saved.isEmpty()) {
         JSONObject snapshot = new JSONObject(saved);
-        reportedPending = snapshot.optInt("pendingCount", 0);
         JSONArray tasks = snapshot.optJSONArray("tasks");
         if (tasks != null) {
+          totalTaskCount = tasks.length();
           for (int i = 0; i < tasks.length(); i++) {
             JSONObject t = tasks.optJSONObject(i);
             if (t == null) continue;
@@ -165,10 +215,7 @@ public class TodayWidgetProvider extends AppWidgetProvider {
             item.subtasksCount = t.optInt("subtasksCount", 0);
             item.subtasksDone = t.optInt("subtasksDone", 0);
 
-            // Calculate priority score (Time + Impact + Effort)
             int score = 0;
-
-            // 1. Time factor
             int startMinutes = -1;
             if (!item.startTime.isEmpty()) {
               try {
@@ -180,20 +227,16 @@ public class TodayWidgetProvider extends AppWidgetProvider {
             if (startMinutes >= 0) {
               int endMinutes = startMinutes + Math.max(15, item.durationMinutes);
               if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
-                score += 10000; // NOW Active block!
+                score += 10000;
               } else if (startMinutes > currentMinutes) {
-                // Upcoming sooner gets higher score
                 score += 2000 - Math.min(1000, (startMinutes - currentMinutes));
               } else {
-                // Past due earlier today
                 score += 800;
               }
             } else {
-              // Floating task without scheduled time
               score += 500;
             }
 
-            // 2. Impact factor
             if ("high".equals(item.impact)) {
               score += 300;
             } else if ("medium".equals(item.impact)) {
@@ -201,18 +244,32 @@ public class TodayWidgetProvider extends AppWidgetProvider {
             } else {
               score += 50;
             }
-
-            // 3. Effort factor (quick wins get bonus)
             score += Math.max(0, 100 - Math.min(100, item.durationMinutes));
 
             item.priorityScore = score;
             allTasks.add(item);
           }
         }
+
+        JSONArray habits = snapshot.optJSONArray("habits");
+        if (habits != null) {
+          totalHabitCount = habits.length();
+          for (int i = 0; i < habits.length(); i++) {
+            JSONObject h = habits.optJSONObject(i);
+            if (h == null) continue;
+            HabitItem item = new HabitItem();
+            item.id = h.optString("id", String.valueOf(i));
+            item.title = h.optString("title", "").trim();
+            if (item.title.isEmpty()) continue;
+            item.isDone = h.optBoolean("isDone", false);
+            item.streakCount = h.optInt("streakCount", 0);
+            allHabits.add(item);
+          }
+        }
       }
     } catch (Exception ignored) {}
 
-    // Sort: uncompleted first by priorityScore descending, then completed
+    // Sort tasks: pending first by priority score, then completed
     Collections.sort(allTasks, new Comparator<TaskItem>() {
       @Override
       public int compare(TaskItem a, TaskItem b) {
@@ -223,6 +280,17 @@ public class TodayWidgetProvider extends AppWidgetProvider {
           return Integer.compare(b.priorityScore, a.priorityScore);
         }
         return 0;
+      }
+    });
+
+    // Sort habits: uncompleted first
+    Collections.sort(allHabits, new Comparator<HabitItem>() {
+      @Override
+      public int compare(HabitItem a, HabitItem b) {
+        if (a.isDone != b.isDone) {
+          return a.isDone ? 1 : -1;
+        }
+        return Integer.compare(b.streakCount, a.streakCount);
       }
     });
 
@@ -240,14 +308,12 @@ public class TodayWidgetProvider extends AppWidgetProvider {
       badgeText = "0 tasks";
     } else if (actualPending == 0) {
       badgeText = "All done ✓";
-    } else if (actualPending == 1) {
-      badgeText = "1 left";
     } else {
       badgeText = actualPending + " left";
     }
     views.setTextViewText(R.id.widget_count_badge, badgeText);
 
-    // Quick Add Button Intent
+    // Quick Add Button
     Intent addIntent = new Intent(context, MainActivity.class);
     addIntent.setAction(ACTION_QUICK_ADD);
     addIntent.putExtra("widget_action", "quick_add");
@@ -255,35 +321,35 @@ public class TodayWidgetProvider extends AppWidgetProvider {
     PendingIntent addPI = PendingIntent.getActivity(context, 99, addIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     views.setOnClickPendingIntent(R.id.widget_btn_add, addPI);
 
-    // Root Click Intent (open app)
+    // Root click opens app
     Intent rootIntent = new Intent(context, MainActivity.class);
     rootIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
     PendingIntent rootPI = PendingIntent.getActivity(context, 10, rootIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     views.setOnClickPendingIntent(R.id.widget_root, rootPI);
 
-    // Rows and Empty View
-    int[] rowIds = { R.id.widget_row_1, R.id.widget_row_2, R.id.widget_row_3, R.id.widget_row_4 };
-    int[] checkIds = { R.id.widget_check_1, R.id.widget_check_2, R.id.widget_check_3, R.id.widget_check_4 };
-    int[] contentIds = { R.id.widget_content_1, R.id.widget_content_2, R.id.widget_content_3, R.id.widget_content_4 };
-    int[] titleIds = { R.id.widget_title_1, R.id.widget_title_2, R.id.widget_title_3, R.id.widget_title_4 };
-    int[] metaIds = { R.id.widget_meta_1, R.id.widget_meta_2, R.id.widget_meta_3, R.id.widget_meta_4 };
+    // Task Rows Binding
+    int[] rowIds = { R.id.widget_row_1, R.id.widget_row_2, R.id.widget_row_3 };
+    int[] checkIds = { R.id.widget_check_1, R.id.widget_check_2, R.id.widget_check_3 };
+    int[] contentIds = { R.id.widget_content_1, R.id.widget_content_2, R.id.widget_content_3 };
+    int[] titleIds = { R.id.widget_title_1, R.id.widget_title_2, R.id.widget_title_3 };
+    int[] metaIds = { R.id.widget_meta_1, R.id.widget_meta_2, R.id.widget_meta_3 };
 
     if (allTasks.isEmpty()) {
       views.setViewVisibility(R.id.widget_empty_view, View.VISIBLE);
-      views.setOnClickPendingIntent(R.id.widget_empty_view, addPI);
-      for (int i = 0; i < MAX_ROWS; i++) {
+      views.setViewVisibility(R.id.label_section_tasks, View.GONE);
+      for (int i = 0; i < MAX_TASK_ROWS; i++) {
         views.setViewVisibility(rowIds[i], View.GONE);
       }
     } else {
       views.setViewVisibility(R.id.widget_empty_view, View.GONE);
+      views.setViewVisibility(R.id.label_section_tasks, View.VISIBLE);
 
-      for (int i = 0; i < MAX_ROWS; i++) {
+      for (int i = 0; i < MAX_TASK_ROWS; i++) {
         if (i < allTasks.size()) {
           TaskItem item = allTasks.get(i);
           views.setViewVisibility(rowIds[i], View.VISIBLE);
 
           if (item.completed) {
-            // Strikethrough for completed task
             SpannableString strikethrough = new SpannableString(item.title);
             strikethrough.setSpan(new StrikethroughSpan(), 0, strikethrough.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             views.setTextViewText(titleIds[i], strikethrough);
@@ -294,16 +360,14 @@ public class TodayWidgetProvider extends AppWidgetProvider {
             views.setTextColor(checkIds[i], Color.parseColor("#FFFFFF"));
 
             views.setInt(rowIds[i], "setBackgroundResource", R.drawable.widget_item_bg);
-            views.setTextViewText(metaIds[i], "Done • Struck through");
+            views.setTextViewText(metaIds[i], "Completed");
             views.setTextColor(metaIds[i], Color.parseColor("#475569"));
           } else {
-            // Pending task
             views.setTextViewText(titleIds[i], item.title);
             views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_checkbox_bg);
             views.setTextViewText(checkIds[i], "");
 
             if (i == 0) {
-              // Top priority NOW task highlight
               views.setInt(rowIds[i], "setBackgroundResource", R.drawable.widget_now_bg);
               views.setTextColor(titleIds[i], Color.parseColor("#FFFFFF"));
             } else {
@@ -311,11 +375,8 @@ public class TodayWidgetProvider extends AppWidgetProvider {
               views.setTextColor(titleIds[i], Color.parseColor("#F1F5F9"));
             }
 
-            // Build rich metadata: [Area] • [Time] • [Duration] • [Steps]
             StringBuilder meta = new StringBuilder();
-            if (i == 0) {
-              meta.append("NOW");
-            }
+            if (i == 0) meta.append("NOW");
             if (!item.area.isEmpty()) {
               if (meta.length() > 0) meta.append(" • ");
               meta.append(item.area);
@@ -328,16 +389,11 @@ public class TodayWidgetProvider extends AppWidgetProvider {
               if (meta.length() > 0) meta.append(" • ");
               meta.append(item.durationMinutes).append("m");
             }
-            if (item.subtasksCount > 0) {
-              if (meta.length() > 0) meta.append(" • ");
-              meta.append("[").append(item.subtasksDone).append("/").append(item.subtasksCount).append(" steps]");
-            }
-
             views.setTextViewText(metaIds[i], meta.toString());
             views.setTextColor(metaIds[i], i == 0 ? Color.parseColor("#93C5FD") : Color.parseColor("#94A3B8"));
           }
 
-          // Checkbox click intent (toggles task and haptic feedback)
+          // Checkbox toggle
           Intent checkIntent = new Intent(context, TodayWidgetProvider.class);
           checkIntent.setAction(ACTION_COMPLETE_TASK);
           checkIntent.setData(Uri.parse("momentum://task/complete/" + item.id));
@@ -350,7 +406,7 @@ public class TodayWidgetProvider extends AppWidgetProvider {
           );
           views.setOnClickPendingIntent(checkIds[i], checkPI);
 
-          // Content click intent (opens app to task)
+          // Content click
           Intent openIntent = new Intent(context, MainActivity.class);
           openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
           openIntent.setData(Uri.parse("momentum://task/open/" + item.id));
@@ -361,12 +417,76 @@ public class TodayWidgetProvider extends AppWidgetProvider {
               PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
           );
           views.setOnClickPendingIntent(contentIds[i], openPI);
-
         } else {
-          // Hide unused row
           views.setViewVisibility(rowIds[i], View.GONE);
         }
       }
+    }
+
+    // Habit Rows Binding
+    int[] hRowIds = { R.id.widget_habit_row_1, R.id.widget_habit_row_2 };
+    int[] hCheckIds = { R.id.widget_habit_check_1, R.id.widget_habit_check_2 };
+    int[] hTitleIds = { R.id.widget_habit_title_1, R.id.widget_habit_title_2 };
+    int[] hStreakIds = { R.id.widget_habit_streak_1, R.id.widget_habit_streak_2 };
+
+    if (allHabits.isEmpty()) {
+      views.setViewVisibility(R.id.label_section_habits, View.GONE);
+      views.setViewVisibility(hRowIds[0], View.GONE);
+      views.setViewVisibility(hRowIds[1], View.GONE);
+    } else {
+      views.setViewVisibility(R.id.label_section_habits, View.VISIBLE);
+      for (int i = 0; i < MAX_HABIT_ROWS; i++) {
+        if (i < allHabits.size()) {
+          HabitItem h = allHabits.get(i);
+          views.setViewVisibility(hRowIds[i], View.VISIBLE);
+          views.setTextViewText(hTitleIds[i], h.title);
+          views.setTextViewText(hStreakIds[i], h.streakCount > 0 ? (h.streakCount + "d 🔥") : "0d");
+
+          if (h.isDone) {
+            views.setInt(hCheckIds[i], "setBackgroundResource", R.drawable.widget_checkbox_checked);
+            views.setTextViewText(hCheckIds[i], "✓");
+            views.setTextColor(hTitleIds[i], Color.parseColor("#94A3B8"));
+          } else {
+            views.setInt(hCheckIds[i], "setBackgroundResource", R.drawable.widget_checkbox_bg);
+            views.setTextViewText(hCheckIds[i], "");
+            views.setTextColor(hTitleIds[i], Color.parseColor("#F1F5F9"));
+          }
+
+          // Habit check intent
+          Intent hIntent = new Intent(context, TodayWidgetProvider.class);
+          hIntent.setAction(ACTION_TOGGLE_HABIT);
+          hIntent.setData(Uri.parse("momentum://habit/toggle/" + h.id));
+          hIntent.putExtra(EXTRA_HABIT_ID, h.id);
+          PendingIntent hPI = PendingIntent.getBroadcast(
+              context,
+              i + 400,
+              hIntent,
+              PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+          );
+          views.setOnClickPendingIntent(hCheckIds[i], hPI);
+          views.setOnClickPendingIntent(hRowIds[i], hPI);
+        } else {
+          views.setViewVisibility(hRowIds[i], View.GONE);
+        }
+      }
+    }
+
+    // Overflow summary footer for heavy workloads
+    int overflowTasks = Math.max(0, allTasks.size() - MAX_TASK_ROWS);
+    int overflowHabits = Math.max(0, allHabits.size() - MAX_HABIT_ROWS);
+    if (overflowTasks > 0 || overflowHabits > 0) {
+      StringBuilder overflow = new StringBuilder();
+      overflow.append("+");
+      if (overflowTasks > 0) overflow.append(overflowTasks).append(" tasks");
+      if (overflowTasks > 0 && overflowHabits > 0) overflow.append(", ");
+      if (overflowHabits > 0) overflow.append(overflowHabits).append(" habits");
+      overflow.append(" in app →");
+
+      views.setTextViewText(R.id.widget_overflow_text, overflow.toString());
+      views.setViewVisibility(R.id.widget_overflow_text, View.VISIBLE);
+      views.setOnClickPendingIntent(R.id.widget_overflow_text, rootPI);
+    } else {
+      views.setViewVisibility(R.id.widget_overflow_text, View.GONE);
     }
 
     manager.updateAppWidget(appWidgetId, views);

@@ -2,7 +2,9 @@
 <resources>
     <string name="app_name">Momentum</string>
     <string name="title_activity_main">Momentum</string>
-    <string name="today_widget_description">Today’s Momentum tasks</string>
+    <string name="today_widget_description">Today’s Momentum tasks and habits</string>
+    <string name="quick_actions_widget_description">Quick Add: Task, Goal, Habit</string>
+    <string name="upcoming_pill_widget_description">Next Upcoming scheduled task</string>
     <string name="package_name">com.hardik.momentum</string>
     <string name="custom_url_scheme">com.hardik.momentum</string>
 </resources>

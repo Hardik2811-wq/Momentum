@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { queryLearnedMemory } from '../lib/nlpMemory';
+import ConfirmModal from './ConfirmModal';
 
 const DURATION_PRESETS = ['Open / Flex', '15 mins', '30 mins', '45 mins', '60 mins'];
 
@@ -820,39 +821,14 @@ export default function HabitModal({
           {/* Modal Footer Bar (Slim) */}
           <footer className="pt-2 border-t border-black/[0.06] flex items-center justify-between gap-3 shrink-0">
             {isEditing && onDelete ? (
-              <div>
-                {confirmDelete ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-error font-medium">Delete sequence?</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onDelete(habit.id);
-                        onClose();
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-error text-white text-xs font-semibold hover:opacity-90"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(false)}
-                      className="text-xs text-neutral-400 hover:text-neutral-700"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-error hover:bg-red-50 text-xs font-semibold transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[15px]">delete</span>
-                    <span>Delete</span>
-                  </button>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-error hover:bg-red-50 text-xs font-semibold transition-colors"
+              >
+                <span className="material-symbols-outlined text-[15px]">delete</span>
+                <span>Delete</span>
+              </button>
             ) : (
               <div />
             )}
@@ -878,6 +854,21 @@ export default function HabitModal({
           </footer>
         </form>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmDelete}
+        title="Delete Habit Routine?"
+        message={`Are you sure you want to delete "${habit?.title}"? All streak tracking for this routine will be removed.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDanger={true}
+        onConfirm={() => {
+          onDelete(habit.id);
+          setConfirmDelete(false);
+          onClose();
+        }}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

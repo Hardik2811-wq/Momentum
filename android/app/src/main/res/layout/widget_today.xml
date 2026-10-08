@@ -5,13 +5,13 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="12dp">
 
     <!-- Header: Momentum brand, Date, Count, Quick Add Button -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="6dp">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -24,9 +24,9 @@
                 android:id="@+id/widget_header_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="MOMENTUM • TODAY"
+                android:text="MOMENTUM • TODAY'S FOCUS"
                 android:textColor="#93C5FD"
-                android:textSize="10sp"
+                android:textSize="9.5sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.08" />
 
@@ -34,9 +34,8 @@
                 android:id="@+id/widget_header_date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
                 android:textColor="#FFFFFF"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -52,14 +51,14 @@
                 android:id="@+id/widget_count_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="6dp"
                 android:background="#222338"
                 android:paddingStart="7dp"
-                android:paddingTop="3dp"
+                android:paddingTop="2dp"
                 android:paddingEnd="7dp"
-                android:paddingBottom="3dp"
+                android:paddingBottom="2dp"
                 android:textColor="#E2E8F0"
-                android:textSize="11sp"
+                android:textSize="10.5sp"
                 android:textStyle="bold" />
 
             <!-- 1-Tap Quick Add Shortcut -->
@@ -71,7 +70,7 @@
                 android:gravity="center"
                 android:text="+"
                 android:textColor="#60A5FA"
-                android:textSize="18sp"
+                android:textSize="17sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </RelativeLayout>
@@ -80,9 +79,10 @@
     <LinearLayout
         android:id="@+id/widget_empty_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="vertical"
+        android:padding="12dp"
         android:visibility="gone">
 
         <TextView
@@ -90,38 +90,51 @@
             android:layout_height="wrap_content"
             android:text="✨ All blocks clear!"
             android:textColor="#34D399"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_empty_subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:text="Tap + to schedule next task"
             android:textColor="#94A3B8"
-            android:textSize="11sp" />
+            android:textSize="10.5sp" />
     </LinearLayout>
 
-    <!-- Task Row 1 (Top / NOW Priority) -->
+    <!-- Section Label: TASKS -->
+    <TextView
+        android:id="@+id/label_section_tasks"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="3dp"
+        android:text="TASKS"
+        android:textColor="#64748B"
+        android:textSize="8.5sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1" />
+
+    <!-- Task Row 1 (NOW / Top Priority) -->
     <RelativeLayout
         android:id="@+id/widget_row_1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/widget_now_bg"
-        android:padding="8dp"
+        android:padding="6dp"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/widget_check_1"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_checkbox_bg"
             android:gravity="center"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
         <LinearLayout
@@ -129,7 +142,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="7dp"
             android:layout_toEndOf="@id/widget_check_1"
             android:orientation="vertical">
 
@@ -140,18 +153,17 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#FFFFFF"
-                android:textSize="12.5sp"
+                android:textSize="11.5sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_meta_1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#93C5FD"
-                android:textSize="10.5sp" />
+                android:textSize="9.5sp" />
         </LinearLayout>
     </RelativeLayout>
 
@@ -160,21 +172,21 @@
         android:id="@+id/widget_row_2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="3dp"
         android:background="@drawable/widget_item_bg"
-        android:padding="8dp"
+        android:padding="6dp"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/widget_check_2"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_checkbox_bg"
             android:gravity="center"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
         <LinearLayout
@@ -182,7 +194,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="7dp"
             android:layout_toEndOf="@id/widget_check_2"
             android:orientation="vertical">
 
@@ -193,18 +205,17 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#F1F5F9"
-                android:textSize="12sp"
+                android:textSize="11.5sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_meta_2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#94A3B8"
-                android:textSize="10.5sp" />
+                android:textSize="9.5sp" />
         </LinearLayout>
     </RelativeLayout>
 
@@ -213,21 +224,21 @@
         android:id="@+id/widget_row_3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="3dp"
         android:background="@drawable/widget_item_bg"
-        android:padding="8dp"
+        android:padding="6dp"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/widget_check_3"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_checkbox_bg"
             android:gravity="center"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
         <LinearLayout
@@ -235,7 +246,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="7dp"
             android:layout_toEndOf="@id/widget_check_3"
             android:orientation="vertical">
 
@@ -246,72 +257,136 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#F1F5F9"
-                android:textSize="12sp"
+                android:textSize="11.5sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_meta_3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#94A3B8"
-                android:textSize="10.5sp" />
+                android:textSize="9.5sp" />
         </LinearLayout>
     </RelativeLayout>
 
-    <!-- Task Row 4 -->
+    <!-- Section Label: TODAY'S HABITS -->
+    <TextView
+        android:id="@+id/label_section_habits"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="3dp"
+        android:text="TODAY'S HABITS"
+        android:textColor="#F59E0B"
+        android:textSize="8.5sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1" />
+
+    <!-- Habit Row 1 -->
     <RelativeLayout
-        android:id="@+id/widget_row_4"
+        android:id="@+id/widget_habit_row_1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
         android:background="@drawable/widget_item_bg"
-        android:padding="8dp"
+        android:padding="6dp"
         android:visibility="gone">
 
         <TextView
-            android:id="@+id/widget_check_4"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:id="@+id/widget_habit_check_1"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_checkbox_bg"
             android:gravity="center"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
-        <LinearLayout
-            android:id="@+id/widget_content_4"
+        <TextView
+            android:id="@+id/widget_habit_title_1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="8dp"
-            android:layout_toEndOf="@id/widget_check_4"
-            android:orientation="vertical">
+            android:layout_marginStart="7dp"
+            android:layout_toEndOf="@id/widget_habit_check_1"
+            android:layout_toStartOf="@+id/widget_habit_streak_1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#F1F5F9"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/widget_title_4"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#F1F5F9"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/widget_meta_4"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#94A3B8"
-                android:textSize="10.5sp" />
-        </LinearLayout>
+        <TextView
+            android:id="@+id/widget_habit_streak_1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:textColor="#FBBF24"
+            android:textSize="10sp"
+            android:textStyle="bold" />
     </RelativeLayout>
+
+    <!-- Habit Row 2 -->
+    <RelativeLayout
+        android:id="@+id/widget_habit_row_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:background="@drawable/widget_item_bg"
+        android:padding="6dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/widget_habit_check_2"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/widget_checkbox_bg"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_habit_title_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="7dp"
+            android:layout_toEndOf="@id/widget_habit_check_2"
+            android:layout_toStartOf="@+id/widget_habit_streak_2"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#F1F5F9"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_habit_streak_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:textColor="#FBBF24"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </RelativeLayout>
+
+    <!-- Overflow notice footer -->
+    <TextView
+        android:id="@+id/widget_overflow_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:gravity="end"
+        android:text=""
+        android:textColor="#64748B"
+        android:textSize="9.5sp"
+        android:visibility="gone" />
 
 </LinearLayout>

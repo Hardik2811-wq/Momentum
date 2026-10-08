@@ -55,6 +55,7 @@ export default function App() {
       tasks: store.tasks,
       onToggleTask: store.toggleTask,
       onDeleteTask: store.deleteTask,
+      onDeleteTasks: store.deleteTasks,
       onToggleSubtask: store.toggleSubtask,
       onReorderTasks: store.reorderTasks,
       onOpenQuickAdd: openQuickAdd,
@@ -77,6 +78,7 @@ export default function App() {
             schedules={store.schedules}
             onUpdateSchedule={store.updateSchedule}
             onDeleteSchedule={store.deleteSchedule}
+            onDeleteSchedules={store.deleteSchedules}
             moveTaskToBacklog={store.moveTaskToBacklog}
             sweepMissedTasksToBacklog={store.sweepMissedTasksToBacklog}
           />
@@ -92,6 +94,7 @@ export default function App() {
             onUpdateSchedule={store.updateSchedule}
             onAddSchedule={store.addSchedule}
             onDeleteSchedule={store.deleteSchedule}
+            onDeleteSchedules={store.deleteSchedules}
             onStartFocus={startFocusForTask}
             onCheckInHabit={store.checkInHabit}
           />
@@ -163,6 +166,14 @@ export default function App() {
             exportFullBackup={store.exportFullBackup}
             importFullBackup={store.importFullBackup}
             cloudSync={store.cloudSync}
+            tasks={store.tasks}
+            habits={store.habits}
+            stats={store.stats}
+            onToggleTask={store.toggleTask}
+            onCheckInHabit={store.checkInHabit}
+            onOpenQuickAdd={openQuickAdd}
+            onOpenNewGoal={() => setIsGoalModalOpen(true)}
+            onOpenNewHabit={() => setIsHabitModalOpen(true)}
           />
         );
       default:
@@ -191,8 +202,12 @@ export default function App() {
     <>
       <AndroidWidgetSync
         tasks={store.tasks}
+        habits={store.habits}
         onToggleTask={store.toggleTask}
+        onCheckInHabit={store.checkInHabit}
         onOpenQuickAdd={openQuickAdd}
+        onOpenNewGoal={() => setIsGoalModalOpen(true)}
+        onOpenNewHabit={() => setIsHabitModalOpen(true)}
       />
       <AuthGate>
       <div className="min-h-screen font-sans bg-[#EFEFF5] text-[#1A1B1F]">

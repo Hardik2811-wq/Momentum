@@ -32,6 +32,7 @@ import { triggerCelebration } from '../lib/celebrate';
 import TaskDetailModal from '../components/TaskDetailModal';
 import ScheduleDetailModal from '../components/ScheduleDetailModal';
 import DeleteRecurringModal from '../components/DeleteRecurringModal';
+import ConfirmModal from '../components/ConfirmModal';
 import {
   taskPlanDate,
   todayPlanDate,
@@ -114,6 +115,7 @@ const TodayView = React.memo(function TodayView({
   tasks = [],
   onToggleTask,
   onDeleteTask,
+  onDeleteTasks,
   onUpdateTask,
   onToggleSubtask,
   onOpenQuickAdd,
@@ -123,6 +125,7 @@ const TodayView = React.memo(function TodayView({
   onUpdateSchedule,
   onAddSchedule,
   onDeleteSchedule,
+  onDeleteSchedules,
   onStartFocus,
   onCheckInHabit
 }) {
@@ -139,7 +142,38 @@ const TodayView = React.memo(function TodayView({
   const [editingTask, setEditingTask] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [recurringDeleteTarget, setRecurringDeleteTarget] = useState(null); // { task, date }
+  const [singleDeleteTarget, setSingleDeleteTarget] = useState(null); // { type, id, title }
   const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  /* ── Multi-Select Batch Deletion State ── */
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
+  const [selectedScheduleIds, setSelectedScheduleIds] = useState(new Set());
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+
+  // Reset selections when switching tray modes
+  useEffect(() => {
+    setSelectedTaskIds(new Set());
+    setSelectedScheduleIds(new Set());
+  }, [trayFilterMode]);
+
+  const toggleSelectTask = useCallback((id) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectSchedule = useCallback((id) => {
+    setSelectedScheduleIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   /* ── Canvas Editor Mode & Vector Shape Transform States ── */
   const [isEditorMode, setIsEditorMode] = useState(false);
@@ -440,6 +474,52 @@ const TodayView = React.memo(function TodayView({
     }
     return list;
   }, [schedules, traySearch, trayAreaFilter]);
+
+  const activeSelectionCount = trayFilterMode === 'schedules' ? selectedScheduleIds.size : selectedTaskIds.size;
+
+  const handleSelectAll = useCallback(() => {
+    if (trayFilterMode === 'schedules') {
+      const allIds = filteredSchedules.map(s => s.id);
+      setSelectedScheduleIds(new Set(allIds));
+    } else {
+      const allIds = trayTasks.map(t => t.id);
+      setSelectedTaskIds(new Set(allIds));
+    }
+  }, [trayFilterMode, filteredSchedules, trayTasks]);
+
+  const handleDeselectAll = useCallback(() => {
+    if (trayFilterMode === 'schedules') {
+      setSelectedScheduleIds(new Set());
+    } else {
+      setSelectedTaskIds(new Set());
+    }
+  }, [trayFilterMode]);
+
+  const handleExecuteBatchDelete = useCallback(() => {
+    if (trayFilterMode === 'schedules') {
+      const ids = Array.from(selectedScheduleIds);
+      if (ids.length > 0) {
+        if (onDeleteSchedules) {
+          onDeleteSchedules(ids);
+        } else {
+          ids.forEach(id => onDeleteSchedule?.(id));
+        }
+      }
+      setSelectedScheduleIds(new Set());
+    } else {
+      const ids = Array.from(selectedTaskIds);
+      if (ids.length > 0) {
+        if (onDeleteTasks) {
+          onDeleteTasks(ids);
+        } else {
+          ids.forEach(id => onDeleteTask?.(id));
+        }
+      }
+      setSelectedTaskIds(new Set());
+    }
+    setShowBatchDeleteConfirm(false);
+    setIsMultiSelectMode(false);
+  }, [trayFilterMode, selectedScheduleIds, selectedTaskIds, onDeleteSchedules, onDeleteSchedule, onDeleteTasks, onDeleteTask]);
 
   /* ── Multi-Column Memoized Layout Generator (O(C * N^2) isolated to data changes) ── */
   const columnsData = useMemo(() => {
@@ -961,10 +1041,37 @@ const TodayView = React.memo(function TodayView({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span className="px-2 py-0.5 rounded-full bg-[#F5F4FA] text-[#64748B] text-[11px] font-bold">
-                    {trayTasks.length}
+                    {trayFilterMode === 'schedules' ? filteredSchedules.length : trayTasks.length}
                   </span>
+
+                  {/* Multi-Select Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMultiSelectMode(prev => {
+                        const next = !prev;
+                        if (!next) {
+                          setSelectedTaskIds(new Set());
+                          setSelectedScheduleIds(new Set());
+                        }
+                        return next;
+                      });
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                      isMultiSelectMode
+                        ? 'bg-[#0A84FF] text-white shadow-xs'
+                        : 'bg-[#F5F4FA] hover:bg-[#EBEBF0] text-[#475569] border border-black/[0.04]'
+                    }`}
+                    title={isMultiSelectMode ? "Cancel multi-select" : "Select multiple items to delete"}
+                  >
+                    <span className="material-symbols-outlined text-[13px]">
+                      {isMultiSelectMode ? 'close' : 'checklist'}
+                    </span>
+                    <span>{isMultiSelectMode ? 'Cancel' : 'Select'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setMobileTab('timeline')}
@@ -975,6 +1082,46 @@ const TodayView = React.memo(function TodayView({
                   </button>
                 </div>
               </div>
+
+              {/* Multi-Select Batch Action Bar */}
+              {isMultiSelectMode && (
+                <div className="p-2 px-3 rounded-xl bg-blue-50/90 border border-[#0A84FF]/25 flex items-center justify-between gap-2 animate-fadeIn shrink-0 shadow-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[11px] font-bold text-[#0A84FF] shrink-0">
+                      {activeSelectionCount} selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={
+                        activeSelectionCount > 0 && activeSelectionCount === (trayFilterMode === 'schedules' ? filteredSchedules.length : trayTasks.length)
+                          ? handleDeselectAll
+                          : handleSelectAll
+                      }
+                      className="text-[10px] font-semibold text-[#475569] hover:text-[#0A84FF] underline decoration-dotted transition truncate cursor-pointer"
+                    >
+                      {activeSelectionCount > 0 && activeSelectionCount === (trayFilterMode === 'schedules' ? filteredSchedules.length : trayTasks.length)
+                        ? 'Deselect all'
+                        : 'Select all'}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      disabled={activeSelectionCount === 0}
+                      onClick={() => setShowBatchDeleteConfirm(true)}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 shadow-xs ${
+                        activeSelectionCount > 0
+                          ? 'bg-[#E5484D] hover:bg-[#D93D42] text-white active:scale-95 cursor-pointer'
+                          : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Delete {activeSelectionCount > 0 ? `(${activeSelectionCount})` : ''}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Quick Add into Tray Form */}
               <form onSubmit={handleCreateTrayTask} className="relative">
@@ -1142,19 +1289,44 @@ const TodayView = React.memo(function TodayView({
                       return (
                         <div
                           key={`tray-s-${sched.id}`}
-                          onClick={() => setEditingSchedule(sched)}
+                          onClick={() => {
+                            if (isMultiSelectMode) {
+                              toggleSelectSchedule(sched.id);
+                            } else {
+                              setEditingSchedule(sched);
+                            }
+                          }}
                           className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-2.5 cursor-pointer group shadow-2xs ${
-                            isDone
+                            isSelected
+                              ? 'ring-2 ring-[#0A84FF] border-[#0A84FF] bg-blue-50/70 shadow-xs'
+                              : isDone
                               ? 'border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50/70 opacity-90'
                               : 'border-indigo-100/80 bg-white hover:bg-indigo-50/40'
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                              isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-50 text-indigo-600'
-                            }`}>
-                              <span className="material-symbols-outlined text-[16px]">{isDone ? 'check' : 'school'}</span>
-                            </div>
+                            {isMultiSelectMode ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSelectSchedule(sched.id);
+                                }}
+                                className={`w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 ${
+                                  isSelected
+                                    ? 'bg-[#0A84FF] border-[#0A84FF] text-white shadow-2xs'
+                                    : 'border-slate-300 bg-white hover:border-[#0A84FF]'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                              </button>
+                            ) : (
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                                isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-50 text-indigo-600'
+                              }`}>
+                                <span className="material-symbols-outlined text-[16px]">{isDone ? 'check' : 'school'}</span>
+                              </div>
+                            )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
                                 <p className={`text-[12px] font-bold truncate transition ${
@@ -1181,36 +1353,38 @@ const TodayView = React.memo(function TodayView({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {sched.category && (
-                              <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[9.5px] font-bold uppercase tracking-wider">
-                                {sched.category}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => handleToggleScheduleDone(sched, viewDate, e)}
-                              className={`p-1.5 rounded-lg border transition-all shrink-0 cursor-pointer ${
-                                isDone
-                                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs hover:bg-emerald-700'
-                                  : 'border-slate-200 hover:border-emerald-500 hover:text-emerald-600 text-slate-300 bg-white'
-                              }`}
-                              title={isDone ? "Mark incomplete" : "Mark attended/completed"}
-                            >
-                              <Check className={`w-3.5 h-3.5 stroke-[2.5] ${isDone ? 'text-white' : ''}`} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingSchedule(sched);
-                              }}
-                              className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition opacity-0 group-hover:opacity-100 cursor-pointer"
-                              title="Edit schedule"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          {!isMultiSelectMode && (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {sched.category && (
+                                <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[9.5px] font-bold uppercase tracking-wider">
+                                  {sched.category}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleScheduleDone(sched, viewDate, e)}
+                                className={`p-1.5 rounded-lg border transition-all shrink-0 cursor-pointer ${
+                                  isDone
+                                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs hover:bg-emerald-700'
+                                    : 'border-slate-200 hover:border-emerald-500 hover:text-emerald-600 text-slate-300 bg-white'
+                                }`}
+                                title={isDone ? "Mark incomplete" : "Mark attended/completed"}
+                              >
+                                <Check className={`w-3.5 h-3.5 stroke-[2.5] ${isDone ? 'text-white' : ''}`} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingSchedule(sched);
+                                }}
+                                className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                                title="Edit schedule"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })
@@ -1284,34 +1458,63 @@ const TodayView = React.memo(function TodayView({
                     const taskArea = Array.isArray(task.areas) && task.areas.length > 0 ? task.areas[0] : (task.category || 'Career & Craft');
                     const isMenuOpen = activeSlotMenuTaskId === task.id;
                     const isAlreadySlotted = Boolean(task.startTime);
+                    const isSelected = isMultiSelectMode && selectedTaskIds.has(task.id);
 
                     return (
                       <div
                         key={task.id}
-                        draggable
+                        draggable={!isMultiSelectMode}
                         onDragStart={(e) => {
+                          if (isMultiSelectMode) return;
                           e.dataTransfer.setData('text/plain', JSON.stringify({ taskId: task.id }));
                           setDraggedTaskId(task.id);
                         }}
                         onDragEnd={() => setDraggedTaskId(null)}
-                        onClick={() => setEditingTask(task)}
-                        className={`relative p-2.5 rounded-xl border transition-all cursor-grab active:cursor-grabbing hover:shadow-xs group ${
-                          draggedTaskId === task.id
+                        onClick={() => {
+                          if (isMultiSelectMode) {
+                            toggleSelectTask(task.id);
+                          } else {
+                            setEditingTask(task);
+                          }
+                        }}
+                        className={`relative p-2.5 rounded-xl border transition-all ${
+                          isMultiSelectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+                        } hover:shadow-xs group ${
+                          isSelected
+                            ? 'ring-2 ring-[#0A84FF] border-[#0A84FF] bg-blue-50/70 shadow-xs'
+                            : draggedTaskId === task.id
                             ? 'opacity-40 border-[#0A84FF] bg-blue-50/50'
                             : 'bg-[#FAFAFC] hover:bg-white border-black/[0.06]'
                         }`}
                       >
                         <div className="flex items-start gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onToggleTask?.(task.id);
-                            }}
-                            className="mt-0.5 text-[#94A3B8] hover:text-[#0A84FF] transition shrink-0"
-                          >
-                            <Square className="w-4 h-4" />
-                          </button>
+                          {isMultiSelectMode ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSelectTask(task.id);
+                              }}
+                              className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition shrink-0 ${
+                                isSelected
+                                  ? 'bg-[#0A84FF] border-[#0A84FF] text-white shadow-2xs'
+                                  : 'border-slate-300 bg-white hover:border-[#0A84FF]'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleTask?.(task.id);
+                              }}
+                              className="mt-0.5 text-[#94A3B8] hover:text-[#0A84FF] transition shrink-0"
+                            >
+                              <Square className="w-4 h-4" />
+                            </button>
+                          )}
 
                           <div className="flex-1 min-w-0">
                             <p className="text-[12px] font-semibold text-[#1A1B1F] leading-tight truncate">
@@ -1344,45 +1547,47 @@ const TodayView = React.memo(function TodayView({
                           </div>
 
                           {/* Slot Button & Popover */}
-                          <div className="relative" ref={isMenuOpen ? slotMenuRef : null}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveSlotMenuTaskId(isMenuOpen ? null : task.id);
-                              }}
-                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 shrink-0 ${
-                                isAlreadySlotted
-                                  ? 'bg-black/[0.04] hover:bg-[#0A84FF] text-[#64748B] hover:text-white'
-                                  : 'bg-[#0A84FF]/10 hover:bg-[#0A84FF] text-[#0A84FF] hover:text-white'
-                              }`}
-                            >
-                              <Clock className="w-3 h-3" />
-                              <span>{isAlreadySlotted ? 'Move' : 'Slot'}</span>
-                            </button>
-
-                            {isMenuOpen && (
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-full mt-1 z-50 w-44 p-1.5 rounded-xl bg-white border border-black/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.14)] space-y-1 animate-fadeIn"
+                          {!isMultiSelectMode && (
+                            <div className="relative" ref={isMenuOpen ? slotMenuRef : null}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveSlotMenuTaskId(isMenuOpen ? null : task.id);
+                                }}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition flex items-center gap-0.5 shrink-0 ${
+                                  isAlreadySlotted
+                                    ? 'bg-black/[0.04] hover:bg-[#0A84FF] text-[#64748B] hover:text-white'
+                                    : 'bg-[#0A84FF]/10 hover:bg-[#0A84FF] text-[#0A84FF] hover:text-white'
+                                }`}
                               >
-                                <div className="px-2 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                  Slot into {planDateLabel(viewDate)}
+                                <Clock className="w-3 h-3" />
+                                <span>{isAlreadySlotted ? 'Move' : 'Slot'}</span>
+                              </button>
+
+                              {isMenuOpen && (
+                                <div
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="absolute right-0 top-full mt-1 z-50 w-44 p-1.5 rounded-xl bg-white border border-black/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.14)] space-y-1 animate-fadeIn"
+                                >
+                                  <div className="px-2 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                    Slot into {planDateLabel(viewDate)}
+                                  </div>
+                                  {['09:00', '11:00', '13:30', '15:00', '16:30'].map(slotTime => (
+                                    <button
+                                      key={slotTime}
+                                      type="button"
+                                      onClick={() => handleSlotTask(task.id, slotTime, viewDate)}
+                                      className="w-full text-left px-2 py-1 rounded-lg text-[11px] font-semibold text-[#1A1B1F] hover:bg-blue-50 hover:text-[#0A84FF] flex items-center justify-between transition"
+                                    >
+                                      <span>{slotTime}</span>
+                                      <Plus className="w-3.5 h-3.5 opacity-60" />
+                                    </button>
+                                  ))}
                                 </div>
-                                {['09:00', '11:00', '13:30', '15:00', '16:30'].map(slotTime => (
-                                  <button
-                                    key={slotTime}
-                                    type="button"
-                                    onClick={() => handleSlotTask(task.id, slotTime, viewDate)}
-                                    className="w-full text-left px-2 py-1 rounded-lg text-[11px] font-semibold text-[#1A1B1F] hover:bg-blue-50 hover:text-[#0A84FF] flex items-center justify-between transition"
-                                  >
-                                    <span>{slotTime}</span>
-                                    <Plus className="w-3.5 h-3.5 opacity-60" />
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1664,7 +1869,7 @@ const TodayView = React.memo(function TodayView({
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          onDeleteSchedule(sched.id);
+                                          setSingleDeleteTarget({ type: 'schedule', id: sched.id, title: sched.title });
                                         }}
                                         title="Remove schedule block"
                                         className="p-0.5 rounded text-indigo-400 hover:text-red-500 hover:bg-white/80 transition opacity-0 group-hover:opacity-100 cursor-pointer"
@@ -2267,6 +2472,19 @@ const TodayView = React.memo(function TodayView({
           }}
         />
       )}
+
+      {/* Multi-Select Batch Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showBatchDeleteConfirm}
+        title={`Delete ${activeSelectionCount} ${trayFilterMode === 'schedules' ? (activeSelectionCount === 1 ? 'Schedule' : 'Schedules') : (activeSelectionCount === 1 ? 'Task' : 'Tasks')}?`}
+        message={`Are you sure you want to delete these ${activeSelectionCount} selected items? You will be able to undo this deletion with 1-click immediately.`}
+        confirmText={`Delete ${activeSelectionCount}`}
+        cancelText="Cancel"
+        isDanger={true}
+        onConfirm={handleExecuteBatchDelete}
+        onCancel={() => setShowBatchDeleteConfirm(false)}
+      />
+
       {/* ══════════════════════════════════════════════════════
           MOBILE ONLY: FLOATING CIRCULAR CALENDAR BUTTON (BOTTOM RIGHT)
          ══════════════════════════════════════════════════════ */}

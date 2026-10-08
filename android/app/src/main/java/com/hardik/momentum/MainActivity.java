@@ -23,7 +23,18 @@ public class MainActivity extends BridgeActivity {
   private void handleWidgetIntent(Intent intent) {
     if (intent == null) return;
     String action = intent.getStringExtra("widget_action");
-    if ("quick_add".equals(action) || "com.hardik.momentum.ACTION_QUICK_ADD".equals(intent.getAction())) {
+    if (action != null && !action.isEmpty()) {
+      WidgetBridgePlugin.setPendingAction(this, action);
+      return;
+    }
+    String intentAction = intent.getAction();
+    if ("com.hardik.momentum.ACTION_QUICK_ADD_TASK".equals(intentAction)) {
+      WidgetBridgePlugin.setPendingAction(this, "quick_add_task");
+    } else if ("com.hardik.momentum.ACTION_QUICK_ADD_GOAL".equals(intentAction)) {
+      WidgetBridgePlugin.setPendingAction(this, "quick_add_goal");
+    } else if ("com.hardik.momentum.ACTION_QUICK_ADD_HABIT".equals(intentAction)) {
+      WidgetBridgePlugin.setPendingAction(this, "quick_add_habit");
+    } else if ("com.hardik.momentum.ACTION_QUICK_ADD".equals(intentAction)) {
       WidgetBridgePlugin.setPendingAction(this, "quick_add");
     }
   }

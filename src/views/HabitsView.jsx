@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { calcStreak, last7Days, todayKey, DAY_LABELS } from '../store/useStore';
 import HabitModal from '../components/HabitModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { computeHabitDecayMetrics } from '../lib/habitDecayGuard';
 
 const HABIT_COLOR_CLASSES = {
@@ -35,6 +36,7 @@ const HabitsView = React.memo(function HabitsView({ habits = [], checkInHabit, a
   };
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [habitToDelete, setHabitToDelete] = useState(null);
 
   const handleApplyGraceToday = (habit) => {
     if (!habit.graceDays || habit.graceDays <= 0) return;
@@ -428,45 +430,18 @@ const HabitsView = React.memo(function HabitsView({ habits = [], checkInHabit, a
             )}
           </button>
 
-          {/* 3. Delete Symbol (With Inline Confirmation) */}
-          {confirmDeleteId === habit.id ? (
-            <div className="flex items-center gap-1.5 bg-red-50 px-2 py-1 rounded-lg border border-red-200 animate-fadeIn">
-              <span className="text-[11px] font-semibold text-error">Delete?</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteHabit(habit.id);
-                  setConfirmDeleteId(null);
-                }}
-                className="px-2 py-0.5 rounded bg-error text-white text-[11px] font-bold hover:bg-error/90 transition-all shadow-xs"
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirmDeleteId(null);
-                }}
-                className="px-1.5 py-0.5 text-[11px] text-neutral-500 hover:text-neutral-800 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setConfirmDeleteId(habit.id);
-              }}
-              className="flex items-center gap-1 p-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-error hover:bg-red-50 transition-colors"
-              title={`Delete "${habit.title}"`}
-            >
-              <span className="material-symbols-outlined text-[16px]">delete</span>
-            </button>
-          )}
+          {/* 3. Delete Symbol (Modal Confirmation) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setHabitToDelete(habit);
+            }}
+            className="flex items-center gap-1 p-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-error hover:bg-red-50 transition-colors"
+            title={`Delete "${habit.title}"`}
+          >
+            <span className="material-symbols-outlined text-[16px]">delete</span>
+          </button>
         </div>
       </div>
     </div>
@@ -639,6 +614,22 @@ const HabitsView = React.memo(function HabitsView({ habits = [], checkInHabit, a
         goals={goals}
         onSave={handleSaveHabit}
         onDelete={deleteHabit}
+      />
+
+      <ConfirmModal
+        isOpen={!!habitToDelete}
+        title="Delete Habit Routine?"
+        message={`Are you sure you want to delete "${habitToDelete?.title}"? All streak tracking for this routine will be removed.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDanger={true}
+        onConfirm={() => {
+          if (habitToDelete) {
+            deleteHabit(habitToDelete.id);
+            setHabitToDelete(null);
+          }
+        }}
+        onCancel={() => setHabitToDelete(null)}
       />
     </main>
   );

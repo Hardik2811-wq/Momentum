@@ -5,6 +5,7 @@ import ApiKeyModal from '../components/ApiKeyModal';
 import { sendNotification } from '../store/useStore';
 import { getCustomCopilotDirective, setCustomCopilotDirective } from '../lib/groqClient';
 import { getNlpInsights, resetNlpMemory } from '../lib/nlpMemory';
+import MobileWidgetsShowcase from '../components/MobileWidgetsShowcase';
 
 const Toggle = ({ checked, onChange }) => (
   <button
@@ -50,7 +51,15 @@ export default function SettingsView({
   loadDemoData,
   exportFullBackup,
   importFullBackup,
-  cloudSync
+  cloudSync,
+  tasks = [],
+  habits = [],
+  stats = {},
+  onToggleTask,
+  onCheckInHabit,
+  onOpenQuickAdd,
+  onOpenNewGoal,
+  onOpenNewHabit
 }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -70,10 +79,10 @@ export default function SettingsView({
     return () => window.removeEventListener('momentum:nlp-learned', refreshIntelligence);
   }, []);
 
+  const [showClearLearningConfirm, setShowClearLearningConfirm] = useState(false);
+
   const clearLearning = () => {
-    if (!window.confirm('Remove local task patterns and learning history? This cannot be undone.')) return;
-    resetNlpMemory();
-    refreshIntelligence();
+    setShowClearLearningConfirm(true);
   };
   
   const getInitials = (name) => {
@@ -480,6 +489,28 @@ export default function SettingsView({
           ))}
         </Section>
 
+        {/* ── Android Home Screen Widgets Simulation & Mock UI ── */}
+        <Section
+          title="Android App Widgets (Home Screen Mock UI)"
+          badge={
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-500 border border-blue-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              CAPACITOR NATIVE BRIDGE
+            </span>
+          }
+        >
+          <MobileWidgetsShowcase
+            tasks={tasks}
+            habits={habits}
+            stats={stats}
+            onToggleTask={onToggleTask}
+            onCheckInHabit={onCheckInHabit}
+            onOpenQuickAdd={onOpenQuickAdd}
+            onOpenNewGoal={onOpenNewGoal}
+            onOpenNewHabit={onOpenNewHabit}
+          />
+        </Section>
+
         {/* ── Workspace & Danger Zone ── */}
         <Section title="Workspace State & Reset">
           <div className="space-y-4">
@@ -555,6 +586,21 @@ export default function SettingsView({
           setShowClearConfirm(false);
         }}
         onCancel={() => setShowClearConfirm(false)}
+      />
+
+      {/* Modern In-App Confirm Modal for Clear Learning */}
+      <ConfirmModal
+        isOpen={showClearLearningConfirm}
+        title="Reset Intelligence History?"
+        message="Remove local task patterns and cognitive learning history? This cannot be undone."
+        confirmText="Yes, Reset Learning"
+        isDanger={true}
+        onConfirm={() => {
+          resetNlpMemory();
+          refreshIntelligence();
+          setShowClearLearningConfirm(false);
+        }}
+        onCancel={() => setShowClearLearningConfirm(false)}
       />
       <ApiKeyModal isOpen={showByokModal} onClose={() => setShowByokModal(false)} />
     </main>
