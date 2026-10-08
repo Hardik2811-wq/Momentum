@@ -287,6 +287,32 @@ const DashboardView = React.memo(function DashboardView({
     onCheckInHabit?.(habitId);
   };
 
+  const handleToggleScheduleDone = (sched, targetDate = todayPlan, e) => {
+    if (e) e.stopPropagation();
+    const isDone = Boolean(
+      sched.completed ||
+      (Array.isArray(sched.completedDates) && sched.completedDates.includes(targetDate))
+    );
+    const currentDates = Array.isArray(sched.completedDates) ? sched.completedDates : [];
+
+    if (isDone) {
+      const updatedDates = currentDates.filter(d => d !== targetDate);
+      onUpdateSchedule?.(sched.id, {
+        completed: false,
+        completedDates: updatedDates,
+      });
+    } else {
+      const updatedDates = currentDates.includes(targetDate) ? currentDates : [...currentDates, targetDate];
+      const isOneTime = !sched.recurrence || sched.recurrence === 'once' || sched.recurrence === 'none';
+      onUpdateSchedule?.(sched.id, {
+        completed: isOneTime ? true : false,
+        completedDates: updatedDates,
+        lastCompletedAt: Date.now()
+      });
+      triggerCelebration({ count: 60, spread: 70 });
+    }
+  };
+
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
@@ -840,26 +866,34 @@ const DashboardView = React.memo(function DashboardView({
                         const startLabel = sched.startTime ? formatTime(sched.startTime) : 'Flexible';
                         const endLabel = sched.endTime ? formatTime(sched.endTime) : (sched.startTime ? formatTime(calculateEndTime(sched.startTime, sched.durationMinutes || 60)) : '');
                         const win = getItemTimeWindow(sched);
-                        const isOngoing = win && currentMins >= win.startMins && currentMins <= win.endMins;
-                        const isUpNext = !isOngoing && upNextSchedule && String(sched.id) === String(upNextSchedule.id);
-                        const isPassed = win && currentMins > win.endMins;
+                        const isDone = Boolean(
+                          sched.completed ||
+                          (Array.isArray(sched.completedDates) && sched.completedDates.includes(todayPlan))
+                        );
+                        const isOngoing = !isDone && win && currentMins >= win.startMins && currentMins <= win.endMins;
+                        const isUpNext = !isDone && !isOngoing && upNextSchedule && String(sched.id) === String(upNextSchedule.id);
+                        const isPassed = !isDone && win && currentMins > win.endMins;
 
                         return (
                           <div
                             key={sched.id}
                             onClick={() => setEditingSchedule(sched)}
                             className={`group relative flex items-start gap-3.5 rounded-2xl p-3 transition-all cursor-pointer active:scale-[0.99] ${
-                              isOngoing
-                                ? 'bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent border-2 border-indigo-500/80 ring-2 ring-indigo-500/20 shadow-sm'
-                                : isUpNext
-                                  ? 'bg-indigo-50/70 hover:bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 shadow-2xs'
-                                  : isPassed
-                                    ? 'bg-surface-container-low/30 hover:bg-surface-container-low/60 border border-black/[0.04] opacity-75'
-                                    : 'bg-indigo-50/40 hover:bg-indigo-50/80 border border-indigo-100/70'
+                              isDone
+                                ? 'bg-emerald-50/50 hover:bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 opacity-90'
+                                : isOngoing
+                                  ? 'bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent border-2 border-indigo-500/80 ring-2 ring-indigo-500/20 shadow-sm'
+                                  : isUpNext
+                                    ? 'bg-indigo-50/70 hover:bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 shadow-2xs'
+                                    : isPassed
+                                      ? 'bg-surface-container-low/30 hover:bg-surface-container-low/60 border border-black/[0.04] opacity-75'
+                                      : 'bg-indigo-50/40 hover:bg-indigo-50/80 border border-indigo-100/70'
                             }`}
                           >
                             {/* Timeline Node */}
-                            <div className="relative z-10 -ml-[18px] mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-indigo-600 shadow-2xs">
+                            <div className={`relative z-10 -ml-[18px] mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white shadow-2xs ${
+                              isDone ? 'bg-emerald-600' : 'bg-indigo-600'
+                            }`}>
                               {isOngoing && (
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                               )}
@@ -869,10 +903,20 @@ const DashboardView = React.memo(function DashboardView({
                             {/* Schedule Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-bold text-indigo-950 dark:text-indigo-200 truncate group-hover:text-indigo-700 transition">
+                                <span className={`text-xs font-bold truncate transition ${
+                                  isDone
+                                    ? 'line-through text-slate-400 dark:text-slate-500 group-hover:text-emerald-700'
+                                    : 'text-indigo-950 dark:text-indigo-200 group-hover:text-indigo-700'
+                                }`}>
                                   {sched.title}
                                 </span>
                                 <div className="flex items-center gap-1.5 shrink-0">
+                                  {isDone && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-[9px] font-extrabold uppercase tracking-wider">
+                                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                      Attended
+                                    </span>
+                                  )}
                                   {isOngoing && (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[9px] font-extrabold uppercase tracking-wider shadow-2xs">
                                       <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
@@ -894,15 +938,32 @@ const DashboardView = React.memo(function DashboardView({
                                   </span>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 font-mono tabular-nums">
-                                  {startLabel}{endLabel ? ` – ${endLabel}` : ''}
-                                </span>
-                                {sched.category && (
-                                  <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/80 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[9px] font-bold uppercase tracking-wider shrink-0">
-                                    {sched.category}
+                              <div className="flex items-center justify-between gap-2 mt-1">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 font-mono tabular-nums truncate">
+                                    {startLabel}{endLabel ? ` – ${endLabel}` : ''}
                                   </span>
-                                )}
+                                  {sched.category && (
+                                    <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/80 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                      {sched.category}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Done Toggle Button */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleToggleScheduleDone(sched, todayPlan, e)}
+                                  className={`p-1.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
+                                    isDone
+                                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs hover:bg-emerald-700'
+                                      : 'border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-surface-container hover:border-emerald-500 hover:text-emerald-600 text-slate-300 shadow-2xs'
+                                  }`}
+                                  title={isDone ? "Mark as not attended" : "Mark as attended / completed"}
+                                  aria-label={isDone ? "Mark schedule as incomplete" : "Mark schedule as completed"}
+                                >
+                                  <Check className={`w-3.5 h-3.5 stroke-[2.5] ${isDone ? 'text-white' : ''}`} />
+                                </button>
                               </div>
                             </div>
                           </div>

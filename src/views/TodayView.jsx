@@ -28,6 +28,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import { triggerCelebration } from '../lib/celebrate';
 import TaskDetailModal from '../components/TaskDetailModal';
 import ScheduleDetailModal from '../components/ScheduleDetailModal';
 import DeleteRecurringModal from '../components/DeleteRecurringModal';
@@ -40,10 +41,12 @@ import {
   calculateDuration,
   calculateEndTime,
   parseTimeString,
+  formatTimeString,
   parseCompoundDuration,
   legacyDueDateForPlan,
   isTaskScheduledForDate
 } from '../lib/taskMetadata';
+import { isScheduleActiveForDate } from '../lib/missedScheduleEngine';
 import { parseNaturalTask } from '../lib/nlpParser';
 import { LIFE_AREAS } from '../lib/lifeAreas';
 import { evaluateCapacityLoad } from '../lib/capacityOverloadGuard';
@@ -627,7 +630,31 @@ const TodayView = React.memo(function TodayView({
     return { main: formatted, short: shortFormatted, isToday: columnDates.includes(todayPlanDate()) };
   }, [viewDate, scope, columnDates]);
 
+  const handleToggleScheduleDone = useCallback((sched, targetDate = viewDate, e) => {
+    if (e) e.stopPropagation();
+    const isDone = Boolean(
+      sched.completed ||
+      (Array.isArray(sched.completedDates) && sched.completedDates.includes(targetDate))
+    );
+    const currentDates = Array.isArray(sched.completedDates) ? sched.completedDates : [];
 
+    if (isDone) {
+      const updatedDates = currentDates.filter(d => d !== targetDate);
+      onUpdateSchedule?.(sched.id, {
+        completed: false,
+        completedDates: updatedDates,
+      });
+    } else {
+      const updatedDates = currentDates.includes(targetDate) ? currentDates : [...currentDates, targetDate];
+      const isOneTime = !sched.recurrence || sched.recurrence === 'once' || sched.recurrence === 'none';
+      onUpdateSchedule?.(sched.id, {
+        completed: isOneTime ? true : false,
+        completedDates: updatedDates,
+        lastCompletedAt: Date.now()
+      });
+      triggerCelebration({ count: 50, spread: 60 });
+    }
+  }, [onUpdateSchedule, viewDate]);
 
   return (
     <main className="w-full min-h-screen bg-[#F8F8FC] pt-16 md:pt-12 px-3 sm:px-6 md:px-margin-desktop py-3 sm:py-6 text-[#1A1B1F] select-none">
@@ -1099,6 +1126,10 @@ const TodayView = React.memo(function TodayView({
                   ) : (
                     filteredSchedules.map(sched => {
                       const isActiveToday = isTaskScheduledForDate(sched, viewDate);
+                      const isDone = Boolean(
+                        sched.completed ||
+                        (Array.isArray(sched.completedDates) && sched.completedDates.includes(viewDate))
+                      );
                       const startLabel = sched.startTime ? formatTimeString(sched.startTime) : 'Flexible';
                       const endLabel = sched.endTime ? formatTimeString(sched.endTime) : (sched.startTime ? formatTimeString(calculateEndTime(sched.startTime, sched.durationMinutes || 60)) : '');
                       const recLabel = sched.recurrence === 'custom' && Array.isArray(sched.repeatDays)
@@ -1112,22 +1143,36 @@ const TodayView = React.memo(function TodayView({
                         <div
                           key={`tray-s-${sched.id}`}
                           onClick={() => setEditingSchedule(sched)}
-                          className="p-3 rounded-xl border border-indigo-100/80 bg-white hover:bg-indigo-50/40 transition-all flex items-center justify-between gap-2.5 cursor-pointer group shadow-2xs"
+                          className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-2.5 cursor-pointer group shadow-2xs ${
+                            isDone
+                              ? 'border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50/70 opacity-90'
+                              : 'border-indigo-100/80 bg-white hover:bg-indigo-50/40'
+                          }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                              <span className="material-symbols-outlined text-[16px]">school</span>
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                              isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-50 text-indigo-600'
+                            }`}>
+                              <span className="material-symbols-outlined text-[16px]">{isDone ? 'check' : 'school'}</span>
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
-                                <p className="text-[12px] font-bold text-indigo-950 truncate group-hover:text-indigo-600 transition">
+                                <p className={`text-[12px] font-bold truncate transition ${
+                                  isDone
+                                    ? 'line-through text-slate-400 group-hover:text-emerald-700'
+                                    : 'text-indigo-950 group-hover:text-indigo-600'
+                                }`}>
                                   {sched.title}
                                 </p>
-                                {isActiveToday && (
+                                {isDone ? (
+                                  <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-bold border border-emerald-200/80 shrink-0">
+                                    Done
+                                  </span>
+                                ) : isActiveToday ? (
                                   <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 text-[9px] font-bold border border-emerald-200/60 shrink-0">
                                     Today
                                   </span>
-                                )}
+                                ) : null}
                               </div>
                               <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono mt-0.5">
                                 <span>{startLabel} – {endLabel}</span>
@@ -1136,7 +1181,7 @@ const TodayView = React.memo(function TodayView({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0">
                             {sched.category && (
                               <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[9.5px] font-bold uppercase tracking-wider">
                                 {sched.category}
@@ -1144,11 +1189,23 @@ const TodayView = React.memo(function TodayView({
                             )}
                             <button
                               type="button"
+                              onClick={(e) => handleToggleScheduleDone(sched, viewDate, e)}
+                              className={`p-1.5 rounded-lg border transition-all shrink-0 cursor-pointer ${
+                                isDone
+                                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs hover:bg-emerald-700'
+                                  : 'border-slate-200 hover:border-emerald-500 hover:text-emerald-600 text-slate-300 bg-white'
+                              }`}
+                              title={isDone ? "Mark incomplete" : "Mark attended/completed"}
+                            >
+                              <Check className={`w-3.5 h-3.5 stroke-[2.5] ${isDone ? 'text-white' : ''}`} />
+                            </button>
+                            <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditingSchedule(sched);
                               }}
-                              className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition opacity-0 group-hover:opacity-100"
+                              className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition opacity-0 group-hover:opacity-100 cursor-pointer"
                               title="Edit schedule"
                             >
                               <Pencil className="w-3.5 h-3.5" />
@@ -1549,6 +1606,11 @@ const TodayView = React.memo(function TodayView({
                             const topPx = Math.max(0, ((startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
                             const heightPx = Math.max(34, (dur / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
 
+                            const isDone = Boolean(
+                              sched.completed ||
+                              (Array.isArray(sched.completedDates) && sched.completedDates.includes(colDate))
+                            );
+
                             return (
                               <div
                                 key={sched.id}
@@ -1562,31 +1624,55 @@ const TodayView = React.memo(function TodayView({
                                   left: '6px',
                                   right: '6px'
                                 }}
-                                className="absolute rounded-xl pointer-events-auto border border-indigo-200/90 bg-indigo-50/85 hover:bg-indigo-100/90 transition-all p-2 flex flex-col justify-between shadow-xs z-10 group cursor-pointer"
+                                className={`absolute rounded-xl pointer-events-auto border transition-all p-2 flex flex-col justify-between shadow-xs z-10 group cursor-pointer ${
+                                  isDone
+                                    ? 'border-emerald-300 bg-emerald-50/90 hover:bg-emerald-100/90 opacity-90'
+                                    : 'border-indigo-200/90 bg-indigo-50/85 hover:bg-indigo-100/90'
+                                }`}
                               >
                                 <div className="flex items-center justify-between gap-1 min-w-0">
                                   <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="material-symbols-outlined text-[13px] text-indigo-600 shrink-0">school</span>
-                                    <span className="text-[11px] font-bold text-indigo-950 truncate tracking-tight">
+                                    <span className="material-symbols-outlined text-[13px] text-indigo-600 shrink-0">{isDone ? 'check' : 'school'}</span>
+                                    <span className={`text-[11px] font-bold truncate tracking-tight ${
+                                      isDone ? 'line-through text-slate-500' : 'text-indigo-950'
+                                    }`}>
                                       {sched.title}
                                     </span>
-                                    <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/90 text-indigo-700 text-[9px] font-bold uppercase tracking-wider shrink-0">
-                                      Class
-                                    </span>
+                                    {isDone ? (
+                                      <span className="px-1.5 py-0.2 rounded-md bg-emerald-100/90 text-emerald-800 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                        Done
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/90 text-indigo-700 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                        Class
+                                      </span>
+                                    )}
                                   </div>
-                                  {onDeleteSchedule && (
+                                  <div className="flex items-center gap-1 shrink-0">
                                     <button
                                       type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeleteSchedule(sched.id);
-                                      }}
-                                      title="Remove schedule block"
-                                      className="p-0.5 rounded text-indigo-400 hover:text-red-500 hover:bg-white/80 transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                                      onClick={(e) => handleToggleScheduleDone(sched, colDate, e)}
+                                      title={isDone ? "Mark incomplete" : "Mark attended/completed"}
+                                      className={`p-0.5 rounded transition cursor-pointer ${
+                                        isDone ? 'text-emerald-700 hover:text-emerald-800' : 'text-indigo-400 hover:text-emerald-600 opacity-0 group-hover:opacity-100'
+                                      }`}
                                     >
-                                      <span className="material-symbols-outlined text-[14px]">close</span>
+                                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                                     </button>
-                                  )}
+                                    {onDeleteSchedule && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onDeleteSchedule(sched.id);
+                                        }}
+                                        title="Remove schedule block"
+                                        className="p-0.5 rounded text-indigo-400 hover:text-red-500 hover:bg-white/80 transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                                      >
+                                        <span className="material-symbols-outlined text-[14px]">close</span>
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             );
