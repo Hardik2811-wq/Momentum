@@ -36,6 +36,31 @@ export function purgeLegacyGroqKey() {
   // Retained for backward-compat; direct client BYOK is active.
 }
 
+let cachedGroqModels = null;
+let lastGroqModelsFetch = 0;
+
+async function getAvailableGroqModels(apiKey) {
+  const now = Date.now();
+  if (cachedGroqModels && (now - lastGroqModelsFetch < 3600000)) {
+    return cachedGroqModels;
+  }
+  try {
+    const DIRECT_MODELS_URL = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1', 'models'].join('/');
+    const res = await fetch(DIRECT_MODELS_URL, {
+      headers: { Authorization: ['Bearer', apiKey].join(' ') }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.data)) {
+        cachedGroqModels = data.data.map(m => m.id);
+        lastGroqModelsFetch = now;
+        return cachedGroqModels;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 const OLLAMA_HOSTS = [
   'http://100.128.172.45:11435', // LAN proxy (accessible from phone & emulator)
   'http://127.0.0.1:11434',      // Local PC direct
@@ -44,6 +69,17 @@ const OLLAMA_HOSTS = [
 ];
 
 async function callOllama(messages, { temperature, maxTokens, jsonMode = true } = {}) {
+  // If running in browser over HTTPS (e.g. Vercel, Netlify), browsers strictly block
+  // unencrypted http:// and loopback addresses due to Mixed Content and Private Network Access CORS policies.
+  // Probing these hosts causes red console error spam. Skip immediately unless on HTTP or in native Capacitor container.
+  const isHttpsBrowser = typeof window !== 'undefined' &&
+    window.location.protocol === 'https:' &&
+    !window.Capacitor?.isNativePlatform();
+
+  if (isHttpsBrowser) {
+    return null;
+  }
+
   for (const host of OLLAMA_HOSTS) {
     try {
       const controller = new AbortController();
@@ -101,16 +137,26 @@ async function callAiService(messages, { temperature, maxTokens, jsonMode = true
     }
   } catch {}
 
-  // 2. Try Groq API with robust model fallbacks
+  // 2. Try Groq API with robust model discovery to eliminate 404 errors
   const localKey = getLocalGroqKey();
   if (localKey) {
-    // Dynamic candidate models: try fastest production model first, then standard alternatives
-    const candidateModels = [
+    const available = await getAvailableGroqModels(localKey);
+    const standardCandidates = [
       'llama-3.3-70b-versatile',
       'llama-3.1-8b-instant',
-      'openai/gpt-oss-120b',
-      'openai/gpt-oss-20b'
+      'qwen/qwen3.8-27b'
     ];
+
+    let candidateModels = standardCandidates;
+    if (available && available.length > 0) {
+      const matched = standardCandidates.filter(m => available.includes(m));
+      if (matched.length > 0) {
+        candidateModels = matched;
+      } else {
+        const chatModels = available.filter(m => !m.includes('whisper') && !m.includes('guard'));
+        if (chatModels.length > 0) candidateModels = chatModels;
+      }
+    }
 
     let lastError = null;
     for (const model of candidateModels) {
@@ -479,11 +525,12 @@ CRITICAL PLANNING PRINCIPLES:
    - EXECUTION TIMELINE (Tasks): Schedule specific study blocks, builds, lectures with concrete time slots (startTime "HH:MM", durationMinutes), areas, and subtasks. Link to existingGoalId/existingHabitId whenever matching items exist in memory!
 3. Ultra-Compact Efficiency: Use concise titles and compact representations so plans fit cleanly in JSON.
 4. Link items: Connect tasks and habits to goals via existingGoalId (preferred if goal exists) or goalIndex (0-based for NEW goals in plan.goals).
-5. If the user only asks a conversational question without requesting scheduling, set "hasPlan": false, "plan": null.
+5. If the user only asks a conversational question or sends a greeting (e.g. "hey", "hello", "how are you"), set "hasPlan": false, "plan": null, and write a helpful, natural conversational reply in "message".
+6. In "message", provide a concise, direct response answering the user or summarizing the proposed plan. For greetings, respond conversationally and ask what to organize today. NEVER echo or parrot template example strings.
 
 Return ONLY raw JSON object (no markdown code blocks):
 {
-  "message": "Sharp, direct executive assessment and strategic briefing.",
+  "message": "Direct concise answer or briefing tailored specifically to user prompt",
   "hasPlan": true,
   "plan": {
     "summary": "1-line operational headline",

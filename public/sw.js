@@ -10,7 +10,7 @@ if (isLocal) {
     );
   });
 } else {
-  const CACHE_NAME = 'momentum-cache-v3';
+  const CACHE_NAME = 'momentum-cache-v4';
   const ASSETS_TO_CACHE = [
     '/favicon.svg',
     '/favicon.ico',
