@@ -3,30 +3,46 @@
     android:id="@+id/widget_bento_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg_industrial"
-    android:padding="12dp">
+    android:background="@drawable/widget_background"
+    android:padding="16dp">
 
-    <TextView
-        android:id="@+id/label_momentum"
-        android:layout_width="wrap_content"
+    <!-- Top Label Header -->
+    <RelativeLayout
+        android:id="@+id/bento_header"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:text="MOMENTUM_INDEX"
-        android:fontFamily="sans-serif-condensed"
-        android:textColor="#777777"
-        android:textSize="8sp"
-        android:letterSpacing="0.2"
-        android:textStyle="bold" />
+        android:layout_alignParentTop="true">
 
-    <!-- Circular progress ring (bitmap drawn in Java) -->
+        <TextView
+            android:id="@+id/label_momentum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:text="MOMENTUM_INDEX"
+            android:fontFamily="sans-serif-condensed"
+            android:textColor="#38BDF8"
+            android:textSize="9.5sp"
+            android:letterSpacing="0.15"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/widget_circle_habit"
+            android:backgroundTint="#10B981" />
+    </RelativeLayout>
+
+    <!-- Circular Progress Gauge in Center -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/label_momentum"
-        android:layout_above="@+id/bento_subtext"
-        android:layout_marginTop="4dp"
-        android:layout_marginBottom="4dp">
+        android:layout_below="@id/bento_header"
+        android:layout_above="@+id/bento_status_pill"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp">
 
         <ImageView
             android:id="@+id/bento_ring"
@@ -34,28 +50,58 @@
             android:layout_height="match_parent"
             android:scaleType="fitCenter" />
 
-        <TextView
-            android:id="@+id/bento_stats_percent"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="80%"
-            android:fontFamily="sans-serif-black"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:includeFontPadding="false" />
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/bento_stats_percent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0%"
+                android:fontFamily="sans-serif-black"
+                android:textColor="#FFFFFF"
+                android:textSize="28sp"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="VELOCITY"
+                android:fontFamily="sans-serif-condensed"
+                android:textColor="#94A3B8"
+                android:textSize="8sp"
+                android:letterSpacing="0.12"
+                android:textStyle="bold" />
+        </LinearLayout>
     </FrameLayout>
 
-    <TextView
-        android:id="@+id/bento_subtext"
-        android:layout_width="wrap_content"
+    <!-- Bottom Status Pill Footer -->
+    <LinearLayout
+        android:id="@+id/bento_status_pill"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true"
-        android:text="STATUS: NOMINAL"
-        android:fontFamily="sans-serif-condensed"
-        android:textColor="#555555"
-        android:letterSpacing="0.1"
-        android:textSize="8sp"
-        android:textStyle="bold" />
+        android:background="@drawable/widget_item_bg"
+        android:gravity="center"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <TextView
+            android:id="@+id/bento_subtext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="STATUS: NOMINAL"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="#E2E8F0"
+            android:letterSpacing="0.05"
+            android:textSize="9.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
 </RelativeLayout>

@@ -127,7 +127,8 @@ const TodayView = React.memo(function TodayView({
   onDeleteSchedule,
   onDeleteSchedules,
   onStartFocus,
-  onCheckInHabit
+  onCheckInHabit,
+  onUpdateHabit
 }) {
   const [viewDate, setViewDate] = useState(() => todayPlanDate());
   const [scope, setScope] = useState('day'); // 'day' | '3day' | 'week'
@@ -138,6 +139,9 @@ const TodayView = React.memo(function TodayView({
   const [newTrayTaskTitle, setNewTrayTaskTitle] = useState('');
   const [activeSlotMenuTaskId, setActiveSlotMenuTaskId] = useState(null);
   const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const [draggedItem, setDraggedItem] = useState(null); // { type: 'task'|'schedule'|'habit', id, title }
+  const longPressTimerRef = useRef(null);
+  const touchStartPosRef = useRef({ x: 0, y: 0 });
   const [dragOverSlot, setDragOverSlot] = useState(null); // { date, hour }
   const [editingTask, setEditingTask] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
@@ -406,6 +410,112 @@ const TodayView = React.memo(function TodayView({
       endTime: null
     });
   };
+
+  /* ── Drag & Mobile Hold Gesture Handlers ── */
+  const handleStartDrag = useCallback((type, item, e) => {
+    if (isMultiSelectMode) return;
+    const payload = {
+      type,
+      id: item.id,
+      title: item.title,
+      [`${type}Id`]: item.id,
+      durationMinutes: item.durationMinutes,
+      duration: item.duration,
+      startTime: item.startTime
+    };
+    if (e?.dataTransfer) {
+      try {
+        e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+        e.dataTransfer.effectAllowed = 'move';
+      } catch (_) {}
+    }
+    setDraggedItem(payload);
+    if (type === 'task') setDraggedTaskId(item.id);
+
+    // Directly switch mobile to calendar timeline so user can drag and drop onto it!
+    setMobileTab('timeline');
+  }, [isMultiSelectMode]);
+
+  const handleEndDrag = useCallback(() => {
+    setDraggedItem(null);
+    setDraggedTaskId(null);
+    setDragOverSlot(null);
+  }, []);
+
+  const handleTouchStartCard = useCallback((type, item, e) => {
+    if (isMultiSelectMode) return;
+    const touch = e.touches?.[0];
+    if (touch) {
+      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    }
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+
+    longPressTimerRef.current = setTimeout(() => {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(40); } catch (_) {}
+      }
+      const payload = {
+        type,
+        id: item.id,
+        title: item.title,
+        [`${type}Id`]: item.id,
+        durationMinutes: item.durationMinutes,
+        duration: item.duration,
+        startTime: item.startTime
+      };
+      setDraggedItem(payload);
+      if (type === 'task') setDraggedTaskId(item.id);
+      setMobileTab('timeline');
+      toast.info(`Hold active: tap any hour on calendar to place "${item.title}"`, { duration: 3200 });
+    }, 320);
+  }, [isMultiSelectMode]);
+
+  const handleTouchMoveCard = useCallback((e) => {
+    const touch = e.touches?.[0];
+    if (touch) {
+      const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+      const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+      if (dx > 12 || dy > 12) {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+      }
+    }
+  }, []);
+
+  const handleTouchEndCard = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleSlotDroppedItem = useCallback((itemPayload, hourLabel, colDate) => {
+    if (!itemPayload) return;
+    const type = itemPayload.type || (itemPayload.taskId ? 'task' : itemPayload.scheduleId ? 'schedule' : itemPayload.habitId ? 'habit' : 'task');
+    const id = itemPayload.id || itemPayload[`${type}Id`];
+
+    if (type === 'schedule') {
+      const targetSched = schedules.find(s => String(s.id) === String(id));
+      const dur = targetSched ? (Number(targetSched.durationMinutes) || 60) : 60;
+      const endTime = calculateEndTime(hourLabel, dur);
+      onUpdateSchedule?.(id, {
+        startTime: hourLabel,
+        endTime,
+        plannedDate: colDate
+      });
+      toast.success(`Scheduled "${targetSched?.title || 'Class'}" at ${formatTimeString(hourLabel)}`);
+    } else if (type === 'habit') {
+      const targetHabit = habits.find(h => String(h.id) === String(id));
+      if (onUpdateHabit) {
+        onUpdateHabit(id, { startTime: hourLabel });
+      }
+      toast.success(`Scheduled ritual "${targetHabit?.title || 'Habit'}" at ${formatTimeString(hourLabel)}`);
+    } else {
+      handleSlotTask(id, hourLabel, colDate);
+    }
+  }, [schedules, habits, onUpdateSchedule, onUpdateHabit, handleSlotTask]);
 
   const handleCreateTrayTask = (e) => {
     if (e) e.preventDefault();
@@ -1025,7 +1135,11 @@ const TodayView = React.memo(function TodayView({
               LEFT COLUMN: UNIFIED TASK TRAY (3.5 cols)
              ══════════════════════════════════════════════════════ */}
           <div className={`w-full min-w-0 lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3 ${
-            mobileTab === 'tray' ? 'flex' : 'hidden lg:flex'
+            mobileTab === 'tray'
+              ? 'flex'
+              : (draggedItem || draggedTaskId)
+              ? 'fixed -left-[9999px] top-0 opacity-0 pointer-events-none'
+              : 'hidden lg:flex'
           }`}>
             <div className="w-full min-w-0 flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs h-[calc(100vh-210px)] min-h-[580px] overflow-hidden">
               {/* Header */}
@@ -1289,6 +1403,13 @@ const TodayView = React.memo(function TodayView({
                       return (
                         <div
                           key={`tray-s-${sched.id}`}
+                          draggable={!isMultiSelectMode}
+                          onDragStart={(e) => handleStartDrag('schedule', sched, e)}
+                          onDragEnd={handleEndDrag}
+                          onTouchStart={(e) => handleTouchStartCard('schedule', sched, e)}
+                          onTouchMove={handleTouchMoveCard}
+                          onTouchEnd={handleTouchEndCard}
+                          onTouchCancel={handleTouchEndCard}
                           onClick={() => {
                             if (isMultiSelectMode) {
                               toggleSelectSchedule(sched.id);
@@ -1402,7 +1523,14 @@ const TodayView = React.memo(function TodayView({
                       return (
                         <div
                           key={`tray-h-${h.id}`}
-                          className={`p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 ${
+                          draggable={!isMultiSelectMode}
+                          onDragStart={(e) => handleStartDrag('habit', h, e)}
+                          onDragEnd={handleEndDrag}
+                          onTouchStart={(e) => handleTouchStartCard('habit', h, e)}
+                          onTouchMove={handleTouchMoveCard}
+                          onTouchEnd={handleTouchEndCard}
+                          onTouchCancel={handleTouchEndCard}
+                          className={`p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing ${
                             isChecked
                               ? 'bg-emerald-50/70 border-emerald-200 opacity-80'
                               : 'bg-white hover:bg-emerald-50/30 border-black/[0.06]'
@@ -1464,12 +1592,12 @@ const TodayView = React.memo(function TodayView({
                       <div
                         key={task.id}
                         draggable={!isMultiSelectMode}
-                        onDragStart={(e) => {
-                          if (isMultiSelectMode) return;
-                          e.dataTransfer.setData('text/plain', JSON.stringify({ taskId: task.id }));
-                          setDraggedTaskId(task.id);
-                        }}
-                        onDragEnd={() => setDraggedTaskId(null)}
+                        onDragStart={(e) => handleStartDrag('task', task, e)}
+                        onDragEnd={handleEndDrag}
+                        onTouchStart={(e) => handleTouchStartCard('task', task, e)}
+                        onTouchMove={handleTouchMoveCard}
+                        onTouchEnd={handleTouchEndCard}
+                        onTouchCancel={handleTouchEndCard}
                         onClick={() => {
                           if (isMultiSelectMode) {
                             toggleSelectTask(task.id);
@@ -1601,8 +1729,31 @@ const TodayView = React.memo(function TodayView({
               RIGHT COLUMN: FULL-WIDTH CALENDAR CANVAS (8.5 cols)
              ══════════════════════════════════════════════════════ */}
           <div className={`w-full min-w-0 lg:col-span-8 xl:col-span-8.5 p-2.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden flex flex-col ${
-            mobileTab === 'timeline' ? 'flex' : 'hidden lg:flex'
+            mobileTab === 'timeline' || Boolean(draggedItem || draggedTaskId) ? 'flex' : 'hidden lg:flex'
           }`}>
+            {/* Active Drag & Mobile Hold Placement Banner */}
+            {draggedItem && (
+              <div className="mb-2.5 p-2 px-3 rounded-xl bg-[#0A84FF] text-white flex items-center justify-between text-xs font-semibold shadow-xs animate-fadeIn shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="material-symbols-outlined text-[17px] shrink-0 animate-bounce">touch_app</span>
+                  <span className="truncate text-[11.5px]">
+                    Drop or tap an hour slot to schedule <strong className="font-bold underline">{draggedItem.title || 'item'}</strong>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEndDrag();
+                  }}
+                  className="p-1 rounded-lg hover:bg-white/20 transition shrink-0 ml-2 cursor-pointer"
+                  title="Cancel slotting"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-2.5 sm:mb-3 gap-2 flex-wrap shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0A84FF] flex items-center justify-center">
@@ -1748,15 +1899,28 @@ const TodayView = React.memo(function TodayView({
                               e.preventDefault();
                               setDragOverSlot(null);
                               try {
-                                const raw = e.dataTransfer.getData('text/plain');
-                                if (!raw) return;
-                                const { taskId } = JSON.parse(raw);
-                                if (taskId) handleSlotTask(taskId, hourLabel, colDate);
+                                const raw = e.dataTransfer?.getData('text/plain');
+                                if (raw) {
+                                  const data = JSON.parse(raw);
+                                  handleSlotDroppedItem(data, hourLabel, colDate);
+                                } else if (draggedItem) {
+                                  handleSlotDroppedItem(draggedItem, hourLabel, colDate);
+                                }
                               } catch (err) {
-                                console.error('Drop error', err);
+                                if (draggedItem) {
+                                  handleSlotDroppedItem(draggedItem, hourLabel, colDate);
+                                }
+                              }
+                              handleEndDrag();
+                            }}
+                            onClick={() => {
+                              if (draggedItem) {
+                                handleSlotDroppedItem(draggedItem, hourLabel, colDate);
+                                handleEndDrag();
+                              } else {
+                                onOpenQuickAdd?.({ initialTime: hourLabel, initialDate: colDate });
                               }
                             }}
-                            onClick={() => onOpenQuickAdd?.({ initialTime: hourLabel, initialDate: colDate })}
                             className={`absolute left-0 right-0 border-b border-black/[0.05] transition-colors cursor-pointer group flex items-start justify-end p-1.5 ${
                               isHovered
                                 ? 'bg-blue-100/60 ring-2 ring-blue-400 inset-0'
@@ -2484,6 +2648,25 @@ const TodayView = React.memo(function TodayView({
         onConfirm={handleExecuteBatchDelete}
         onCancel={() => setShowBatchDeleteConfirm(false)}
       />
+
+      {/* Single Delete Confirmation Modal */}
+      {singleDeleteTarget && (
+        <ConfirmModal
+          isOpen={Boolean(singleDeleteTarget)}
+          title="Delete Item?"
+          message={`Are you sure you want to delete "${singleDeleteTarget?.title}"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          isDanger={true}
+          onConfirm={() => {
+            if (singleDeleteTarget.type === 'schedule') {
+              onDeleteSchedule?.(singleDeleteTarget.id);
+            }
+            setSingleDeleteTarget(null);
+          }}
+          onCancel={() => setSingleDeleteTarget(null)}
+        />
+      )}
 
       {/* ══════════════════════════════════════════════════════
           MOBILE ONLY: FLOATING CIRCULAR CALENDAR BUTTON (BOTTOM RIGHT)

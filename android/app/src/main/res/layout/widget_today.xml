@@ -5,13 +5,13 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="16dp">
 
     <!-- Header: Momentum brand, Date, Count, Quick Add Button -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp">
+        android:layout_marginBottom="8dp">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -25,18 +25,20 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="MOMENTUM • TODAY'S FOCUS"
-                android:textColor="#93C5FD"
+                android:fontFamily="sans-serif-condensed"
+                android:textColor="#38BDF8"
                 android:textSize="9.5sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.08" />
+                android:letterSpacing="0.12" />
 
             <TextView
                 android:id="@+id/widget_header_date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
                 android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-black" />
         </LinearLayout>
 
         <LinearLayout
@@ -51,26 +53,27 @@
                 android:id="@+id/widget_count_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:background="#222338"
-                android:paddingStart="7dp"
-                android:paddingTop="2dp"
-                android:paddingEnd="7dp"
-                android:paddingBottom="2dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/widget_item_bg"
+                android:paddingStart="8dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="3dp"
                 android:textColor="#E2E8F0"
                 android:textSize="10.5sp"
+                android:fontFamily="sans-serif-medium"
                 android:textStyle="bold" />
 
-            <!-- 1-Tap Quick Add Shortcut -->
+            <!-- 1-Tap Quick Add Shortcut Button -->
             <TextView
                 android:id="@+id/widget_btn_add"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:background="@drawable/widget_add_btn_bg"
                 android:gravity="center"
                 android:text="+"
-                android:textColor="#60A5FA"
-                android:textSize="17sp"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </RelativeLayout>
@@ -82,7 +85,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:padding="16dp"
         android:visibility="gone">
 
         <TextView
@@ -100,7 +103,7 @@
             android:layout_marginTop="2dp"
             android:text="Tap + to schedule next task"
             android:textColor="#94A3B8"
-            android:textSize="10.5sp" />
+            android:textSize="11sp" />
     </LinearLayout>
 
     <!-- Section Label: TASKS -->
@@ -108,13 +111,14 @@
         android:id="@+id/label_section_tasks"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:layout_marginBottom="3dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
         android:text="TASKS"
-        android:textColor="#64748B"
-        android:textSize="8.5sp"
+        android:fontFamily="sans-serif-condensed"
+        android:textColor="#94A3B8"
+        android:textSize="9sp"
         android:textStyle="bold"
-        android:letterSpacing="0.1" />
+        android:letterSpacing="0.12" />
 
     <!-- Task Row 1 (NOW / Top Priority) -->
     <RelativeLayout
@@ -122,13 +126,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/widget_now_bg"
-        android:padding="6dp"
+        android:padding="8dp"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/widget_check_1"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_checkbox_bg"
@@ -142,7 +146,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="7dp"
+            android:layout_marginStart="9dp"
             android:layout_toEndOf="@id/widget_check_1"
             android:orientation="vertical">
 
@@ -153,17 +157,18 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#FFFFFF"
-                android:textSize="11.5sp"
+                android:textSize="12.5sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_meta_1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#93C5FD"
-                android:textSize="9.5sp" />
+                android:textColor="#7DD3FC"
+                android:textSize="10sp" />
         </LinearLayout>
     </RelativeLayout>
 
@@ -172,15 +177,15 @@
         android:id="@+id/widget_row_2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
+        android:layout_marginTop="5dp"
         android:background="@drawable/widget_item_bg"
-        android:padding="6dp"
+        android:padding="8dp"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/widget_check_2"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_checkbox_bg"
@@ -194,7 +199,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="7dp"
+            android:layout_marginStart="9dp"
             android:layout_toEndOf="@id/widget_check_2"
             android:orientation="vertical">
 
@@ -205,17 +210,18 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#F1F5F9"
-                android:textSize="11.5sp"
+                android:textSize="12.5sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_meta_2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#94A3B8"
-                android:textSize="9.5sp" />
+                android:textSize="10sp" />
         </LinearLayout>
     </RelativeLayout>
 
@@ -224,15 +230,15 @@
         android:id="@+id/widget_row_3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
+        android:layout_marginTop="5dp"
         android:background="@drawable/widget_item_bg"
-        android:padding="6dp"
+        android:padding="8dp"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/widget_check_3"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_checkbox_bg"
@@ -246,7 +252,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="7dp"
+            android:layout_marginStart="9dp"
             android:layout_toEndOf="@id/widget_check_3"
             android:orientation="vertical">
 
@@ -257,17 +263,18 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#F1F5F9"
-                android:textSize="11.5sp"
+                android:textSize="12.5sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_meta_3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#94A3B8"
-                android:textSize="9.5sp" />
+                android:textSize="10sp" />
         </LinearLayout>
     </RelativeLayout>
 
@@ -276,13 +283,14 @@
         android:id="@+id/label_section_habits"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="3dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp"
         android:text="TODAY'S HABITS"
+        android:fontFamily="sans-serif-condensed"
         android:textColor="#F59E0B"
-        android:textSize="8.5sp"
+        android:textSize="9sp"
         android:textStyle="bold"
-        android:letterSpacing="0.1" />
+        android:letterSpacing="0.12" />
 
     <!-- Habit Row 1 -->
     <RelativeLayout
@@ -290,13 +298,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/widget_item_bg"
-        android:padding="6dp"
+        android:padding="8dp"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/widget_habit_check_1"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_checkbox_bg"
@@ -310,13 +318,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="7dp"
+            android:layout_marginStart="9dp"
             android:layout_toEndOf="@id/widget_habit_check_1"
             android:layout_toStartOf="@+id/widget_habit_streak_1"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="#F1F5F9"
-            android:textSize="11.5sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
         <TextView
@@ -326,7 +334,7 @@
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:textColor="#FBBF24"
-            android:textSize="10sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
     </RelativeLayout>
 
@@ -335,15 +343,15 @@
         android:id="@+id/widget_habit_row_2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
+        android:layout_marginTop="5dp"
         android:background="@drawable/widget_item_bg"
-        android:padding="6dp"
+        android:padding="8dp"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/widget_habit_check_2"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_checkbox_bg"
@@ -357,13 +365,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="7dp"
+            android:layout_marginStart="9dp"
             android:layout_toEndOf="@id/widget_habit_check_2"
             android:layout_toStartOf="@+id/widget_habit_streak_2"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="#F1F5F9"
-            android:textSize="11.5sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
         <TextView
@@ -373,7 +381,7 @@
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:textColor="#FBBF24"
-            android:textSize="10sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
     </RelativeLayout>
 
@@ -382,11 +390,11 @@
         android:id="@+id/widget_overflow_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="6dp"
         android:gravity="end"
         android:text=""
-        android:textColor="#64748B"
-        android:textSize="9.5sp"
+        android:textColor="#94A3B8"
+        android:textSize="10sp"
         android:visibility="gone" />
 
 </LinearLayout>

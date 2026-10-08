@@ -97,6 +97,7 @@ export default function App() {
             onDeleteSchedules={store.deleteSchedules}
             onStartFocus={startFocusForTask}
             onCheckInHabit={store.checkInHabit}
+            onUpdateHabit={store.updateHabit}
           />
         );
       case 'goals':

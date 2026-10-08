@@ -7,6 +7,7 @@ import {
 } from '../lib/taskMetadata';
 import { LIFE_AREAS } from '../lib/lifeAreas';
 import { CupertinoTimeInput } from './QuickAddModal';
+import ConfirmModal from './ConfirmModal';
 
 const DAY_LABELS = [
   { day: 0, label: 'Su', full: 'Sunday' },
@@ -326,43 +327,18 @@ export default function ScheduleDetailModal({
             />
           </div>
 
-          {/* Delete confirmation banner */}
-          {showConfirmDelete && (
-            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 space-y-2 animate-fadeIn">
-              <p className="text-xs font-bold">Remove this schedule block?</p>
-              <p className="text-[11px] text-rose-700">This will remove it from all recurring days on your timetable.</p>
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition cursor-pointer"
-                >
-                  Confirm Delete
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmDelete(false)}
-                  className="px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-slate-700 text-xs font-medium hover:bg-slate-50 transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
         </form>
 
         {/* Footer Actions */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-black/[0.06] bg-[#FAFAFC]">
-          {!showConfirmDelete ? (
-            <button
-              type="button"
-              onClick={() => setShowConfirmDelete(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-xl transition cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">delete</span>
-              <span>Delete</span>
-            </button>
-          ) : <div />}
+          <button
+            type="button"
+            onClick={() => setShowConfirmDelete(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-xl transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">delete</span>
+            <span>Delete</span>
+          </button>
 
           <div className="flex items-center gap-2">
             <button
@@ -383,6 +359,19 @@ export default function ScheduleDetailModal({
           </div>
         </div>
       </div>
+
+      {showConfirmDelete && (
+        <ConfirmModal
+          isOpen={showConfirmDelete}
+          title="Remove schedule block?"
+          message={`Are you sure you want to delete "${title}"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          isDanger={true}
+          onConfirm={handleDelete}
+          onCancel={() => setShowConfirmDelete(false)}
+        />
+      )}
     </div>
   );
 }

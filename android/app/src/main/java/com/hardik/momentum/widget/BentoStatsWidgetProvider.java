@@ -100,28 +100,28 @@ public class BentoStatsWidgetProvider extends AppWidgetProvider {
     private static Bitmap drawProgressRing(Context context, float percent) {
         float density = context.getResources().getDisplayMetrics().density;
         int size = (int) (120 * density);
-        float strokeWidth = 6 * density;
+        float strokeWidth = 8 * density;
 
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
 
-        float pad = strokeWidth / 2f;
+        float pad = strokeWidth / 2f + (2 * density);
         RectF rect = new RectF(pad, pad, size - pad, size - pad);
 
-        // Track (dark gray ring)
+        // Track (soft dark blue-gray ring)
         Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         trackPaint.setStyle(Paint.Style.STROKE);
         trackPaint.setStrokeWidth(strokeWidth);
-        trackPaint.setColor(0xFF222222);
+        trackPaint.setColor(0x3338BDF8); // Translucent sky blue base
         trackPaint.setStrokeCap(Paint.Cap.ROUND);
         canvas.drawArc(rect, 0, 360, false, trackPaint);
 
-        // Progress arc (pure white when > 0, emerald when 100%)
+        // Progress arc (vibrant cyan when progressing, bright emerald at 100%)
         if (percent > 0) {
             Paint progressPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             progressPaint.setStyle(Paint.Style.STROKE);
             progressPaint.setStrokeWidth(strokeWidth);
-            progressPaint.setColor(percent >= 100f ? 0xFF10B981 : 0xFFFFFFFF);
+            progressPaint.setColor(percent >= 100f ? 0xFF10B981 : 0xFF38BDF8);
             progressPaint.setStrokeCap(Paint.Cap.ROUND);
             float sweep = Math.min(360f, (percent / 100f) * 360f);
             canvas.drawArc(rect, -90, sweep, false, progressPaint);
