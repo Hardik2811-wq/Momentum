@@ -34,6 +34,7 @@ public class WidgetBridgePlugin extends Plugin {
     preferences.edit().putString(SNAPSHOT, snapshot.toString()).apply();
     TodayWidgetProvider.refresh(getContext());
     BentoStatsWidgetProvider.refresh(getContext());
+    HabitWidgetProvider.refresh(getContext());
     QuickActionsWidgetProvider.refresh(getContext());
     UpcomingPillWidgetProvider.refresh(getContext());
     call.resolve();

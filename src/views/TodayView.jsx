@@ -140,7 +140,9 @@ const TodayView = React.memo(function TodayView({
   const [activeSlotMenuTaskId, setActiveSlotMenuTaskId] = useState(null);
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null); // { type: 'task'|'schedule'|'habit', id, title }
-  const longPressTimerRef = useRef(null);
+  const [activeTouchDrag, setActiveTouchDrag] = useState(null); // { item, currentX, currentY, targetHour, targetDate }
+  const touchDragRef = useRef(null);
+  const holdTimerRef = useRef(null);
   const touchStartPosRef = useRef({ x: 0, y: 0 });
   const [dragOverSlot, setDragOverSlot] = useState(null); // { date, hour }
   const [editingTask, setEditingTask] = useState(null);
@@ -442,54 +444,154 @@ const TodayView = React.memo(function TodayView({
     setDragOverSlot(null);
   }, []);
 
+  /* ── Continuous Mobile Thumb Drag-and-Drop System (Google Calendar Style) ── */
+  const calculateGridSlotFromCoords = useCallback((clientX, clientY) => {
+    if (!calendarScrollRef.current) return null;
+    const rect = calendarScrollRef.current.getBoundingClientRect();
+
+    // Auto-scroll calendar container when dragging near top or bottom edges:
+    const edgeMargin = 75;
+    if (clientY < rect.top + edgeMargin) {
+      calendarScrollRef.current.scrollTop -= 14;
+    } else if (clientY > rect.bottom - edgeMargin) {
+      calendarScrollRef.current.scrollTop += 14;
+    }
+
+    const scrollY = calendarScrollRef.current.scrollTop;
+    const scrollX = calendarScrollRef.current.scrollLeft;
+    const relY = Math.max(0, clientY - rect.top + scrollY);
+
+    // Each hour slot is 70px (HOUR_HEIGHT)
+    const rawHour = Math.floor(relY / HOUR_HEIGHT);
+    const clampedHour = Math.max(0, Math.min(TOTAL_HOURS - 1, rawHour));
+    const hourNum = START_HOUR + clampedHour;
+    const hourLabel = `${String(hourNum).padStart(2, '0')}:00`;
+
+    let targetDate = viewDate;
+    if (scope !== 'day' && Array.isArray(columnDates) && columnDates.length > 0) {
+      const relX = clientX - rect.left + scrollX;
+      const colX = Math.max(0, relX - 44);
+      const colWidth = scope === 'week' ? 120 : 180;
+      const colIndex = Math.max(0, Math.min(columnDates.length - 1, Math.floor(colX / colWidth)));
+      if (columnDates[colIndex]) {
+        targetDate = columnDates[colIndex];
+      }
+    }
+
+    return { hour: hourLabel, date: targetDate };
+  }, [viewDate, scope, columnDates]);
+
   const handleTouchStartCard = useCallback((type, item, e) => {
     if (isMultiSelectMode) return;
     const touch = e.touches?.[0];
-    if (touch) {
-      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-    }
-    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    if (!touch) return;
 
-    longPressTimerRef.current = setTimeout(() => {
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+
+    // Fast 220ms hold threshold to activate drag
+    holdTimerRef.current = setTimeout(() => {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try { navigator.vibrate(40); } catch (_) {}
+        try { navigator.vibrate(35); } catch (_) {}
       }
-      const payload = {
-        type,
-        id: item.id,
-        title: item.title,
-        [`${type}Id`]: item.id,
-        durationMinutes: item.durationMinutes,
-        duration: item.duration,
-        startTime: item.startTime
+
+      let initialHour = item.startTime ? `${item.startTime.slice(0, 2)}:00` : '09:00';
+      const slot = calculateGridSlotFromCoords(touch.clientX, touch.clientY);
+      if (slot?.hour) initialHour = slot.hour;
+
+      const dragData = {
+        item: {
+          type,
+          id: item.id,
+          title: item.title,
+          durationMinutes: Number(item.durationMinutes) || 45,
+          duration: item.duration,
+          startTime: item.startTime,
+          ...item
+        },
+        currentX: touch.clientX,
+        currentY: touch.clientY,
+        targetHour: initialHour,
+        targetDate: slot?.date || viewDate
       };
-      setDraggedItem(payload);
-      if (type === 'task') setDraggedTaskId(item.id);
+
+      touchDragRef.current = dragData;
+      setActiveTouchDrag(dragData);
       setMobileTab('timeline');
-      toast.info(`Hold active: tap any hour on calendar to place "${item.title}"`, { duration: 3200 });
-    }, 320);
-  }, [isMultiSelectMode]);
+    }, 220);
+  }, [isMultiSelectMode, calculateGridSlotFromCoords, viewDate]);
 
   const handleTouchMoveCard = useCallback((e) => {
-    const touch = e.touches?.[0];
-    if (touch) {
-      const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
-      const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
-      if (dx > 12 || dy > 12) {
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
+    // If drag hasn't started yet, cancel hold if finger moves > 10px (user is scrolling)
+    if (!touchDragRef.current) {
+      const touch = e.touches?.[0];
+      if (touch) {
+        const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+        const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+        if (dx > 10 || dy > 10) {
+          if (holdTimerRef.current) {
+            clearTimeout(holdTimerRef.current);
+            holdTimerRef.current = null;
+          }
         }
       }
     }
   }, []);
 
   const handleTouchEndCard = useCallback(() => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
     }
   }, []);
+
+  // Global window listeners while thumb is dragged across the screen
+  useEffect(() => {
+    if (!activeTouchDrag) return;
+
+    const handleWindowTouchMove = (e) => {
+      const touch = e.touches?.[0];
+      if (!touch) return;
+      if (e.cancelable) e.preventDefault(); // lock viewport scroll while thumb dragging
+
+      const slot = calculateGridSlotFromCoords(touch.clientX, touch.clientY);
+      setActiveTouchDrag(prev => {
+        if (!prev) return null;
+        const next = {
+          ...prev,
+          currentX: touch.clientX,
+          currentY: touch.clientY,
+          targetHour: slot ? slot.hour : prev.targetHour,
+          targetDate: slot ? slot.date : prev.targetDate
+        };
+        touchDragRef.current = next;
+        return next;
+      });
+    };
+
+    const handleWindowTouchEnd = () => {
+      const current = touchDragRef.current;
+      if (current && current.item && current.targetHour && current.targetDate) {
+        handleSlotDroppedItem(current.item, current.targetHour, current.targetDate);
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(45); } catch (_) {}
+        }
+      }
+      touchDragRef.current = null;
+      setActiveTouchDrag(null);
+    };
+
+    window.addEventListener('touchmove', handleWindowTouchMove, { passive: false });
+    window.addEventListener('touchend', handleWindowTouchEnd);
+    window.addEventListener('touchcancel', handleWindowTouchEnd);
+
+    return () => {
+      window.removeEventListener('touchmove', handleWindowTouchMove);
+      window.removeEventListener('touchend', handleWindowTouchEnd);
+      window.removeEventListener('touchcancel', handleWindowTouchEnd);
+    };
+  }, [activeTouchDrag, calculateGridSlotFromCoords, handleSlotDroppedItem]);
 
   const handleSlotDroppedItem = useCallback((itemPayload, hourLabel, colDate) => {
     if (!itemPayload) return;
@@ -1137,7 +1239,7 @@ const TodayView = React.memo(function TodayView({
           <div className={`w-full min-w-0 lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3 ${
             mobileTab === 'tray'
               ? 'flex'
-              : (draggedItem || draggedTaskId)
+              : (activeTouchDrag || draggedItem || draggedTaskId)
               ? 'fixed -left-[9999px] top-0 opacity-0 pointer-events-none'
               : 'hidden lg:flex'
           }`}>
@@ -1729,7 +1831,7 @@ const TodayView = React.memo(function TodayView({
               RIGHT COLUMN: FULL-WIDTH CALENDAR CANVAS (8.5 cols)
              ══════════════════════════════════════════════════════ */}
           <div className={`w-full min-w-0 lg:col-span-8 xl:col-span-8.5 p-2.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden flex flex-col ${
-            mobileTab === 'timeline' || Boolean(draggedItem || draggedTaskId) ? 'flex' : 'hidden lg:flex'
+            mobileTab === 'timeline' || Boolean(activeTouchDrag || draggedItem || draggedTaskId) ? 'flex' : 'hidden lg:flex'
           }`}>
             {/* Active Drag & Mobile Hold Placement Banner */}
             {draggedItem && (
@@ -1878,6 +1980,7 @@ const TodayView = React.memo(function TodayView({
                         const hourLabel = `${String(hourNum).padStart(2, '0')}:00`;
                         const topPos = i * HOUR_HEIGHT;
                         const isHovered = dragOverSlot?.date === colDate && dragOverSlot?.hour === hourLabel;
+                        const isTargetedByTouch = activeTouchDrag && activeTouchDrag.targetDate === colDate && activeTouchDrag.targetHour === hourLabel;
 
                         return (
                           <div
@@ -1922,8 +2025,8 @@ const TodayView = React.memo(function TodayView({
                               }
                             }}
                             className={`absolute left-0 right-0 border-b border-black/[0.05] transition-colors cursor-pointer group flex items-start justify-end p-1.5 ${
-                              isHovered
-                                ? 'bg-blue-100/60 ring-2 ring-blue-400 inset-0'
+                              isHovered || isTargetedByTouch
+                                ? 'bg-blue-100/75 ring-2 ring-blue-500 inset-0 z-10'
                                 : (hourNum < 6 || hourNum >= 22)
                                   ? 'bg-[#F8F8FC]/80 hover:bg-blue-50/40'
                                   : 'bg-white hover:bg-blue-50/40'
@@ -1938,6 +2041,45 @@ const TodayView = React.memo(function TodayView({
                           </div>
                         );
                       })}
+
+                      {/* Live Snapped Ghost Block Preview (Google Calendar Style) */}
+                      {activeTouchDrag && activeTouchDrag.targetDate === colDate && (
+                        (() => {
+                          const ghostStartMin = minutesFromStartOfDay(activeTouchDrag.targetHour);
+                          if (ghostStartMin === null) return null;
+                          const ghostDur = Number(activeTouchDrag.item.durationMinutes) || 45;
+                          const ghostTopPx = Math.max(0, ((ghostStartMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                          const ghostHeightPx = Math.max(38, (ghostDur / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                          return (
+                            <div
+                              style={{
+                                top: `${ghostTopPx}px`,
+                                height: `${ghostHeightPx}px`,
+                                left: '6px',
+                                right: '6px'
+                              }}
+                              className="absolute z-25 rounded-xl border-2 border-dashed border-[#0A84FF] bg-blue-500/20 backdrop-blur-2xs p-2.5 flex flex-col justify-between pointer-events-none transition-all duration-75 shadow-md ring-2 ring-[#0A84FF]/25 animate-fadeIn"
+                            >
+                              <div className="flex items-center justify-between gap-1 text-[#0A84FF] font-bold text-xs truncate">
+                                <span className="truncate flex items-center gap-1.5 drop-shadow-2xs">
+                                  <span className="material-symbols-outlined text-[15px]">schedule</span>
+                                  {activeTouchDrag.item.title}
+                                </span>
+                                <span className="text-[10px] font-mono bg-[#0A84FF] text-white px-1.5 py-0.5 rounded-md font-bold shadow-xs shrink-0">
+                                  {formatTimeString(activeTouchDrag.targetHour)}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-[9.5px] font-semibold text-[#0A84FF]/90">
+                                <span className="flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[12px]">touch_app</span>
+                                  Release thumb to place
+                                </span>
+                                <span className="font-mono bg-blue-100/90 text-blue-800 px-1 py-0.2 rounded font-bold">{ghostDur}m</span>
+                              </div>
+                            </div>
+                          );
+                        })()
+                      )}
 
                       {/* Live Laser Ruler on Today column */}
                       {isToday && currentTimeTop !== null && (
@@ -1987,6 +2129,13 @@ const TodayView = React.memo(function TodayView({
                                   e.stopPropagation();
                                   setEditingSchedule(sched);
                                 }}
+                                onTouchStart={(e) => {
+                                  if (e.target.closest('button')) return;
+                                  handleTouchStartCard('schedule', sched, e);
+                                }}
+                                onTouchMove={handleTouchMoveCard}
+                                onTouchEnd={handleTouchEndCard}
+                                onTouchCancel={handleTouchEndCard}
                                 style={{
                                   top: `${topPx}px`,
                                   height: `${heightPx}px`,
@@ -2075,6 +2224,13 @@ const TodayView = React.memo(function TodayView({
                             return (
                               <div
                                 key={`cal-habit-${habit.id}`}
+                                onTouchStart={(e) => {
+                                  if (e.target.closest('button')) return;
+                                  handleTouchStartCard('habit', habit, e);
+                                }}
+                                onTouchMove={handleTouchMoveCard}
+                                onTouchEnd={handleTouchEndCard}
+                                onTouchCancel={handleTouchEndCard}
                                 style={{
                                   top: `${topPx}px`,
                                   height: `${heightPx}px`,
@@ -2218,6 +2374,13 @@ const TodayView = React.memo(function TodayView({
                                 e.stopPropagation();
                                 setEditingTask(task);
                               }}
+                              onTouchStart={(e) => {
+                                if (e.target.closest('button') || e.target.closest('[data-resize-handle="true"]')) return;
+                                handleTouchStartCard('task', task, e);
+                              }}
+                              onTouchMove={handleTouchMoveCard}
+                              onTouchEnd={handleTouchEndCard}
+                              onTouchCancel={handleTouchEndCard}
                               onMouseDown={(e) => {
                                 if (isEditorMode && isSelectedForTransform) {
                                   if (e.target.closest('button') || e.target.closest('[data-resize-handle="true"]')) return;
@@ -2688,6 +2851,29 @@ const TodayView = React.memo(function TodayView({
           <Calendar className="w-5 h-5 transition-transform" />
         )}
       </button>
+
+      {/* ══════════════════════════════════════════════════════
+          FLOATING THUMB PILL (FOLLOWS USER'S THUMB DURING DRAG)
+         ══════════════════════════════════════════════════════ */}
+      {activeTouchDrag && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${activeTouchDrag.currentX}px`,
+            top: `${activeTouchDrag.currentY}px`,
+            transform: 'translate(-50%, -130%)',
+            pointerEvents: 'none',
+            zIndex: 9999
+          }}
+          className="px-3.5 py-2 rounded-2xl bg-[#0A84FF] text-white shadow-[0_16px_36px_rgba(10,132,255,0.5)] border border-white/40 flex items-center gap-2 text-xs font-bold select-none whitespace-nowrap animate-scaleIn"
+        >
+          <span className="material-symbols-outlined text-[16px] animate-pulse">touch_app</span>
+          <span className="truncate max-w-[150px]">{activeTouchDrag.item.title}</span>
+          <span className="px-1.5 py-0.5 rounded-lg bg-black/25 text-[10px] font-mono font-bold">
+            {formatTimeString(activeTouchDrag.targetHour)}
+          </span>
+        </div>
+      )}
     </main>
   );
 });
