@@ -251,6 +251,8 @@ export default function App() {
         addTask={store.addTask}
         toggleTask={store.toggleTask}
         checkInHabit={store.checkInHabit}
+        focusTimer={store.focusTimer}
+        activeTab={activeTab}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
       />
 

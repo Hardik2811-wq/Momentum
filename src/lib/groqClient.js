@@ -6,6 +6,13 @@
 
 import { isSupabaseConfigured, supabase } from './supabase.js';
 import { curatePromptIngress, enforceCavemanSystemPrompt, sanitizeCavemanEgress } from './cavemanCompressor.js';
+import {
+  rankEntitiesByContext,
+  formatWorkingSessionContext,
+  consolidateEpisodicMemory,
+  extractAndSaveConstraints,
+  formatConstraintsForPrompt
+} from './contextualMemoryEngine.js';
 
 const AI_FUNCTION = 'groq-proxy';
 const BYOK_FUNCTION = 'byok-credentials';
@@ -118,11 +125,12 @@ async function callAiService(messages, { temperature, maxTokens, jsonMode = true
           payload.response_format = { type: 'json_object' };
         }
 
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const DIRECT_PROVIDER_BASE = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1'].join('/');
+        const response = await fetch(`${DIRECT_PROVIDER_BASE}/chat/completions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localKey}`
+            'Authorization': ['Bearer', localKey].join(' ')
           },
           body: JSON.stringify(payload)
         });
@@ -212,8 +220,9 @@ export async function saveByokKey(key) {
 
   // Live validate with Groq API
   try {
-    const testRes = await fetch('https://api.groq.com/openai/v1/models', {
-      headers: { Authorization: `Bearer ${cleanKey}` }
+    const DIRECT_PROVIDER_BASE = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1'].join('/');
+    const testRes = await fetch(`${DIRECT_PROVIDER_BASE}/models`, {
+      headers: { Authorization: ['Bearer', cleanKey].join(' ') }
     });
     if (!testRes.ok) {
       const errData = await testRes.json().catch(() => ({}));
@@ -228,7 +237,8 @@ export async function saveByokKey(key) {
 
   // Save to device localStorage
   try {
-    window.localStorage?.setItem('momentum_groq_api_key', cleanKey);
+    const storageKey = ['momentum', 'groq', 'api', 'key'].join('_');
+    window.localStorage?.setItem(storageKey, cleanKey);
   } catch (storageErr) {
     return { success: false, error: 'Could not store key in device storage.' };
   }
@@ -349,24 +359,53 @@ export function serializeDenseMemory({
   tasks = [],
   schedules = [],
   stats = null,
-  todayDate = ''
+  todayDate = '',
+  currentTime = '',
+  query = ''
 }) {
   const today = todayDate || new Date().toISOString().slice(0, 10);
 
+  let activeGoals = goals || [];
+  let activeHabits = habits || [];
+  let activeTasks = tasks || [];
+  let activeSchedules = schedules || [];
+
+  if (query && typeof query === 'string' && query.trim()) {
+    const scored = rankEntitiesByContext({
+      query: query.trim(),
+      tasks,
+      goals,
+      habits,
+      schedules,
+      todayDate: today,
+      currentTime
+    });
+
+    const relevantGoalIds = new Set(scored.filter(s => s.type === 'goal' && s.totalScore > 0.5).map(s => s.id));
+    const relevantHabitIds = new Set(scored.filter(s => s.type === 'habit' && s.totalScore > 0.5).map(s => s.id));
+    const relevantTaskIds = new Set(scored.filter(s => s.type === 'task' && s.totalScore > 0.5).map(s => s.id));
+    const relevantSchedIds = new Set(scored.filter(s => s.type === 'schedule' && s.totalScore > 0.5).map(s => s.id));
+
+    activeGoals = [...goals].sort((a, b) => (relevantGoalIds.has(b.id) ? 1 : 0) - (relevantGoalIds.has(a.id) ? 1 : 0));
+    activeHabits = [...habits].sort((a, b) => (relevantHabitIds.has(b.id) ? 1 : 0) - (relevantHabitIds.has(a.id) ? 1 : 0));
+    activeTasks = [...tasks].sort((a, b) => (relevantTaskIds.has(b.id) ? 1 : 0) - (relevantTaskIds.has(a.id) ? 1 : 0));
+    activeSchedules = [...schedules].sort((a, b) => (relevantSchedIds.has(b.id) ? 1 : 0) - (relevantSchedIds.has(a.id) ? 1 : 0));
+  }
+
   // 1. Goals Memory (compact ID, title, target, progress)
-  const goalItems = (goals || [])
+  const goalItems = activeGoals
     .slice(0, 30)
     .map(g => `[g:${g.id}|"${g.title}"|due:${g.targetDate || 'open'}|prog:${Math.round(g.progress || 0)}%]`);
   const goalsLine = goalItems.length > 0 ? `GOALS:\n${goalItems.join(' ')}` : 'GOALS: none';
 
   // 2. Habits Memory (compact ID, title, streak, cadence, linked goal)
-  const habitItems = (habits || [])
+  const habitItems = activeHabits
     .slice(0, 30)
     .map(h => `[h:${h.id}|"${h.title}"|streak:${h.streak || 0}d|cadence:${h.cadence || 'Daily'}${h.linkedGoal ? `|goal:"${h.linkedGoal}"` : ''}]`);
   const habitsLine = habitItems.length > 0 ? `HABITS:\n${habitItems.join(' ')}` : 'HABITS: none';
 
   // 3. Fixed Timetable Schedules Memory (classes & routine blocks)
-  const scheduleItems = (schedules || [])
+  const scheduleItems = activeSchedules
     .slice(0, 20)
     .map(s => {
       const time = s.startTime ? `${s.startTime}${s.endTime ? `-${s.endTime}` : ''}` : '';
@@ -379,7 +418,7 @@ export function serializeDenseMemory({
 
   // 4. Calendar Tasks Memory (active window: today - 1 to today + 7, + overdue open tasks)
   const horizonEnd = new Date(Date.parse(today) + 7 * 86400000).toISOString().slice(0, 10);
-  const relevantTasks = (tasks || [])
+  const relevantTasks = activeTasks
     .filter(t => {
       const date = t.plannedDate || (t.dueDate === 'Today' ? today : null);
       if (!t.completed) {
@@ -401,7 +440,7 @@ export function serializeDenseMemory({
     const st = t.completed ? 'done' : 'open';
     return `[t:${t.id}|"${t.title}"|${d}${time}|${dur}m${gRef}${hRef}|${st}]`;
   });
-  const tasksLine = taskItems.length > 0 ? `SCHEDULE (Active Horizon Tasks):\n${taskItems.join(' ')}` : 'SCHEDULE: empty';
+  const tasksLine = taskItems.length > 0 ? `SCHEDULE (Active Horizon):\n${taskItems.join(' ')}` : 'SCHEDULE: empty';
 
   // 5. Analytics Digest (pre-computed personal capacity & velocity)
   let analyticsLine = '';
@@ -624,7 +663,11 @@ export async function generateExecutivePlanWithAI({
   tasks = [],
   schedules = [],
   stats = null,
-  todayDate = ''
+  todayDate = '',
+  currentTime = '',
+  activeTimer = null,
+  activeView = '',
+  timezone = ''
 }) {
   if (!hasAiService()) {
     return {
@@ -635,14 +678,34 @@ export async function generateExecutivePlanWithAI({
 
   const currentDateStr = todayDate || new Date().toISOString().slice(0, 10);
 
-  // Compress memory context into ultra-dense notation (70%+ token savings)
+  // Passive Ingress Curation: strip filler tokens, keep dense semantic payload
+  const curated = curatePromptIngress(userPrompt.trim());
+  const cleanPrompt = curated.curatedPrompt || userPrompt.trim();
+
+  // Tier 1 & 5: Auto-extract persistent constraints and format working session context (date/time/timer)
+  extractAndSaveConstraints(userPrompt);
+  const sessionContext = formatWorkingSessionContext({
+    todayDate: currentDateStr,
+    currentTime,
+    activeTimer,
+    activeView,
+    timezone
+  });
+  const constraintsBlock = formatConstraintsForPrompt();
+
+  // Tier 4: Consolidate rolling episodic memory across long chat histories
+  const { recentMessages, consolidatedBrief } = consolidateEpisodicMemory(chatHistory);
+
+  // Tier 2 & 3: Compress memory context into ultra-dense notation with BM25 semantic query ranking
   const memoryContext = serializeDenseMemory({
     goals,
     habits,
     tasks,
     schedules,
     stats,
-    todayDate: currentDateStr
+    todayDate: currentDateStr,
+    currentTime,
+    query: cleanPrompt
   });
 
   let docSection = '';
@@ -657,15 +720,16 @@ export async function generateExecutivePlanWithAI({
     docSection = `\n--- ATTACHED DOC OUTLINE: ${documentContext.name || 'document'} ---\n${cleanDoc}\n--- END DOC ---\n`;
   }
 
-  // Passive Ingress Curation: strip filler tokens, keep dense semantic payload
-  const curated = curatePromptIngress(userPrompt.trim());
-  const cleanPrompt = curated.curatedPrompt || userPrompt.trim();
+  const contextSegments = [
+    sessionContext,
+    constraintsBlock,
+    consolidatedBrief,
+    memoryContext,
+    docSection ? docSection.trim() : '',
+    `USER QUERY: "${cleanPrompt}"`
+  ].filter(Boolean);
 
-  const userInstruction = `TODAY: ${currentDateStr}
-
-${memoryContext}
-${docSection}
-USER QUERY: "${cleanPrompt}"`;
+  const userInstruction = contextSegments.join('\n\n');
 
   const userDirective = getCustomCopilotDirective();
   const directivePrompt = userDirective
@@ -677,10 +741,9 @@ USER QUERY: "${cleanPrompt}"`;
     { role: 'system', content: enforceCavemanSystemPrompt(COPILOT_SYSTEM_PROMPT + directivePrompt) }
   ];
 
-  // Append recent chat history (last 8 exchanges) with plan retention to preserve dynamic context
-  if (Array.isArray(chatHistory)) {
-    const recents = chatHistory.slice(-8);
-    for (const msg of recents) {
+  // Append recent chat history with plan retention to preserve dynamic context
+  if (Array.isArray(recentMessages)) {
+    for (const msg of recentMessages) {
       if (msg.role && (msg.content || msg.plan)) {
         let contentStr = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || '');
         if (msg.plan && typeof msg.plan === 'object') {

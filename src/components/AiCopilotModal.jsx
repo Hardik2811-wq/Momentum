@@ -26,6 +26,8 @@ export default function AiCopilotModal({
   addTask,
   toggleTask,
   checkInHabit,
+  focusTimer = null,
+  activeTab = '',
   onOpenApiKeyModal
 }) {
   const [copilotView, setCopilotView] = useState('chat'); // 'chat' | 'graph'
@@ -153,6 +155,7 @@ export default function AiCopilotModal({
         tasks,
         goals,
         habits,
+        schedules,
         stats,
         todayDate: todayPlanDate(),
         actions: { addTask, toggleTask, checkInHabit }
@@ -200,16 +203,27 @@ export default function AiCopilotModal({
     setAttachedDoc(null);
 
     try {
+      const nowTime = new Date().toTimeString().slice(0, 5);
+      const activeTimerObj = (focusTimer && focusTimer.isRunning) ? {
+        isRunning: true,
+        title: focusTimer.timerTaskId ? (tasks.find(t => t.id === focusTimer.timerTaskId)?.title || 'Focus Session') : 'Focus Session',
+        remainingMinutes: Math.round((focusTimer.timeLeft || 0) / 60)
+      } : null;
+
       const result = await generateExecutivePlanWithAI({
         userPrompt: userMsg.content,
         documentContext: docToSend,
-        chatHistory: messages.slice(-8),
+        chatHistory: messages,
         goals,
         habits,
         tasks,
         schedules,
         stats,
-        todayDate: todayPlanDate()
+        todayDate: todayPlanDate(),
+        currentTime: nowTime,
+        activeTimer: activeTimerObj,
+        activeView: activeTab || '',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       });
 
       if (!result.success) {

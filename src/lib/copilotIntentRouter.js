@@ -13,6 +13,7 @@ export function resolveLocalCopilotIntent({
   tasks = [],
   goals = [],
   habits = [],
+  schedules = [],
   stats = null,
   todayDate = '',
   actions = {}
@@ -125,13 +126,20 @@ export function resolveLocalCopilotIntent({
   // 4. QUERY TODAY'S SCHEDULE (e.g. "What do I have today?", "Show today schedule")
   if (/^(what('s|\s+is)\s+(on\s+my\s+schedule|scheduled|today)|what\s+do\s+i\s+have(\s+today)?|show\s+(today('s)?\s+)?(schedule|tasks)|today('s)?\s+(schedule|tasks))(\?)?$/i.test(text)) {
     const todayTasks = (tasks || []).filter(t => (t.plannedDate || (t.dueDate === 'Today' ? today : null)) === today);
-    if (todayTasks.length === 0) {
+    const todayScheds = (schedules || []).filter(s => s.startTime);
+
+    if (todayTasks.length === 0 && todayScheds.length === 0) {
       return {
         handledLocally: true,
-        message: `Your schedule is completely clear for today (${today}). No open tasks planned.`,
+        message: `Your schedule is completely clear for today (${today}). No open tasks or classes planned.`,
         plan: null
       };
     }
+
+    const schedLines = todayScheds.map(s => {
+      const time = s.startTime ? `\`${s.startTime}${s.endTime ? `-${s.endTime}` : ''}\`` : 'Routine';
+      return `- 🎓 ${time} **${s.title}** (Class, ${s.durationMinutes || 60}m)`;
+    });
 
     const taskLines = todayTasks.map(t => {
       const time = t.startTime ? `\`${t.startTime}\`` : 'Anytime';
@@ -139,11 +147,52 @@ export function resolveLocalCopilotIntent({
       return `- ${status} ${time} **${t.title}** (${t.durationMinutes || t.duration || 30}m)`;
     });
 
+    const allLines = [...schedLines, ...taskLines];
+
     return {
       handledLocally: true,
-      message: `**Today's Schedule (${todayTasks.length} items):**\n\n${taskLines.join('\n')}`,
+      message: `**Today's Schedule (${allLines.length} items):**\n\n${allLines.join('\n')}`,
       plan: null
     };
+  }
+
+  // 4b. QUERY NEXT UPCOMING (e.g. "What's next?", "What should I do next?")
+  if (/^(what('s|\s+is)\s+next|what\s+(should\s+i\s+do|is\s+coming\s+up)\s+next)(\?)?$/i.test(text)) {
+    const nowTime = new Date().toTimeString().slice(0, 5);
+    const todayTasks = (tasks || []).filter(t => !t.completed && (t.plannedDate || (t.dueDate === 'Today' ? today : null)) === today && t.startTime && t.startTime >= nowTime);
+    todayTasks.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const todayScheds = (schedules || []).filter(s => s.startTime && s.startTime >= nowTime);
+    todayScheds.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const upcoming = [];
+    if (todayTasks[0]) upcoming.push({ ...todayTasks[0], isClass: false });
+    if (todayScheds[0]) upcoming.push({ ...todayScheds[0], isClass: true });
+    upcoming.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+    if (upcoming.length > 0) {
+      const nextItem = upcoming[0];
+      const typeLabel = nextItem.isClass ? 'Class' : 'Task';
+      return {
+        handledLocally: true,
+        message: `**Up Next (${nextItem.startTime}):**\n**${nextItem.title}** (${typeLabel}, ${nextItem.durationMinutes || 60}m).\n\nCurrent time is ${nowTime}.`,
+        plan: null
+      };
+    } else {
+      const unscheduledToday = (tasks || []).find(t => !t.completed && (t.plannedDate || (t.dueDate === 'Today' ? today : null)) === today);
+      if (unscheduledToday) {
+        return {
+          handledLocally: true,
+          message: `No more timed blocks today. Next priority is **"${unscheduledToday.title}"** (Anytime).`,
+          plan: null
+        };
+      }
+      return {
+        handledLocally: true,
+        message: `No pending items remaining for today. You're all caught up!`,
+        plan: null
+      };
+    }
   }
 
   // 5. QUERY OVERDUE TASKS
