@@ -58,8 +58,9 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
 
   // 4. Handle recurring tasks
   if (task.recurrence && task.recurrence !== 'none') {
-    // If task has a base plannedDate, don't show before base date
-    if (pDate && dateStr < pDate) return false;
+    // If task has a base plannedDate, don't show before base date UNLESS it is a timetable schedule or has repeatDays
+    const isTimetableSchedule = task.type === 'schedule' || (Array.isArray(task.repeatDays) && task.repeatDays.length > 0);
+    if (!isTimetableSchedule && pDate && dateStr < pDate) return false;
     if (task.recurrenceEndDate && dateStr > task.recurrenceEndDate) return false;
 
     // Fast-path: daily recurrence does not require Date instantiation

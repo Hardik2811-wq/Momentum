@@ -430,13 +430,7 @@ export default function AiCopilotModal({
           repeatDays = [1];
         }
 
-        const schedPlannedDate = (s.plannedDate && s.plannedDate !== todayPlanDate())
-          ? s.plannedDate
-          : calculateNextArrivingDate({
-              repeatDays,
-              startTime: start,
-              baseDateStr: todayPlanDate()
-            });
+        const schedPlannedDate = s.plannedDate || todayPlanDate();
 
         addSchedule({
           id,

@@ -187,6 +187,23 @@ test('Missed Schedule Engine: recurring schedule only activates on matching days
   assert.equal(isScheduleActiveForDate(satSchedule, '2026-10-10'), true);
 });
 
+test('Missed Schedule Engine: Thursday schedule with future plannedDate still shows on current Thursday', async () => {
+  const { isScheduleActiveForDate } = await import('../src/lib/missedScheduleEngine.js');
+
+  const thuSchedule = {
+    id: 'sched-2',
+    title: 'MERN LAB',
+    plannedDate: '2026-10-15', // next week plannedDate
+    recurrence: 'weekly',
+    repeatDays: [4] // Thursday
+  };
+
+  // Thursday 2026-10-08: MUST be active
+  assert.equal(isScheduleActiveForDate(thuSchedule, '2026-10-08'), true);
+  // Friday 2026-10-09: must NOT be active
+  assert.equal(isScheduleActiveForDate(thuSchedule, '2026-10-09'), false);
+});
+
 test('Missed Schedule Engine: calculateNextArrivingDate advances past slots to next arrival', async () => {
   const { calculateNextArrivingDate } = await import('../src/lib/taskMetadata.js');
 

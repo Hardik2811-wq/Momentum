@@ -1125,7 +1125,7 @@ const TodayView = React.memo(function TodayView({
                     </div>
                   ) : (
                     filteredSchedules.map(sched => {
-                      const isActiveToday = isTaskScheduledForDate(sched, viewDate);
+                      const isActiveToday = isScheduleActiveForDate(sched, viewDate);
                       const isDone = Boolean(
                         sched.completed ||
                         (Array.isArray(sched.completedDates) && sched.completedDates.includes(viewDate))
@@ -1590,7 +1590,7 @@ const TodayView = React.memo(function TodayView({
                       <div className="absolute inset-0 pointer-events-none p-1.5">
                         {/* Fixed Timetable & Class Blocks Layer (Background containers) */}
                         {(schedules || [])
-                          .filter(sched => isTaskScheduledForDate(sched, colDate) && sched.startTime)
+                          .filter(sched => isScheduleActiveForDate(sched, colDate) && sched.startTime)
                           .map(sched => {
                             const startMin = minutesFromStartOfDay(sched.startTime);
                             if (startMin === null) return null;

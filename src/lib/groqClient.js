@@ -720,20 +720,8 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
         }
       }
 
-      // Compute next arriving planned date
-      let plannedDate = s.plannedDate ? normalizeIsoDate(s.plannedDate, today) : null;
-      if (repeatDays && repeatDays.length > 0) {
-        plannedDate = calculateNextArrivingDate({
-          repeatDays,
-          startTime: start,
-          baseDateStr: today
-        });
-      } else if (!plannedDate || plannedDate === today) {
-        plannedDate = calculateNextArrivingDate({
-          startTime: start,
-          baseDateStr: today
-        });
-      }
+      // For schedules (timetable classes), keep plannedDate anchored to today or explicit date
+      let plannedDate = s.plannedDate ? normalizeIsoDate(s.plannedDate, today) : today;
 
       return {
         title: s.title || `Class / Routine ${idx + 1}`,

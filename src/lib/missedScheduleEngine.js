@@ -35,10 +35,9 @@ export function isScheduleActiveForDate(sched = {}, dateStr = todayPlanDate()) {
   );
 
   if (isRecurring) {
-    // If schedule has a starting plannedDate, do not activate before that date
-    if (sched.plannedDate && dateStr < sched.plannedDate) return false;
     if (sched.recurrenceEndDate && dateStr > sched.recurrenceEndDate) return false;
     if (sched.recurrenceUntil && dateStr >= sched.recurrenceUntil) return false;
+    if (sched.recurrenceStartDate && dateStr < sched.recurrenceStartDate) return false;
 
     if (repeatType === 'daily' || repeatType === 'everyday') return true;
 
