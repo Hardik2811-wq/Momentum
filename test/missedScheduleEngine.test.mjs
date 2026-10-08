@@ -167,3 +167,53 @@ test('Missed Schedule Engine: builds clean backlog patch for tasks', () => {
   assert.equal(patch.dueDate, 'Someday');
   assert.equal(patch.isBacklog, true);
 });
+
+test('Missed Schedule Engine: recurring schedule only activates on matching days of week', async () => {
+  const { isScheduleActiveForDate } = await import('../src/lib/missedScheduleEngine.js');
+
+  const satSchedule = {
+    id: 'sched-1',
+    title: 'CML Class',
+    plannedDate: '2026-10-08', // Thursday base date
+    recurrence: 'weekly',
+    repeatDays: [6] // Saturday only
+  };
+
+  // Thursday 2026-10-08: must NOT be active
+  assert.equal(isScheduleActiveForDate(satSchedule, '2026-10-08'), false);
+  // Friday 2026-10-09: must NOT be active
+  assert.equal(isScheduleActiveForDate(satSchedule, '2026-10-09'), false);
+  // Saturday 2026-10-10: MUST be active
+  assert.equal(isScheduleActiveForDate(satSchedule, '2026-10-10'), true);
+});
+
+test('Missed Schedule Engine: calculateNextArrivingDate advances past slots to next arrival', async () => {
+  const { calculateNextArrivingDate } = await import('../src/lib/taskMetadata.js');
+
+  // Thursday 16:02: slot at 14:15 on Thursday has passed -> advances to next Thursday (2026-10-15)
+  const nextThu = calculateNextArrivingDate({
+    repeatDays: [4],
+    startTime: '14:15',
+    baseDateStr: '2026-10-08',
+    nowTimeStr: '16:02'
+  });
+  assert.equal(nextThu, '2026-10-15');
+
+  // Saturday slot at 09:30 -> arrives on coming Saturday (2026-10-10)
+  const nextSat = calculateNextArrivingDate({
+    repeatDays: [6],
+    startTime: '09:30',
+    baseDateStr: '2026-10-08',
+    nowTimeStr: '16:02'
+  });
+  assert.equal(nextSat, '2026-10-10');
+
+  // Tuesday slot at 13:30 -> arrives next Tuesday (2026-10-13)
+  const nextTue = calculateNextArrivingDate({
+    repeatDays: [2],
+    startTime: '13:30',
+    baseDateStr: '2026-10-08',
+    nowTimeStr: '16:02'
+  });
+  assert.equal(nextTue, '2026-10-13');
+});

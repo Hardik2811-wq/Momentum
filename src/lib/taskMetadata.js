@@ -55,12 +55,12 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
   }
 
   const pDate = taskPlanDate(task);
-  if (pDate === dateStr) return true;
 
   // 4. Handle recurring tasks
   if (task.recurrence && task.recurrence !== 'none') {
     // If task has a base plannedDate, don't show before base date
     if (pDate && dateStr < pDate) return false;
+    if (task.recurrenceEndDate && dateStr > task.recurrenceEndDate) return false;
 
     // Fast-path: daily recurrence does not require Date instantiation
     if (task.recurrence === 'daily' || task.recurrence === 'everyday') return true;
@@ -77,7 +77,13 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
     if (task.recurrence === 'weekdays') {
       return dayOfWeek >= 1 && dayOfWeek <= 5;
     }
+    if (task.recurrence === 'weekends') {
+      return dayOfWeek === 0 || dayOfWeek === 6;
+    }
     if (task.recurrence === 'weekly') {
+      if (Array.isArray(task.repeatDays) && task.repeatDays.length > 0) {
+        return task.repeatDays.includes(dayOfWeek);
+      }
       if (pDate) {
         const baseDay = new Date(`${pDate}T12:00:00`).getDay();
         return dayOfWeek === baseDay;
@@ -95,7 +101,11 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
       }
       return targetDate.getDate() === 1;
     }
+    return false;
   }
+
+  // Non-recurring task: exact date match
+  if (pDate === dateStr) return true;
 
   return false;
 }
@@ -249,6 +259,81 @@ export function parseTimeString(str) {
   if (ampm === 'pm' && hour < 12) hour += 12;
   if (ampm === 'am' && hour === 12) hour = 0;
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+/**
+ * Calculates next arriving date (YYYY-MM-DD) for a task, schedule, or routine.
+ * Guarantees that newly created items start at their current or next arriving state
+ * rather than in the past.
+ */
+export function calculateNextArrivingDate({
+  repeatDays = null,
+  startTime = null,
+  baseDateStr = todayPlanDate(),
+  nowTimeStr = null
+} = {}) {
+  const baseDate = new Date(`${baseDateStr || todayPlanDate()}T12:00:00`);
+  if (Number.isNaN(baseDate.getTime())) return todayPlanDate();
+
+  const baseDayOfWeek = baseDate.getDay();
+  const isBaseToday = (baseDateStr === todayPlanDate());
+
+  let currentMins = null;
+  if (isBaseToday) {
+    if (nowTimeStr) {
+      const [nh, nm] = nowTimeStr.split(':').map(Number);
+      if (!isNaN(nh) && !isNaN(nm)) currentMins = nh * 60 + nm;
+    }
+    if (currentMins === null) {
+      const now = new Date();
+      currentMins = now.getHours() * 60 + now.getMinutes();
+    }
+  }
+
+  let startMins = null;
+  if (startTime) {
+    const cleanTime = parseTimeString(startTime) || startTime;
+    const [sh, sm] = cleanTime.split(':').map(Number);
+    if (!isNaN(sh) && !isNaN(sm)) {
+      startMins = sh * 60 + sm;
+    }
+  }
+
+  // 1. If repeatDays are specified (recurring by days of week)
+  const candidateDays = Array.isArray(repeatDays) && repeatDays.length > 0
+    ? repeatDays.map(Number).filter(d => !isNaN(d) && d >= 0 && d <= 6)
+    : (typeof repeatDays === 'number' && repeatDays >= 0 && repeatDays <= 6 ? [repeatDays] : null);
+
+  if (candidateDays && candidateDays.length > 0) {
+    let minDiff = Infinity;
+    for (const candDay of candidateDays) {
+      let diff = (candDay - baseDayOfWeek + 7) % 7;
+      if (diff === 0 && isBaseToday && startMins !== null && currentMins !== null) {
+        // Today, but slot already passed! Advance to next week
+        if (startMins <= currentMins) {
+          diff = 7;
+        }
+      }
+      if (diff < minDiff) {
+        minDiff = diff;
+      }
+    }
+    if (minDiff !== Infinity) {
+      const nextDate = new Date(baseDate);
+      nextDate.setDate(nextDate.getDate() + minDiff);
+      const y = nextDate.getFullYear();
+      const m = String(nextDate.getMonth() + 1).padStart(2, '0');
+      const d = String(nextDate.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+
+  // 2. Non-recurring or unconstrained: if scheduled for today but time already passed, roll to tomorrow
+  if (isBaseToday && startMins !== null && currentMins !== null && startMins <= currentMins) {
+    return tomorrowPlanDate();
+  }
+
+  return baseDateStr;
 }
 
 

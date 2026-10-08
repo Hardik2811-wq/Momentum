@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { parseDocumentFile } from '../lib/documentParser';
 import { generateExecutivePlanWithAI, hasAiService } from '../lib/groqClient';
-import { todayPlanDate, calculateEndTime, parseCompoundDuration } from '../lib/taskMetadata';
+import { todayPlanDate, calculateEndTime, parseCompoundDuration, calculateNextArrivingDate } from '../lib/taskMetadata';
 import { resolveLocalCopilotIntent } from '../lib/copilotIntentRouter';
 import { harvestCopilotPlan } from '../lib/nlpMemory';
 import LifeGraphVisualizer from './LifeGraphVisualizer';
@@ -413,6 +413,31 @@ export default function AiCopilotModal({
         const start = s.startTime || '09:00';
         const end = s.endTime || calculateEndTime(start, dur);
 
+        let repeatDays = Array.isArray(s.repeatDays) && s.repeatDays.length > 0 ? s.repeatDays : null;
+        if (!repeatDays) {
+          const match = (s.title || '').match(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tue|wed|thu|fri|sat)\b/i);
+          if (match) {
+            const DAY_MAP = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+            const dIdx = DAY_MAP[match[1].toLowerCase().slice(0, 3)];
+            if (dIdx !== undefined) repeatDays = [dIdx];
+          }
+        }
+        if (!repeatDays && s.plannedDate) {
+          const bd = new Date(`${s.plannedDate}T12:00:00`).getDay();
+          if (!isNaN(bd)) repeatDays = [bd];
+        }
+        if (!repeatDays) {
+          repeatDays = [1];
+        }
+
+        const schedPlannedDate = (s.plannedDate && s.plannedDate !== todayPlanDate())
+          ? s.plannedDate
+          : calculateNextArrivingDate({
+              repeatDays,
+              startTime: start,
+              baseDateStr: todayPlanDate()
+            });
+
         addSchedule({
           id,
           title: s.title,
@@ -421,9 +446,9 @@ export default function AiCopilotModal({
           startTime: start,
           endTime: end,
           durationMinutes: dur,
-          plannedDate: s.plannedDate || todayPlanDate(),
+          plannedDate: schedPlannedDate,
           recurrence: s.recurrence || 'weekly',
-          repeatDays: Array.isArray(s.repeatDays) ? s.repeatDays : [new Date().getDay()],
+          repeatDays,
           recurrenceEndDate: s.recurrenceEndDate || null,
           type: 'schedule'
         });
@@ -449,7 +474,24 @@ export default function AiCopilotModal({
       plan.tasks.forEach((t, idx) => {
         if (!t.title) return;
         const cleanTitle = t.title.trim().toLowerCase();
-        const taskDate = t.plannedDate || todayPlanDate();
+        let taskRepeatDays = Array.isArray(t.repeatDays) && t.repeatDays.length > 0 ? t.repeatDays : null;
+        if (!taskRepeatDays) {
+          const match = (t.title || '').match(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tue|wed|thu|fri|sat)\b/i);
+          if (match) {
+            const DAY_MAP = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+            const dIdx = DAY_MAP[match[1].toLowerCase().slice(0, 3)];
+            if (dIdx !== undefined) taskRepeatDays = [dIdx];
+          }
+        }
+
+        let taskDate = t.plannedDate || todayPlanDate();
+        if (taskDate === todayPlanDate() && t.startTime) {
+          taskDate = calculateNextArrivingDate({
+            repeatDays: taskRepeatDays,
+            startTime: t.startTime,
+            baseDateStr: todayPlanDate()
+          });
+        }
 
         // Check if this task represents a timetable class / recurring college routine
         const isClassOrTimetable = (
@@ -471,9 +513,14 @@ export default function AiCopilotModal({
             const sStart = t.startTime || '09:00';
             const sEnd = t.endTime || calculateEndTime(sStart, sDur);
             const baseDay = new Date(`${taskDate}T12:00:00`).getDay();
-            const schedRepeatDays = Array.isArray(t.repeatDays) && t.repeatDays.length > 0 
-              ? t.repeatDays 
-              : (isNaN(baseDay) ? [1] : [baseDay]);
+            const schedRepeatDays = taskRepeatDays || (isNaN(baseDay) ? [1] : [baseDay]);
+            const schedPlannedDate = (taskDate && taskDate !== todayPlanDate())
+              ? taskDate
+              : calculateNextArrivingDate({
+                  repeatDays: schedRepeatDays,
+                  startTime: sStart,
+                  baseDateStr: todayPlanDate()
+                });
 
             addSchedule({
               id: schedId,
@@ -483,7 +530,7 @@ export default function AiCopilotModal({
               startTime: sStart,
               endTime: sEnd,
               durationMinutes: sDur,
-              plannedDate: taskDate,
+              plannedDate: schedPlannedDate,
               recurrence: t.recurrence && t.recurrence !== 'none' ? t.recurrence : 'weekly',
               repeatDays: schedRepeatDays,
               recurrenceEndDate: t.recurrenceEndDate || null,

@@ -11,7 +11,8 @@ import {
   planDateLabel,
   urgencyFromPlan,
   calculateDuration,
-  calculateEndTime
+  calculateEndTime,
+  calculateNextArrivingDate
 } from './taskMetadata.js';
 
 const MONTH_INDEX = {
@@ -610,16 +611,29 @@ export function parseNaturalTask(input = '', goals = [], habits = []) {
   }
   const dateResult = extractDateMatch(text);
   if (dateResult) {
-    extracted.plannedDate = dateResult.date;
-    extracted.dueDate = planDateLabel(dateResult.date);
-    extracted.urgency = urgencyFromPlan(dateResult.date);
+    let resolvedDate = dateResult.date;
+    if (resolvedDate === todayPlanDate() && extracted.startTime) {
+      resolvedDate = calculateNextArrivingDate({
+        repeatDays: extracted.repeatDays,
+        startTime: extracted.startTime,
+        baseDateStr: resolvedDate
+      });
+    }
+    extracted.plannedDate = resolvedDate;
+    extracted.dueDate = planDateLabel(resolvedDate);
+    extracted.urgency = urgencyFromPlan(resolvedDate);
     explicitScore += 0.25;
     text = text.replace(dateResult.token, ' ');
   } else if (extracted.recurrence) {
-    // Recurring tasks with no explicit start date start today
-    extracted.plannedDate = todayPlanDate();
-    extracted.dueDate = 'Today';
-    extracted.urgency = 'today';
+    // Recurring tasks start at next arriving occurrence (never in past)
+    const nextArrDate = calculateNextArrivingDate({
+      repeatDays: extracted.repeatDays,
+      startTime: extracted.startTime,
+      baseDateStr: todayPlanDate()
+    });
+    extracted.plannedDate = nextArrDate;
+    extracted.dueDate = planDateLabel(nextArrDate);
+    extracted.urgency = urgencyFromPlan(nextArrDate);
   } else {
     const fallbackHorizonMatch = text.match(/\b(this\s+week|someday|backlog)\b/i);
     if (fallbackHorizonMatch) {

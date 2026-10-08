@@ -56,10 +56,12 @@ export function computeHabitDecayMetrics(habit = {}, todayDateStr = '') {
   // Find most recent completed date
   const sortedDates = [...completedDays].filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
   const lastActiveDate = sortedDates[sortedDates.length - 1] || null;
-  const daysSinceCheckIn = lastActiveDate ? parseDaysBetween(lastActiveDate, today) : 5;
+  const createdAtDate = habit.createdAt ? String(habit.createdAt).slice(0, 10) : today;
+  const daysSinceCreation = parseDaysBetween(createdAtDate, today);
+  const daysSinceCheckIn = lastActiveDate ? parseDaysBetween(lastActiveDate, today) : Math.min(daysSinceCreation, 3);
 
   // Habit Age in days (Lindy denominator)
-  const firstActiveDate = sortedDates[0] || lastActiveDate || today;
+  const firstActiveDate = sortedDates[0] || lastActiveDate || createdAtDate || today;
   const habitAgeDays = Math.max(1, parseDaysBetween(firstActiveDate, today));
 
   // Dynamic Decay parameter lambda
@@ -96,7 +98,9 @@ export function computeHabitDecayMetrics(habit = {}, todayDateStr = '') {
   let riskLevel = 'stable'; // 'stable' | 'warning' | 'critical'
   let isAtRisk = false;
 
-  if (!isDoneToday) {
+  const isBrandNewHabit = (completedDays.length === 0 && daysSinceCreation <= 1);
+
+  if (!isDoneToday && !isBrandNewHabit) {
     if (deltaT >= 2 || currentStrength < 0.45 || survivalProb < 0.40) {
       riskLevel = 'critical';
       isAtRisk = true;

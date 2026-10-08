@@ -282,7 +282,9 @@ export function formatWorkingSessionContext({
   const timeStr = currentTime || now.toTimeString().slice(0, 5);
 
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dayName = days[now.getDay()];
+  const baseD = todayDate ? new Date(`${todayDate}T12:00:00`) : now;
+  const dayIdx = Number.isNaN(baseD.getTime()) ? now.getDay() : baseD.getDay();
+  const dayName = days[dayIdx];
 
   const [hour] = timeStr.split(':').map(Number);
   const partOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : hour < 21 ? 'evening' : 'night';
@@ -290,7 +292,7 @@ export function formatWorkingSessionContext({
   const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
   const lines = [
-    `NOW: ${dayName} ${dateStr} ${timeStr} (${partOfDay}) | TZ: ${tz}`
+    `NOW: ${dayName} ${dateStr} ${timeStr} (${partOfDay}, dayIdx:${dayIdx}, 0=Sun..6=Sat) | TZ: ${tz}`
   ];
 
   if (activeView) {

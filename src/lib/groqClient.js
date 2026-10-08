@@ -13,6 +13,11 @@ import {
   extractAndSaveConstraints,
   formatConstraintsForPrompt
 } from './contextualMemoryEngine.js';
+import {
+  calculateEndTime,
+  calculateNextArrivingDate,
+  todayPlanDate
+} from './taskMetadata.js';
 
 const AI_FUNCTION = 'groq-proxy';
 const BYOK_FUNCTION = 'byok-credentials';
@@ -521,7 +526,12 @@ CRITICAL PLANNING PRINCIPLES:
    - Never create a duplicate task that is already scheduled or open for that date.
 3. TIMETABLE CLASSES & ROUTINE BLOCKS:
    - When the user asks to schedule classes, university timetable, lectures, labs, or recurring routines (e.g. "CN = 3.30-5.30pm", "Saturday: CML = 9.30-11.30am", "repeats every week till 18 Oct"):
-   - Put them in 'plan.schedules' with title, category ("College"|"Academics"|"Work"|"Personal"), startTime ("HH:MM"), endTime ("HH:MM"), durationMinutes, plannedDate, recurrence ("weekly"|"daily"|"custom"|"none"), repeatDays (0=Sun..6=Sat, e.g. Saturday is [6]), recurrenceEndDate ("YYYY-MM-DD" or null) so they integrate into their Timetable Schedule!
+   - Put them in 'plan.schedules' with title, category ("College"|"Academics"|"Work"|"Personal"), startTime ("HH:MM"), endTime ("HH:MM"), durationMinutes, plannedDate, recurrence ("weekly"|"daily"|"custom"|"none"), repeatDays (0=Sun..6=Sat, e.g. Tuesday is [2], Wednesday is [3], Thursday is [4], Friday is [5], Saturday is [6]), recurrenceEndDate ("YYYY-MM-DD" or null) so they integrate into their Timetable Schedule!
+   - CRITICAL NEXT ARRIVING HORIZON:
+     - Map each class strictly to its designated day of week via repeatDays: [targetDayIndex]. NEVER set repeatDays to today's day for classes on other days!
+     - Calculate plannedDate as the NEXT ARRIVING DATE for each class relative to NOW.
+     - If today is Thursday 16:02 and a class was Thursday 14:15-15:45 (already passed today), its plannedDate starts next Thursday (e.g. 2026-10-15), NOT today! NEVER stamp today's date for an occurrence whose time has already passed today!
+     - Never lump all classes onto today's date.
 4. Full Multi-Vector Horizon Formulation: When formulating an entirely NEW plan or topic:
    - HORIZONS (Goals): Create 5-8 distinct anchors covering subjects, creative passions, and discipline commitments only if they do not already exist in memory.
    - DAILY RITUALS (Habits): Create 6-12 specific recurring rituals only if not already active in memory.
@@ -636,19 +646,41 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
   const today = todayDate || new Date().toISOString().slice(0, 10);
   const plan = parsed.plan;
 
+  const DAY_LOOKUP = {
+    sun: 0, sunday: 0,
+    mon: 1, monday: 1,
+    tue: 2, tuesday: 2,
+    wed: 3, wednesday: 3,
+    thu: 4, thursday: 4,
+    fri: 5, friday: 5,
+    sat: 6, saturday: 6
+  };
+
+  function extractDayIndexFromText(text = '') {
+    if (!text || typeof text !== 'string') return null;
+    const match = text.match(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tue|wed|thu|fri|sat)\b/i);
+    if (!match) return null;
+    const key = match[1].toLowerCase().slice(0, 3);
+    return DAY_LOOKUP[key] ?? null;
+  }
+
   if (Array.isArray(plan.goals)) {
     plan.goals = plan.goals.map((g, idx) => {
       if (Array.isArray(g)) {
+        let tDate = g[3] ? normalizeIsoDate(g[3], today) : null;
+        if (tDate && tDate < today) tDate = null;
         return {
           title: g[0] || `Goal ${idx + 1}`,
           category: g[1] || 'career',
           why: g[2] || '',
-          targetDate: g[3] ? normalizeIsoDate(g[3], today) : null
+          targetDate: tDate
         };
       }
+      let tDate = g.targetDate ? normalizeIsoDate(g.targetDate, today) : null;
+      if (tDate && tDate < today) tDate = null;
       return {
         ...g,
-        targetDate: g.targetDate ? normalizeIsoDate(g.targetDate, today) : null
+        targetDate: tDate
       };
     });
   }
@@ -679,6 +711,30 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
       if (!repeatDays && s.recurrence === 'custom' && Array.isArray(s.days)) {
         repeatDays = s.days;
       }
+
+      // Infer repeat day from title, name, or day field if not provided
+      if (!repeatDays || repeatDays.length === 0) {
+        const inferredDay = extractDayIndexFromText(s.day || s.title || s.name || '');
+        if (inferredDay !== null) {
+          repeatDays = [inferredDay];
+        }
+      }
+
+      // Compute next arriving planned date
+      let plannedDate = s.plannedDate ? normalizeIsoDate(s.plannedDate, today) : null;
+      if (repeatDays && repeatDays.length > 0) {
+        plannedDate = calculateNextArrivingDate({
+          repeatDays,
+          startTime: start,
+          baseDateStr: today
+        });
+      } else if (!plannedDate || plannedDate === today) {
+        plannedDate = calculateNextArrivingDate({
+          startTime: start,
+          baseDateStr: today
+        });
+      }
+
       return {
         title: s.title || `Class / Routine ${idx + 1}`,
         category: s.category || 'College',
@@ -686,7 +742,7 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
         startTime: start,
         endTime: end,
         durationMinutes: dur,
-        plannedDate: s.plannedDate ? normalizeIsoDate(s.plannedDate, today) : today,
+        plannedDate: plannedDate || today,
         recurrence: s.recurrence || 'weekly',
         repeatDays,
         recurrenceEndDate: s.recurrenceEndDate ? normalizeIsoDate(s.recurrenceEndDate, today) : null
@@ -699,9 +755,13 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
       if (Array.isArray(t)) {
         const goalRef = t[4];
         const habitRef = t[5];
+        let pDate = normalizeIsoDate(t[1], today);
+        if (pDate === today && t[2]) {
+          pDate = calculateNextArrivingDate({ startTime: t[2], baseDateStr: today });
+        }
         return {
           title: t[0] || 'Scheduled Task',
-          plannedDate: normalizeIsoDate(t[1], today),
+          plannedDate: pDate,
           startTime: t[2] || null,
           durationMinutes: typeof t[3] === 'number' ? t[3] : 45,
           goalIndex: typeof goalRef === 'number' ? goalRef : null,
@@ -716,17 +776,32 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
       }
 
       const formattedSubtasks = normalizeSubtasks(t.subtasks || t.steps || t.checklist || []);
+      let taskPlannedDate = normalizeIsoDate(t.plannedDate || t.date, today);
+      let taskRepeatDays = Array.isArray(t.repeatDays) ? t.repeatDays : null;
+      if (!taskRepeatDays && t.recurrence && t.recurrence !== 'none') {
+        const infDay = extractDayIndexFromText(t.title || '');
+        if (infDay !== null) taskRepeatDays = [infDay];
+      }
+
+      // For tasks with start time, ensure they don't start in the past today
+      if (taskPlannedDate === today && t.startTime) {
+        taskPlannedDate = calculateNextArrivingDate({
+          repeatDays: taskRepeatDays,
+          startTime: t.startTime,
+          baseDateStr: today
+        });
+      }
 
       return {
         title: t.title || 'Scheduled Task',
-        plannedDate: normalizeIsoDate(t.plannedDate || t.date, today),
+        plannedDate: taskPlannedDate,
         startTime: t.startTime || t.time || null,
         durationMinutes: t.durationMinutes || t.dur || 45,
         impact: t.impact || 'medium',
         priority: t.priority || (t.impact === 'high' ? 'high' : 'normal'),
         energy: t.energy || (t.impact === 'high' ? 'High' : t.impact === 'low' ? 'Low' : 'Normal'),
         recurrence: t.recurrence || 'none',
-        repeatDays: Array.isArray(t.repeatDays) ? t.repeatDays : null,
+        repeatDays: taskRepeatDays,
         recurrenceEndDate: t.recurrenceEndDate ? normalizeIsoDate(t.recurrenceEndDate, today) : null,
         category: t.category || (t.areas?.includes('College') ? 'College' : 'Work'),
         deadlineDate: t.deadlineDate ? normalizeIsoDate(t.deadlineDate, today) : null,

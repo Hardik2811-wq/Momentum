@@ -26,27 +26,39 @@ import {
  */
 export function isScheduleActiveForDate(sched = {}, dateStr = todayPlanDate()) {
   if (!sched || !dateStr) return false;
-  if (sched.plannedDate && sched.plannedDate === dateStr) return true;
 
-  // Recurring schedule evaluation
-  if (sched.repeat && sched.repeat !== 'never') {
+  const repeatType = sched.recurrence || sched.repeat;
+  const isRecurring = Boolean(
+    repeatType &&
+    repeatType !== 'none' &&
+    repeatType !== 'never'
+  );
+
+  if (isRecurring) {
+    // If schedule has a starting plannedDate, do not activate before that date
+    if (sched.plannedDate && dateStr < sched.plannedDate) return false;
     if (sched.recurrenceEndDate && dateStr > sched.recurrenceEndDate) return false;
     if (sched.recurrenceUntil && dateStr >= sched.recurrenceUntil) return false;
-    if (sched.repeat === 'daily' || sched.repeat === 'everyday') return true;
+
+    if (repeatType === 'daily' || repeatType === 'everyday') return true;
 
     const targetDate = new Date(`${dateStr}T12:00:00`);
     if (Number.isNaN(targetDate.getTime())) return false;
     const dayOfWeek = targetDate.getDay();
 
-    if (sched.repeat === 'weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5;
-    if (sched.repeat === 'weekends') return dayOfWeek === 0 || dayOfWeek === 6;
-    if (sched.repeat === 'custom') {
-      const days = Array.isArray(sched.repeatDays) ? sched.repeatDays : [];
+    if (repeatType === 'weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5;
+    if (repeatType === 'weekends') return dayOfWeek === 0 || dayOfWeek === 6;
+    if (repeatType === 'custom' || repeatType === 'weekly') {
+      const days = Array.isArray(sched.repeatDays) && sched.repeatDays.length > 0
+        ? sched.repeatDays
+        : (sched.plannedDate ? [new Date(`${sched.plannedDate}T12:00:00`).getDay()] : [1]);
       return days.includes(dayOfWeek);
     }
+    return false;
   }
 
-  return false;
+  // Non-recurring schedule: exact date match
+  return sched.plannedDate === dateStr;
 }
 
 /**
@@ -87,6 +99,31 @@ export function isItemTimeWindowPassed(item = {}, now = new Date(), targetDate =
 
   // If item is scheduled for today: check if current time > end window
   return currentMins > window.endMins;
+}
+
+function wasCreatedAfterWindow(item, window, targetDate) {
+  if (!item || !window) return false;
+  if (targetDate !== todayPlanDate()) return false;
+
+  let createdTs = item.createdAt;
+  if (!createdTs && typeof item.id === 'string') {
+    const match = item.id.match(/-(?:t|sched|task)?(\d{10,13})/);
+    if (match) createdTs = Number(match[1]);
+  }
+
+  if (createdTs) {
+    const createdDate = new Date(createdTs);
+    if (!isNaN(createdDate.getTime())) {
+      const createdYMD = createdDate.toISOString().slice(0, 10);
+      if (createdYMD === targetDate) {
+        const createdMins = createdDate.getHours() * 60 + createdDate.getMinutes();
+        if (createdMins >= window.endMins - 15) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 /**
@@ -143,11 +180,15 @@ export function classifyDayItems({
       upcoming.push(enriched);
     } else {
       // currentMins > window.endMins
-      missed.push({
-        ...enriched,
-        isMissed: true,
-        minutesOverdue: currentMins - window.endMins
-      });
+      if (wasCreatedAfterWindow(t, window, targetDate)) {
+        upcoming.push(enriched);
+      } else {
+        missed.push({
+          ...enriched,
+          isMissed: true,
+          minutesOverdue: currentMins - window.endMins
+        });
+      }
     }
   }
 
@@ -166,11 +207,15 @@ export function classifyDayItems({
       upcoming.push(enriched);
     } else {
       // Fixed schedule missed today: schedules do NOT go to backlog
-      missed.push({
-        ...enriched,
-        isMissed: true,
-        minutesOverdue: currentMins - window.endMins
-      });
+      if (wasCreatedAfterWindow(s, window, targetDate)) {
+        upcoming.push(enriched);
+      } else {
+        missed.push({
+          ...enriched,
+          isMissed: true,
+          minutesOverdue: currentMins - window.endMins
+        });
+      }
     }
   }
 
