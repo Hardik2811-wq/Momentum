@@ -539,12 +539,27 @@ CRITICAL PLANNING PRINCIPLES:
 5. Ultra-Compact Efficiency: Use concise titles and compact representations so plans fit cleanly in JSON.
 6. Link items: Connect tasks and habits to goals via existingGoalId (preferred if goal exists) or goalIndex (0-based for NEW goals in plan.goals).
 7. If the user only asks a conversational question or sends a greeting (e.g. "hey", "hello", "how are you"), set "hasPlan": false, "plan": null, and write a helpful, natural conversational reply in "message".
-8. In "message", provide a concise, direct response answering the user or summarizing the proposed plan. For greetings, respond conversationally and ask what to organize today. NEVER echo or parrot template example strings.
+8. DELETIONS, UNDO, OR REMOVAL REQUESTS:
+   - If user asks to delete, remove, clear, or undo goals, horizons, tasks, habits, or schedules (e.g. "Delete these horizons", "undo this one", "remove goal X"):
+   - NEVER claim or pretend in the message text that you already deleted them!
+   - Instead, find the matching item IDs from memory (G=[g:ID|...], H=[h:ID|...], S=[s:ID|...], T=[t:ID|...]).
+   - Set "hasPlan": false, "plan": null, "hasDeletion": true, and output the deletion object:
+     "deletion": {
+       "summary": "Delete X item(s)",
+       "goalIds": ["g1", "g2"],
+       "habitIds": [],
+       "scheduleIds": [],
+       "taskIds": []
+     }
+   - In "message", say: "I found matching items to remove. Please review and approve deletion below:".
+9. In "message", provide a concise, direct response answering the user or summarizing the proposed plan. For greetings, respond conversationally and ask what to organize today. NEVER echo or parrot template example strings.
 
 Return ONLY raw JSON object (no markdown code blocks):
 {
   "message": "Direct concise answer or briefing tailored specifically to user prompt",
   "hasPlan": true,
+  "hasDeletion": false,
+  "deletion": null,
   "plan": {
     "summary": "1-line operational headline",
     "goals": [
@@ -639,11 +654,55 @@ function normalizeSubtasks(rawSubtasks) {
  * delta tuples ["title", "YYYY-MM-DD", "HH:MM", dur, goalRef, habitRef, pri]
  * to cut output token generation costs by 60-80%.
  */
-export function normalizeCopilotPlan(parsed, todayDate = '') {
+export function normalizeCopilotPlan(parsed, todayDate = '', contextEntities = {}) {
   if (!parsed || typeof parsed !== 'object') return parsed;
-  if (!parsed.hasPlan || !parsed.plan) return parsed;
 
   const today = todayDate || new Date().toISOString().slice(0, 10);
+
+  // Normalize deletion if present
+  if (parsed.hasDeletion || parsed.deletion) {
+    const del = parsed.deletion || {};
+    const goalIds = Array.isArray(del.goalIds) ? del.goalIds : [];
+    const habitIds = Array.isArray(del.habitIds) ? del.habitIds : [];
+    const scheduleIds = Array.isArray(del.scheduleIds) ? del.scheduleIds : [];
+    const taskIds = Array.isArray(del.taskIds) ? del.taskIds : [];
+
+    const items = [];
+    const allGoals = contextEntities.goals || [];
+    const allHabits = contextEntities.habits || [];
+    const allScheds = contextEntities.schedules || [];
+    const allTasks = contextEntities.tasks || [];
+
+    goalIds.forEach(id => {
+      const g = allGoals.find(x => String(x.id) === String(id));
+      items.push({ type: 'goal', id, title: g?.title || `Goal ${id}`, category: g?.category });
+    });
+    habitIds.forEach(id => {
+      const h = allHabits.find(x => String(x.id) === String(id));
+      items.push({ type: 'habit', id, title: h?.title || `Habit ${id}` });
+    });
+    scheduleIds.forEach(id => {
+      const s = allScheds.find(x => String(x.id) === String(id));
+      items.push({ type: 'schedule', id, title: s?.title || `Schedule ${id}` });
+    });
+    taskIds.forEach(id => {
+      const t = allTasks.find(x => String(x.id) === String(id));
+      items.push({ type: 'task', id, title: t?.title || `Task ${id}` });
+    });
+
+    parsed.hasDeletion = true;
+    parsed.deletion = {
+      summary: del.summary || `Delete ${items.length} items`,
+      goalIds,
+      habitIds,
+      scheduleIds,
+      taskIds,
+      items
+    };
+  }
+
+  if (!parsed.hasPlan || !parsed.plan) return parsed;
+
   const plan = parsed.plan;
 
   const DAY_LOOKUP = {
@@ -918,7 +977,7 @@ export async function generateExecutivePlanWithAI({
     const cleanContent = sanitizeCavemanEgress(result.content);
     return {
       success: true,
-      data: normalizeCopilotPlan(JSON.parse(cleanContent), currentDateStr),
+      data: normalizeCopilotPlan(JSON.parse(cleanContent), currentDateStr, { goals, habits, schedules, tasks }),
       model: result.model
     };
   } catch (error) {

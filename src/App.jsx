@@ -250,6 +250,10 @@ export default function App() {
         addHabit={store.addHabit}
         addTask={store.addTask}
         addSchedule={store.addSchedule}
+        deleteGoal={store.deleteGoal}
+        deleteHabit={store.deleteHabit}
+        deleteTask={store.deleteTask}
+        deleteSchedule={store.deleteSchedule}
         toggleTask={store.toggleTask}
         checkInHabit={store.checkInHabit}
         focusTimer={store.focusTimer}

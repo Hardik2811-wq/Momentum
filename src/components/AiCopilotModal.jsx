@@ -25,6 +25,10 @@ export default function AiCopilotModal({
   addHabit,
   addTask,
   addSchedule,
+  deleteGoal,
+  deleteHabit,
+  deleteTask,
+  deleteSchedule,
   toggleTask,
   checkInHabit,
   focusTimer = null,
@@ -38,6 +42,8 @@ export default function AiCopilotModal({
   const [isParsingDoc, setIsParsingDoc] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [appliedPlans, setAppliedPlans] = useState(new Set());
+  const [executedDeletions, setExecutedDeletions] = useState(new Set());
+  const [lastCreatedEntities, setLastCreatedEntities] = useState(null);
   const [editingPlanIds, setEditingPlanIds] = useState(new Set());
 
   const toggleEditPlan = (messageId) => {
@@ -219,7 +225,8 @@ export default function AiCopilotModal({
         schedules,
         stats,
         todayDate: todayPlanDate(),
-        actions: { addTask, toggleTask, checkInHabit }
+        actions: { addTask, toggleTask, checkInHabit, deleteGoal, deleteHabit, deleteTask, deleteSchedule },
+        lastCreatedEntities
       });
 
       if (localResult.handledLocally) {
@@ -235,7 +242,9 @@ export default function AiCopilotModal({
             role: 'assistant',
             content: localResult.message,
             hasPlan: false,
-            plan: null
+            plan: null,
+            hasDeletion: Boolean(localResult.hasDeletion && localResult.deletion),
+            deletion: localResult.deletion || null
           }
         ]);
         setInput('');
@@ -306,7 +315,9 @@ export default function AiCopilotModal({
         role: 'assistant',
         content: data.message || 'Here is the proposed schedule based on your input:',
         hasPlan: Boolean(data.hasPlan && data.plan),
-        plan: data.plan || null
+        plan: data.plan || null,
+        hasDeletion: Boolean(data.hasDeletion && data.deletion),
+        deletion: data.deletion || null
       };
 
       setMessages(prev => [...prev, assistantMsg]);
@@ -331,6 +342,10 @@ export default function AiCopilotModal({
     const timestamp = Date.now();
     const goalIdMap = new Map();
     const habitIdMap = new Map();
+    const createdGoalIds = [];
+    const createdHabitIds = [];
+    const createdScheduleIds = [];
+    const createdTaskIds = [];
 
     // 1. Process Goals (re-use existing goal if title matches closely, avoiding duplicates)
     if (Array.isArray(plan.goals)) {
@@ -353,6 +368,7 @@ export default function AiCopilotModal({
             color: g.category === 'health' ? 'secondary' : g.category === 'creative' ? 'tertiary' : 'primary'
           });
           goalIdMap.set(idx, id);
+          createdGoalIds.push(id);
         }
       });
     }
@@ -392,6 +408,7 @@ export default function AiCopilotModal({
             linkedGoalId: linkedGoalId || null
           });
           habitIdMap.set(idx, id);
+          createdHabitIds.push(id);
         }
       });
     }
@@ -446,6 +463,7 @@ export default function AiCopilotModal({
           recurrenceEndDate: s.recurrenceEndDate || null,
           type: 'schedule'
         });
+        createdScheduleIds.push(id);
         autoSchedulesCount++;
       });
     }
@@ -621,10 +639,17 @@ export default function AiCopilotModal({
           completed: false,
           dueDate: t.plannedDate ? 'Today' : 'This Week'
         });
+        createdTaskIds.push(id);
       });
     }
 
     setAppliedPlans(prev => new Set([...prev, messageId]));
+    setLastCreatedEntities({
+      goalIds: createdGoalIds,
+      habitIds: createdHabitIds,
+      scheduleIds: createdScheduleIds,
+      taskIds: createdTaskIds
+    });
 
     // 5. Harvest newly approved verbs and entities into local offline memory
     harvestCopilotPlan(plan);
@@ -650,6 +675,57 @@ export default function AiCopilotModal({
       confetti({
         particleCount: 60,
         spread: 55,
+        origin: { y: 0.6 }
+      });
+    } catch {}
+  };
+
+  const handleApproveDeletion = (messageId, deletion) => {
+    if (!deletion || executedDeletions.has(messageId)) return;
+
+    let deletedCount = 0;
+    if (Array.isArray(deletion.goalIds) && deleteGoal) {
+      deletion.goalIds.forEach(id => {
+        deleteGoal(id);
+        deletedCount++;
+      });
+    }
+    if (Array.isArray(deletion.habitIds) && deleteHabit) {
+      deletion.habitIds.forEach(id => {
+        deleteHabit(id);
+        deletedCount++;
+      });
+    }
+    if (Array.isArray(deletion.scheduleIds) && deleteSchedule) {
+      deletion.scheduleIds.forEach(id => {
+        deleteSchedule(id);
+        deletedCount++;
+      });
+    }
+    if (Array.isArray(deletion.taskIds) && deleteTask) {
+      deletion.taskIds.forEach(id => {
+        deleteTask(id);
+        deletedCount++;
+      });
+    }
+
+    setExecutedDeletions(prev => new Set([...prev, messageId]));
+    setLastCreatedEntities(null);
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: `sys-del-${Date.now()}`,
+        role: 'assistant',
+        content: `✓ Successfully deleted ${deletedCount} item(s) from your workspace.`,
+        hasPlan: false
+      }
+    ]);
+
+    try {
+      confetti({
+        particleCount: 45,
+        spread: 60,
         origin: { y: 0.6 }
       });
     } catch {}
@@ -1299,6 +1375,74 @@ export default function AiCopilotModal({
                           )}
                         </div>
                       </div>
+                      );
+                    })()}
+
+                    {/* Linear-Style Proposed Deletion Card with Approval Button */}
+                    {msg.hasDeletion && msg.deletion && (() => {
+                      const isExecuted = executedDeletions.has(msg.id);
+                      const items = Array.isArray(msg.deletion.items) ? msg.deletion.items : [];
+                      const totalCount = (msg.deletion.goalIds?.length || 0) + (msg.deletion.habitIds?.length || 0) + (msg.deletion.scheduleIds?.length || 0) + (msg.deletion.taskIds?.length || 0);
+
+                      return (
+                        <div className="mt-3 p-4 rounded-xl bg-red-50/80 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 space-y-3">
+                          <div className="flex items-center justify-between border-b border-red-200/60 pb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-[16px] text-red-600">delete</span>
+                              <span className="font-semibold text-xs text-red-950 dark:text-red-200">
+                                {msg.deletion.summary || `Confirm Deletion (${totalCount} items)`}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-100/80 dark:bg-red-900/40 px-2 py-0.5 rounded-full">
+                              Requires Approval
+                            </span>
+                          </div>
+
+                          {/* Items Preview */}
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                            {items.map((item, idx) => (
+                              <div key={idx} className="p-2 rounded-lg bg-white dark:bg-surface-container border border-red-100 dark:border-red-900/30 text-xs flex items-center justify-between gap-2 shadow-2xs">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
+                                    item.type === 'goal' ? 'bg-blue-100 text-blue-800' :
+                                    item.type === 'habit' ? 'bg-emerald-100 text-emerald-800' :
+                                    item.type === 'schedule' ? 'bg-indigo-100 text-indigo-800' :
+                                    'bg-slate-100 text-slate-800'
+                                  }`}>
+                                    {item.type === 'goal' ? 'Horizon' : item.type}
+                                  </span>
+                                  <span className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                                    {item.title}
+                                  </span>
+                                </div>
+                                {item.category && (
+                                  <span className="text-[9.5px] text-slate-400 uppercase font-mono shrink-0">
+                                    {item.category}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Approval Button to Delete */}
+                          <div className="pt-1">
+                            {isExecuted ? (
+                              <div className="w-full py-2.5 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5">
+                                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                                <span>Deleted from Workspace</span>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleApproveDeletion(msg.id, msg.deletion)}
+                                className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold shadow-xs transition active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">delete_forever</span>
+                                <span>Approve & Delete ({totalCount} items)</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       );
                     })()}
                   </div>

@@ -16,7 +16,8 @@ export function resolveLocalCopilotIntent({
   schedules = [],
   stats = null,
   todayDate = '',
-  actions = {}
+  actions = {},
+  lastCreatedEntities = null
 }) {
   const rawText = (query || '').trim();
   if (!rawText) return { handledLocally: false };
@@ -265,6 +266,115 @@ export function resolveLocalCopilotIntent({
       message: `**Personal Momentum Digest:**\n- **Momentum Score**: ${stats.momentumScore || 0}%\n- **Completion Rate**: ${stats.completionRate || 0}%\n- **Active Streak**: ${stats.longestStreak || 0} days\n- **Habits Done Today**: ${stats.habitsCompletedToday || 0} of ${stats.totalHabits || 0}\n- **Focus Logged Today**: ${stats.completedFocusMinutes || 0} mins`,
       plan: null
     };
+  }
+
+  // 9. UNDO RECENT PLAN INTENT (e.g. "undo this one", "undo", "undo plan", "revert")
+  const isUndoIntent = /^(undo(\s+(this(\s+one)?|plan|last\s+plan))?|revert(\s+(last\s+)?plan)?)$/i.test(text.trim());
+  if (isUndoIntent && lastCreatedEntities) {
+    const matchedGoals = (goals || []).filter(g => (lastCreatedEntities.goalIds || []).includes(g.id));
+    const matchedHabits = (habits || []).filter(h => (lastCreatedEntities.habitIds || []).includes(h.id));
+    const matchedScheds = (schedules || []).filter(s => (lastCreatedEntities.scheduleIds || []).includes(s.id));
+    const matchedTasks = (tasks || []).filter(t => (lastCreatedEntities.taskIds || []).includes(t.id));
+
+    const totalCount = matchedGoals.length + matchedHabits.length + matchedScheds.length + matchedTasks.length;
+    if (totalCount > 0) {
+      return {
+        handledLocally: true,
+        hasDeletion: true,
+        deletion: {
+          type: 'undo',
+          summary: `Undo Recent Plan (${totalCount} items)`,
+          goalIds: matchedGoals.map(g => g.id),
+          habitIds: matchedHabits.map(h => h.id),
+          scheduleIds: matchedScheds.map(s => s.id),
+          taskIds: matchedTasks.map(t => t.id),
+          items: [
+            ...matchedGoals.map(g => ({ type: 'goal', id: g.id, title: g.title, category: g.category })),
+            ...matchedHabits.map(h => ({ type: 'habit', id: h.id, title: h.title })),
+            ...matchedScheds.map(s => ({ type: 'schedule', id: s.id, title: s.title })),
+            ...matchedTasks.map(t => ({ type: 'task', id: t.id, title: t.title }))
+          ]
+        },
+        message: `I found ${totalCount} items from your recently applied plan. Please review the items below and tap **Approve & Delete** to remove them from your workspace:`
+      };
+    }
+  }
+
+  // 10. EXPLICIT DELETION / REMOVAL INTENT (Goals / Horizons / Tasks / Habits / Schedules)
+  const isDeleteKeyword = /\b(delete|remove|clear|drop|erase)\b/i.test(text);
+  if (isDeleteKeyword) {
+    const lowerText = text.toLowerCase();
+
+    // Match goals / horizons
+    const isGoalTarget = /\b(horizon|horizons|goal|goals)\b/i.test(lowerText);
+    const matchedGoals = (goals || []).filter(g => {
+      if (!g.title) return false;
+      const clean = g.title.toLowerCase().trim();
+      if (lowerText.includes(clean)) return true;
+      // Multi-word partial match
+      const words = clean.split(/[\s()&]+/).filter(w => w.length > 3);
+      if (words.length >= 2 && words.every(w => lowerText.includes(w))) return true;
+      return false;
+    });
+
+    let finalGoals = matchedGoals;
+    // Fallback: if user specified "delete these horizons" or "delete all horizons"
+    if (finalGoals.length === 0 && isGoalTarget) {
+      if (/delete\s+(these|all|the)\s+(horizons|goals)/i.test(lowerText) && goals.length > 0) {
+        if (lastCreatedEntities?.goalIds?.length) {
+          finalGoals = goals.filter(g => lastCreatedEntities.goalIds.includes(g.id));
+        }
+        if (finalGoals.length === 0) finalGoals = goals;
+      }
+    }
+
+    // Match tasks
+    const isTaskTarget = /\b(task|tasks|todo|todos)\b/i.test(lowerText);
+    const matchedTasks = (tasks || []).filter(t => {
+      if (!t.title) return false;
+      const clean = t.title.toLowerCase().trim();
+      return lowerText.includes(clean);
+    });
+
+    // Match habits
+    const isHabitTarget = /\b(habit|habits|ritual|rituals)\b/i.test(lowerText);
+    const matchedHabits = (habits || []).filter(h => {
+      if (!h.title) return false;
+      const clean = h.title.toLowerCase().trim();
+      return lowerText.includes(clean);
+    });
+
+    // Match schedules
+    const isSchedTarget = /\b(schedule|schedules|timetable|class|classes)\b/i.test(lowerText);
+    const matchedScheds = (schedules || []).filter(s => {
+      if (!s.title) return false;
+      const clean = s.title.toLowerCase().trim();
+      return lowerText.includes(clean);
+    });
+
+    const totalCount = finalGoals.length + matchedHabits.length + matchedScheds.length + matchedTasks.length;
+    if (totalCount > 0) {
+      const typeLabel = finalGoals.length > 0 && totalCount === finalGoals.length ? 'horizons' : 'items';
+      return {
+        handledLocally: true,
+        hasDeletion: true,
+        deletion: {
+          type: 'delete',
+          summary: `Delete ${totalCount} ${typeLabel}`,
+          goalIds: finalGoals.map(g => g.id),
+          habitIds: matchedHabits.map(h => h.id),
+          scheduleIds: matchedScheds.map(s => s.id),
+          taskIds: matchedTasks.map(t => t.id),
+          items: [
+            ...finalGoals.map(g => ({ type: 'goal', id: g.id, title: g.title, category: g.category })),
+            ...matchedHabits.map(h => ({ type: 'habit', id: h.id, title: h.title })),
+            ...matchedScheds.map(s => ({ type: 'schedule', id: s.id, title: s.title })),
+            ...matchedTasks.map(t => ({ type: 'task', id: t.id, title: t.title }))
+          ]
+        },
+        message: `I found ${totalCount} ${typeLabel} to remove from your workspace. Please review the items below and tap **Approve & Delete**:`
+      };
+    }
   }
 
   return { handledLocally: false };
