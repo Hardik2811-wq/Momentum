@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import DeleteGoalModal from '../components/DeleteGoalModal';
 import GoalDetailDrawer, { InlineGoalCalendar } from '../components/GoalDetailDrawer';
 import GoalModal from '../components/GoalModal';
 
@@ -724,15 +725,20 @@ const GoalsView = React.memo(function GoalsView({
 
       </div>
 
-      <ConfirmModal
+      {/* Goal Deletion Choice Modal */}
+      <DeleteGoalModal
         isOpen={!!goalToDelete}
-        title="Delete Strategic Goal?"
-        message={`Are you sure you want to delete "${goalToDelete?.title}"? All active progress tracking will be removed.`}
-        confirmText="Delete Goal"
-        isDanger={true}
-        onConfirm={() => {
+        goal={goalToDelete}
+        connectedTasksCount={tasks.filter(t => String(t.goalId) === String(goalToDelete?.id)).length}
+        connectedHabitsCount={habits.filter(h => {
+          if (!goalToDelete) return false;
+          if (h.goalId && String(h.goalId) === String(goalToDelete.id)) return true;
+          if (h.linkedGoal && goalToDelete.title && h.linkedGoal.toLowerCase().includes(goalToDelete.title.toLowerCase().slice(0, 8))) return true;
+          return false;
+        }).length}
+        onConfirm={(options) => {
           if (goalToDelete) {
-            deleteGoal(goalToDelete.id);
+            deleteGoal(goalToDelete.id, options);
             if (detailGoalId === goalToDelete.id) setDetailGoalId(null);
             setGoalToDelete(null);
           }
@@ -747,7 +753,12 @@ const GoalsView = React.memo(function GoalsView({
         goal={activeGoalForDetail}
         onUpdateGoal={updateGoal}
         onDeleteGoal={(id) => {
-          deleteGoal?.(id);
+          const target = goals.find(g => String(g.id) === String(id));
+          if (target) {
+            setGoalToDelete(target);
+          } else {
+            deleteGoal?.(id);
+          }
           setDetailGoalId(null);
         }}
         tasks={tasks}

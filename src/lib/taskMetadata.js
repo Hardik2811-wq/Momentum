@@ -280,15 +280,12 @@ export function calculateNextArrivingDate({
   const isBaseToday = (baseDateStr === todayPlanDate());
 
   let currentMins = null;
-  if (isBaseToday) {
-    if (nowTimeStr) {
-      const [nh, nm] = nowTimeStr.split(':').map(Number);
-      if (!isNaN(nh) && !isNaN(nm)) currentMins = nh * 60 + nm;
-    }
-    if (currentMins === null) {
-      const now = new Date();
-      currentMins = now.getHours() * 60 + now.getMinutes();
-    }
+  if (nowTimeStr) {
+    const [nh, nm] = nowTimeStr.split(':').map(Number);
+    if (!isNaN(nh) && !isNaN(nm)) currentMins = nh * 60 + nm;
+  } else if (isBaseToday) {
+    const now = new Date();
+    currentMins = now.getHours() * 60 + now.getMinutes();
   }
 
   let startMins = null;
@@ -307,10 +304,11 @@ export function calculateNextArrivingDate({
 
   if (candidateDays && candidateDays.length > 0) {
     let minDiff = Infinity;
+    const shouldCheckTimePassed = Boolean(nowTimeStr || isBaseToday);
     for (const candDay of candidateDays) {
       let diff = (candDay - baseDayOfWeek + 7) % 7;
-      if (diff === 0 && isBaseToday && startMins !== null && currentMins !== null) {
-        // Today, but slot already passed! Advance to next week
+      if (diff === 0 && shouldCheckTimePassed && startMins !== null && currentMins !== null) {
+        // Slot on base date already passed! Advance to next cycle
         if (startMins <= currentMins) {
           diff = 7;
         }
@@ -329,9 +327,15 @@ export function calculateNextArrivingDate({
     }
   }
 
-  // 2. Non-recurring or unconstrained: if scheduled for today but time already passed, roll to tomorrow
-  if (isBaseToday && startMins !== null && currentMins !== null && startMins <= currentMins) {
-    return tomorrowPlanDate();
+  // 2. Non-recurring or unconstrained: if scheduled for base date but time already passed, roll to next day
+  const shouldCheckTimePassed = Boolean(nowTimeStr || isBaseToday);
+  if (shouldCheckTimePassed && startMins !== null && currentMins !== null && startMins <= currentMins) {
+    const nextDate = new Date(baseDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    const y = nextDate.getFullYear();
+    const m = String(nextDate.getMonth() + 1).padStart(2, '0');
+    const d = String(nextDate.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   return baseDateStr;

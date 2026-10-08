@@ -49,7 +49,8 @@ export default function SettingsView({
   clearAllData,
   loadDemoData,
   exportFullBackup,
-  importFullBackup
+  importFullBackup,
+  cloudSync
 }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -167,6 +168,58 @@ export default function SettingsView({
                 />
               </div>
             </div>
+          </div>
+        </Section>
+
+        {/* ── Cloud Account & Multi-Device Sync ── */}
+        <Section
+          title="Cloud Account & Real-Time Sync"
+          badge={
+            cloudSync?.isConnected ? (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                CLOUD ACTIVE
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 border border-amber-500/20">
+                OFFLINE ONLY
+              </span>
+            )
+          }
+        >
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.04]">
+              <div>
+                <p className="text-[13px] font-semibold text-[#1A1B1F]">
+                  {cloudSync?.email || 'Logged In Operator'}
+                </p>
+                <p className="text-[11px] text-[#BBBBC0]">
+                  {cloudSync?.lastSyncedAt
+                    ? `Last synced: ${new Date(cloudSync.lastSyncedAt).toLocaleTimeString()}`
+                    : 'Real-time WebSocket active for Web & Android'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={cloudSync?.syncNow}
+                  className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-[#0A84FF] border border-[#0A84FF]/30 hover:bg-[#0A84FF]/5 transition-colors flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[15px]">sync</span>
+                  Sync Now
+                </button>
+                <button
+                  type="button"
+                  onClick={cloudSync?.signOut}
+                  className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-rose-500 border border-rose-500/30 hover:bg-rose-50 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+            <p className="text-[11px] text-[#8E8E93]">
+              Tasks, goals, habits, and schedules synchronize across Laptop Web and Android App via live Supabase snapshots.
+            </p>
           </div>
         </Section>
 

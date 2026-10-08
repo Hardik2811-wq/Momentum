@@ -162,6 +162,7 @@ export default function App() {
             loadDemoData={store.loadDemoData}
             exportFullBackup={store.exportFullBackup}
             importFullBackup={store.importFullBackup}
+            cloudSync={store.cloudSync}
           />
         );
       default:

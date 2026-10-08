@@ -393,6 +393,8 @@ export default function useStore() {
   const [focusSessions, setFocusSessions] = useLocalStorage('momentum_focus_sessions', []);
   const [schedules, setSchedules] = useLocalStorage('momentum_schedules', []);
   const [cloudUserId, setCloudUserId] = useState(null);
+  const [cloudUserEmail, setCloudUserEmail] = useState('');
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
   const [cloudReady, setCloudReady] = useState(!isSupabaseConfigured);
   const lastSyncedJsonRef = useRef('');
   const isApplyingRemoteRef = useRef(false);
@@ -451,11 +453,13 @@ export default function useStore() {
   const loadWorkspace = useCallback(async (session) => {
     if (!session?.user?.id) {
       setCloudUserId(null);
+      setCloudUserEmail('');
       setCloudReady(true);
       return;
     }
     setCloudReady(false);
     try {
+      if (session.user.email) setCloudUserEmail(session.user.email);
       const { data, error } = await supabase
         .from('workspace_snapshots')
         .select('data')
@@ -479,6 +483,7 @@ export default function useStore() {
           }));
         }
       }
+      setLastSyncedAt(Date.now());
     } catch (err) {
       console.error('Failed to load cloud workspace snapshot', err);
     } finally {
@@ -591,6 +596,7 @@ export default function useStore() {
           console.error('Cloud workspace sync failed', error);
         } else {
           lastSyncedJsonRef.current = currentJson;
+          setLastSyncedAt(Date.now());
         }
       });
     }, 500);
@@ -1079,18 +1085,50 @@ export default function useStore() {
     ));
   }, [setGoals]);
 
-  const deleteGoal = useCallback((id) => {
+  const deleteGoal = useCallback((id, options = { cascade: false }) => {
     const target = goals.find(g => String(g.id) === String(id));
     if (!target) return;
+
+    const previousGoals = goals;
+    const previousTasks = tasks;
+    const previousHabits = habits;
+
+    const shouldCascade = Boolean(options?.cascade);
+
+    // 1. Remove Goal
     setGoals(prev => prev.filter(g => String(g.id) !== String(id)));
+
+    // 2. Cascade or Unlink Tasks
+    if (shouldCascade) {
+      setTasks(prev => prev.filter(t => String(t.goalId) !== String(id)));
+    } else {
+      setTasks(prev => prev.map(t => String(t.goalId) === String(id) ? { ...t, goalId: null } : t));
+    }
+
+    // 3. Cascade or Unlink Habits (by goalId or matching linkedGoal title)
+    if (shouldCascade) {
+      setHabits(prev => prev.filter(h => {
+        if (h.goalId && String(h.goalId) === String(id)) return false;
+        if (h.linkedGoal && target.title && h.linkedGoal.toLowerCase().includes(target.title.toLowerCase().slice(0, 8))) return false;
+        return true;
+      }));
+    } else {
+      setHabits(prev => prev.map(h => {
+        if (h.goalId && String(h.goalId) === String(id)) return { ...h, goalId: null, linkedGoal: null };
+        return h;
+      }));
+    }
+
     showToast(`Goal deleted: "${target.title}"`, {
       actionLabel: 'Undo',
       onAction: () => {
-        setGoals(prev => [...prev, target]);
+        setGoals(previousGoals);
+        setTasks(previousTasks);
+        setHabits(previousHabits);
         showToast('Goal restored');
       }
     });
-  }, [goals, setGoals, showToast]);
+  }, [goals, tasks, habits, setGoals, setTasks, setHabits, showToast]);
 
   /* Habits Actions */
   const checkInHabit = useCallback((id, targetDateKey = null) => {
@@ -1556,7 +1594,27 @@ export default function useStore() {
     habitsAtRisk,
     checkScheduleCollisions,
     getSuggestedTimeGap,
-    getCavemanMetrics
+    getCavemanMetrics,
+    cloudSync: {
+      isConnected: isSupabaseConfigured && Boolean(cloudUserId),
+      userId: cloudUserId,
+      email: cloudUserEmail,
+      isSyncing: !cloudReady,
+      lastSyncedAt,
+      syncNow: async () => {
+        if (!isSupabaseConfigured || !supabase) return;
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+          await loadWorkspace(data.session);
+          showToast('Workspace synced with cloud', { type: 'success' });
+        }
+      },
+      signOut: async () => {
+        if (!isSupabaseConfigured || !supabase) return;
+        await supabase.auth.signOut();
+        window.location.reload();
+      }
+    }
   };
 }
 
