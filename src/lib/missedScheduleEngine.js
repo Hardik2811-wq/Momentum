@@ -231,18 +231,20 @@ export function classifyDayItems({
   missed.sort((a, b) => (a.minutesOverdue || 0) - (b.minutesOverdue || 0));
 
   // Determine current active focus target (Excludes missed items!)
-  let focusTarget = null;
-  if (activeNow.length > 0) {
-    focusTarget = activeNow[0];
-  } else if (upcoming.length > 0) {
-    // Only pick upcoming tasks (or schedules) that haven't missed their window
-    focusTarget = upcoming[0];
-  }
+  // Strictly for TASKS (next or ongoing tasks). Schedules are highlighted in Today's Schedule.
+  const activeTask = activeNow.find(item => item.itemType === 'task');
+  const upcomingTask = upcoming.find(item => item.itemType === 'task');
+  const focusTarget = activeTask || upcomingTask || null;
+
+  const missedTasks = missed.filter(item => item.itemType === 'task');
+  const missedSchedules = missed.filter(item => item.itemType === 'schedule');
 
   return {
     activeNow,
     upcoming,
     missed,
+    missedTasks,
+    missedSchedules,
     completed,
     totallyMissedTasks,
     focusTarget

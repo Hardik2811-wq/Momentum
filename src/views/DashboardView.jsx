@@ -41,7 +41,13 @@ import TaskCard from '../components/TaskCard';
 import TaskDetailModal from '../components/TaskDetailModal';
 import ScheduleDetailModal from '../components/ScheduleDetailModal';
 import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanDate, todayPlanDate, isTaskScheduledForDate, calculateEndTime } from '../lib/taskMetadata';
-import { classifyDayItems, findIntelligentRecoverySlot, buildBacklogTaskPatch } from '../lib/missedScheduleEngine';
+import {
+  classifyDayItems,
+  findIntelligentRecoverySlot,
+  buildBacklogTaskPatch,
+  getItemTimeWindow,
+  isScheduleActiveForDate
+} from '../lib/missedScheduleEngine';
 
 const IMPACT_ORDER = { high: 1, medium: 2, low: 3 };
 
@@ -90,7 +96,7 @@ const DashboardView = React.memo(function DashboardView({
   const todaySchedules = useMemo(() => {
     const today = todayPlanDate();
     return (schedules || [])
-      .filter(s => isTaskScheduledForDate(s, today))
+      .filter(s => isScheduleActiveForDate(s, today))
       .sort((a, b) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99'));
   }, [schedules]);
 
@@ -170,16 +176,20 @@ const DashboardView = React.memo(function DashboardView({
     return result;
   }, [tasks, todayPlan]);
 
-  // Focus target: live now or next upcoming (strictly excludes missed items whose window passed)
+  // Focus target: live now or next upcoming task (strictly excludes missed items whose window passed)
   const nextTask = dayClassification.focusTarget;
+
+  const missedTasksList = useMemo(() => {
+    return dayClassification.missedTasks || (dayClassification.missed || []).filter(m => m.itemType === 'task');
+  }, [dayClassification.missedTasks, dayClassification.missed]);
 
   // Active tasks for upcoming queue (excludes missed tasks and current focus target)
   const activeUpcomingTasks = useMemo(() => {
-    const missedIds = new Set(dayClassification.missed.map(m => String(m.id)));
+    const missedIds = new Set(missedTasksList.map(m => String(m.id)));
     const focusId = nextTask ? String(nextTask.id) : null;
 
     return todayTasks.filter(t => !t.completed && !missedIds.has(String(t.id)) && String(t.id) !== focusId);
-  }, [todayTasks, dayClassification.missed, nextTask]);
+  }, [todayTasks, missedTasksList, nextTask]);
 
   // Single-pass counters for queue filters
   const { filterCounts, completedTodayTasksCount } = useMemo(() => {
@@ -394,13 +404,11 @@ const DashboardView = React.memo(function DashboardView({
                 <span className="text-[11px] font-display font-extrabold uppercase tracking-wider text-primary">Now Focus Target</span>
                 {nextTask && (
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    nextTask.itemType === 'schedule'
-                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/40 dark:text-indigo-300'
-                      : taskImpact(nextTask) === 'high'
-                        ? 'bg-rose-50 text-rose-700 border-rose-200/60'
-                        : 'bg-amber-50 text-amber-800 border-amber-200/50'
+                    taskImpact(nextTask) === 'high'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200/60'
+                      : 'bg-amber-50 text-amber-800 border-amber-200/50'
                   }`}>
-                    {nextTask.itemType === 'schedule' ? 'Schedule Block' : `${IMPACT_LABELS[taskImpact(nextTask)]} Impact`}
+                    {IMPACT_LABELS[taskImpact(nextTask)]} Impact
                   </span>
                 )}
               </div>
@@ -432,11 +440,11 @@ const DashboardView = React.memo(function DashboardView({
               ) : (
                 <>
                   <h2 className="mt-1 text-xl font-display font-bold text-on-surface">
-                    {dayClassification.missed.length > 0 ? 'All active tasks completed or window passed.' : 'No task needs attention now.'}
+                    {missedTasksList.length > 0 ? 'All active tasks completed or window passed.' : 'No task needs attention now.'}
                   </h2>
                   <p className="mt-1 text-sm text-on-surface-variant">
-                    {dayClassification.missed.length > 0
-                      ? `${dayClassification.missed.length} ${dayClassification.missed.length === 1 ? 'item' : 'items'} missed designated time. Check Missed Window below to reschedule or move to backlog.`
+                    {missedTasksList.length > 0
+                      ? `${missedTasksList.length} ${missedTasksList.length === 1 ? 'task' : 'tasks'} passed designated time. Check Missed Tasks Window below to reschedule or allocate to backlog.`
                       : 'All scheduled tasks completed. Add new task or plan tomorrow.'}
                   </p>
                 </>
@@ -445,33 +453,21 @@ const DashboardView = React.memo(function DashboardView({
 
             {nextTask ? (
               <div className="flex items-center gap-3 shrink-0 pt-2 sm:pt-0">
-                {nextTask.itemType === 'schedule' ? (
-                  <button
-                    onClick={() => setActiveTab?.('today')}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/90 text-on-primary text-sm font-semibold shadow-xs hover:shadow-sm active:scale-95 transition-all cursor-pointer"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    <span>View in Planner</span>
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => setEditingTask(nextTask)}
-                      className="px-4 py-2 rounded-full text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-all"
-                    >
-                      View task
-                    </button>
-                    <button
-                      onClick={() => handleToggleTask(nextTask.id)}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/90 text-on-primary text-sm font-semibold shadow-xs hover:shadow-sm active:scale-95 transition-all cursor-pointer"
-                    >
-                      <Check className="w-4 h-4 stroke-[2.5]" />
-                      <span>Complete task</span>
-                    </button>
-                  </>
-                )}
+                <button
+                  onClick={() => setEditingTask(nextTask)}
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-all cursor-pointer"
+                >
+                  View task
+                </button>
+                <button
+                  onClick={() => handleToggleTask(nextTask.id)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/90 text-on-primary text-sm font-semibold shadow-xs hover:shadow-sm active:scale-95 transition-all cursor-pointer"
+                >
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>Complete task</span>
+                </button>
               </div>
-            ) : dayClassification.missed.length > 0 ? (
+            ) : missedTasksList.length > 0 ? (
               <button
                 onClick={() => {
                   const el = document.getElementById('missed-window-section');
@@ -479,10 +475,10 @@ const DashboardView = React.memo(function DashboardView({
                 }}
                 className="rounded-full bg-amber-500 hover:bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:shadow-sm transition-all cursor-pointer"
               >
-                Review Missed ({dayClassification.missed.length})
+                Review Missed Tasks ({missedTasksList.length})
               </button>
             ) : (
-              <button onClick={onOpenQuickAdd} className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary shadow-xs hover:shadow-sm transition-all">
+              <button onClick={onOpenQuickAdd} className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary shadow-xs hover:shadow-sm transition-all cursor-pointer">
                 Add first task
               </button>
             )}
@@ -569,8 +565,8 @@ const DashboardView = React.memo(function DashboardView({
               </SortableContext>
             </DndContext>
 
-            {/* ── MISSED WINDOW & RESCHEDULE ZONE ── */}
-            {(dayClassification.missed.length > 0 || dayClassification.totallyMissedTasks.length > 0) && (
+            {/* ── MISSED TASKS WINDOW & RESCHEDULE ZONE ── */}
+            {(missedTasksList.length > 0 || dayClassification.totallyMissedTasks.length > 0) && (
               <section id="missed-window-section" className="rounded-3xl border border-amber-500/25 bg-amber-500/[0.03] dark:bg-amber-500/[0.05] p-5 sm:p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-2.5">
@@ -579,13 +575,13 @@ const DashboardView = React.memo(function DashboardView({
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-base font-display font-bold text-on-surface">Missed Window</h3>
+                        <h3 className="text-base font-display font-bold text-on-surface">Missed Tasks Window</h3>
                         <span className="text-[11px] px-2 py-0.5 rounded-full font-mono font-bold tabular-nums bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                          {dayClassification.missed.length} missed
+                          {missedTasksList.length} missed
                         </span>
                       </div>
                       <p className="text-xs text-on-surface-variant">
-                        Designated time passed. Reschedule with AI recommendation or send tasks to backlog.
+                        Designated task time passed. Reschedule with AI recommendation or allocate to backlog.
                       </p>
                     </div>
                   </div>
@@ -603,7 +599,7 @@ const DashboardView = React.memo(function DashboardView({
                 </div>
 
                 <div className="space-y-3">
-                  {dayClassification.missed.map(item => {
+                  {missedTasksList.map(item => {
                     const rec = findIntelligentRecoverySlot({
                       item,
                       tasks,
@@ -611,24 +607,19 @@ const DashboardView = React.memo(function DashboardView({
                       targetDate: todayPlan,
                       now: currentTime
                     });
-                    const isSchedule = item.itemType === 'schedule';
                     const startFormatted = formatTime(item.startTime);
                     const endFormatted = formatTime(calculateEndTime(item.startTime, item.durationMinutes || 60));
 
                     return (
                       <div
-                        key={`${item.itemType}-${item.id}`}
+                        key={`task-${item.id}`}
                         className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-surface-container-lowest p-4 sm:p-4.5 space-y-3 shadow-[0_2px_12px_rgba(0,0,0,0.02)]"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                                isSchedule
-                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/40 dark:text-indigo-300'
-                                  : 'bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-300'
-                              }`}>
-                                {isSchedule ? 'Schedule' : 'Task'}
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-300">
+                                Task
                               </span>
                               <span className="text-xs font-mono font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
@@ -666,21 +657,18 @@ const DashboardView = React.memo(function DashboardView({
                             </button>
                           )}
 
-                          {/* Tasks move to backlog; schedules DO NOT go to backlog */}
-                          {!isSchedule && (
-                            <button
-                              type="button"
-                              onClick={() => handleMoveToBacklog(item.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold border border-black/[0.05] transition-all cursor-pointer"
-                            >
-                              <Inbox className="w-3.5 h-3.5 text-on-surface-variant" />
-                              <span>To Backlog</span>
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleMoveToBacklog(item.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold border border-black/[0.05] transition-all cursor-pointer"
+                          >
+                            <Inbox className="w-3.5 h-3.5 text-on-surface-variant" />
+                            <span>To Backlog</span>
+                          </button>
 
                           <button
                             type="button"
-                            onClick={() => isSchedule ? onUpdateSchedule?.(item.id, { completed: true }) : handleToggleTask(item.id)}
+                            onClick={() => handleToggleTask(item.id)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition-all ml-auto cursor-pointer"
                           >
                             <Check className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -833,46 +821,96 @@ const DashboardView = React.memo(function DashboardView({
               </div>
 
               {todaySchedules.length > 0 ? (
-                <div className="relative pl-3 space-y-3 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-[1.5px] before:bg-indigo-100">
-                  {todaySchedules.map(sched => {
-                    const startLabel = sched.startTime ? formatTime(sched.startTime) : 'Flexible';
-                    const endLabel = sched.endTime ? formatTime(sched.endTime) : (sched.startTime ? formatTime(calculateEndTime(sched.startTime, sched.durationMinutes || 60)) : '');
-                    return (
-                      <div
-                        key={sched.id}
-                        onClick={() => setEditingSchedule(sched)}
-                        className="group relative flex items-start gap-3.5 rounded-2xl bg-indigo-50/40 hover:bg-indigo-50/80 border border-indigo-100/70 p-3 transition-all cursor-pointer hover:shadow-2xs active:scale-[0.99]"
-                      >
-                        {/* Timeline Node */}
-                        <div className="relative z-10 -ml-[18px] mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-indigo-600 shadow-2xs">
-                          <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                        </div>
+                (() => {
+                  const currentMins = currentTime.getHours() * 60 + currentTime.getMinutes();
+                  const liveSchedule = todaySchedules.find(sched => {
+                    const win = getItemTimeWindow(sched);
+                    return win && currentMins >= win.startMins && currentMins <= win.endMins;
+                  });
+                  const upNextSchedule = !liveSchedule
+                    ? todaySchedules.find(sched => {
+                        const win = getItemTimeWindow(sched);
+                        return win && currentMins < win.startMins;
+                      })
+                    : null;
 
-                        {/* Schedule Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-indigo-950 truncate group-hover:text-indigo-700 transition">
-                              {sched.title}
-                            </span>
-                            <span className="text-[10px] font-mono font-bold text-indigo-600/90 shrink-0">
-                              {sched.durationMinutes || 60}m
-                            </span>
+                  return (
+                    <div className="relative pl-3 space-y-3 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-[1.5px] before:bg-indigo-100 dark:before:bg-indigo-900/40">
+                      {todaySchedules.map(sched => {
+                        const startLabel = sched.startTime ? formatTime(sched.startTime) : 'Flexible';
+                        const endLabel = sched.endTime ? formatTime(sched.endTime) : (sched.startTime ? formatTime(calculateEndTime(sched.startTime, sched.durationMinutes || 60)) : '');
+                        const win = getItemTimeWindow(sched);
+                        const isOngoing = win && currentMins >= win.startMins && currentMins <= win.endMins;
+                        const isUpNext = !isOngoing && upNextSchedule && String(sched.id) === String(upNextSchedule.id);
+                        const isPassed = win && currentMins > win.endMins;
+
+                        return (
+                          <div
+                            key={sched.id}
+                            onClick={() => setEditingSchedule(sched)}
+                            className={`group relative flex items-start gap-3.5 rounded-2xl p-3 transition-all cursor-pointer active:scale-[0.99] ${
+                              isOngoing
+                                ? 'bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent border-2 border-indigo-500/80 ring-2 ring-indigo-500/20 shadow-sm'
+                                : isUpNext
+                                  ? 'bg-indigo-50/70 hover:bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 shadow-2xs'
+                                  : isPassed
+                                    ? 'bg-surface-container-low/30 hover:bg-surface-container-low/60 border border-black/[0.04] opacity-75'
+                                    : 'bg-indigo-50/40 hover:bg-indigo-50/80 border border-indigo-100/70'
+                            }`}
+                          >
+                            {/* Timeline Node */}
+                            <div className="relative z-10 -ml-[18px] mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-indigo-600 shadow-2xs">
+                              {isOngoing && (
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                              )}
+                              <div className="relative h-1.5 w-1.5 rounded-full bg-white" />
+                            </div>
+
+                            {/* Schedule Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-bold text-indigo-950 dark:text-indigo-200 truncate group-hover:text-indigo-700 transition">
+                                  {sched.title}
+                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {isOngoing && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[9px] font-extrabold uppercase tracking-wider shadow-2xs">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                      Live Now
+                                    </span>
+                                  )}
+                                  {isUpNext && (
+                                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 text-[9px] font-bold uppercase tracking-wider">
+                                      Up Next
+                                    </span>
+                                  )}
+                                  {isPassed && (
+                                    <span className="px-1.5 py-0.2 rounded-md bg-black/[0.04] dark:bg-white/[0.06] text-on-surface-variant text-[9px] font-medium">
+                                      Passed
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] font-mono font-bold text-indigo-600/90 dark:text-indigo-400">
+                                    {sched.durationMinutes || 60}m
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+                                  {startLabel}{endLabel ? ` – ${endLabel}` : ''}
+                                </span>
+                                {sched.category && (
+                                  <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/80 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                    {sched.category}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[11px] font-medium text-slate-500 font-mono tabular-nums">
-                              {startLabel}{endLabel ? ` – ${endLabel}` : ''}
-                            </span>
-                            {sched.category && (
-                              <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/80 text-indigo-700 text-[9px] font-bold uppercase tracking-wider shrink-0">
-                                {sched.category}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
               ) : (
                 <div className="text-center py-5 px-3 rounded-2xl bg-surface-container-low/40 border border-dashed border-black/[0.06] space-y-2">
                   <p className="text-xs text-on-surface-variant">No classes or timetable routines today</p>
