@@ -394,21 +394,68 @@ export default function useStore() {
   const [schedules, setSchedules] = useLocalStorage('momentum_schedules', []);
   const [cloudUserId, setCloudUserId] = useState(null);
   const [cloudReady, setCloudReady] = useState(!isSupabaseConfigured);
-  const cloudLoadRef = useRef(false);
+  const lastSyncedJsonRef = useRef('');
+  const isApplyingRemoteRef = useRef(false);
 
   useEffect(() => {
     purgeLegacyGroqKey();
   }, []);
 
-  useEffect(() => {
-    if (!isSupabaseConfigured) return undefined;
-    const loadWorkspace = async (session) => {
-      if (!session?.user?.id) {
-        setCloudUserId(null);
-        setCloudReady(true);
-        return;
+  const applyRemoteSnapshot = useCallback((saved, userMeta) => {
+    if (!saved || typeof saved !== 'object') return;
+    isApplyingRemoteRef.current = true;
+
+    if (Array.isArray(saved.tasks)) setTasks(saved.tasks);
+    if (Array.isArray(saved.goals)) setGoals(saved.goals);
+    if (Array.isArray(saved.habits)) setHabits(saved.habits);
+    if (Array.isArray(saved.schedules)) {
+      // If cloud has schedules, adopt them.
+      // If cloud has empty array but local has non-empty schedules (e.g. migration from local-only version),
+      // preserve local schedules so migration doesn't wipe them.
+      setSchedules(prev => (saved.schedules.length > 0 || !prev?.length ? saved.schedules : prev));
+    }
+    if (saved.reflections && typeof saved.reflections === 'object') setReflections(saved.reflections);
+    if (Array.isArray(saved.focusSessions)) setFocusSessions(saved.focusSessions);
+
+    if (saved.settings && typeof saved.settings === 'object') {
+      const meta = userMeta || {};
+      const mergedSettings = { ...saved.settings };
+      if (!mergedSettings.profile?.name && (meta.full_name || meta.name)) {
+        mergedSettings.profile = {
+          ...mergedSettings.profile,
+          name: meta.full_name || meta.name || '',
+          role: meta.role || '',
+          timezone: meta.timezone || (typeof Intl !== 'undefined' && Intl.DateTimeFormat ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC')
+        };
       }
-      setCloudReady(false);
+      delete mergedSettings.groqApiKey;
+      setSettings(mergedSettings);
+    }
+
+    const snapshotData = {
+      tasks: Array.isArray(saved.tasks) ? saved.tasks : [],
+      goals: Array.isArray(saved.goals) ? saved.goals : [],
+      habits: Array.isArray(saved.habits) ? saved.habits : [],
+      schedules: Array.isArray(saved.schedules) ? saved.schedules : [],
+      reflections: saved.reflections || {},
+      settings: saved.settings || {},
+      focusSessions: Array.isArray(saved.focusSessions) ? saved.focusSessions : []
+    };
+    lastSyncedJsonRef.current = JSON.stringify(snapshotData);
+
+    setTimeout(() => {
+      isApplyingRemoteRef.current = false;
+    }, 150);
+  }, [setTasks, setGoals, setHabits, setSchedules, setReflections, setSettings, setFocusSessions]);
+
+  const loadWorkspace = useCallback(async (session) => {
+    if (!session?.user?.id) {
+      setCloudUserId(null);
+      setCloudReady(true);
+      return;
+    }
+    setCloudReady(false);
+    try {
       const { data, error } = await supabase
         .from('workspace_snapshots')
         .select('data')
@@ -416,29 +463,9 @@ export default function useStore() {
         .maybeSingle();
       const saved = data?.data;
       if (!error && saved && Array.isArray(saved.tasks) && Array.isArray(saved.goals) && Array.isArray(saved.habits)) {
-        cloudLoadRef.current = true;
-        setTasks(saved.tasks);
-        setGoals(saved.goals);
-        setHabits(saved.habits);
-        if (saved.reflections && typeof saved.reflections === 'object') setReflections(saved.reflections);
-        if (saved.settings && typeof saved.settings === 'object') {
-          // If saved settings lacks profile name but session metadata has it, merge it
-          const meta = session.user.user_metadata || {};
-          const mergedSettings = { ...saved.settings };
-          if (!mergedSettings.profile?.name && (meta.full_name || meta.name)) {
-            mergedSettings.profile = {
-              ...mergedSettings.profile,
-              name: meta.full_name || meta.name || '',
-              role: meta.role || '',
-              timezone: meta.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-            };
-          }
-          delete mergedSettings.groqApiKey;
-          setSettings(mergedSettings);
-        }
-        if (Array.isArray(saved.focusSessions)) setFocusSessions(saved.focusSessions);
+        applyRemoteSnapshot(saved, session.user.user_metadata);
       } else {
-        // First-time user: seed profile with metadata from sign-up
+        // First-time cloud user or empty snapshot: seed profile with metadata from sign-up
         const meta = session.user.user_metadata || {};
         if (meta.full_name || meta.name || meta.role) {
           setSettings(prev => ({
@@ -447,33 +474,129 @@ export default function useStore() {
               ...prev.profile,
               name: meta.full_name || meta.name || prev.profile?.name || '',
               role: meta.role || prev.profile?.role || '',
-              timezone: meta.timezone || prev.profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+              timezone: meta.timezone || prev.profile?.timezone || (typeof Intl !== 'undefined' && Intl.DateTimeFormat ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC')
             }
           }));
         }
       }
+    } catch (err) {
+      console.error('Failed to load cloud workspace snapshot', err);
+    } finally {
       setCloudUserId(session.user.id);
       setCloudReady(true);
+    }
+  }, [applyRemoteSnapshot, setSettings]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined;
+
+    let activeSession = null;
+    let channel = null;
+
+    const setupRealtime = (userId) => {
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+      if (!userId) return;
+
+      channel = supabase
+        .channel(`workspace_realtime_${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'workspace_snapshots',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            const incoming = payload.new?.data;
+            if (incoming && typeof incoming === 'object') {
+              const incomingJson = JSON.stringify({
+                tasks: incoming.tasks || [],
+                goals: incoming.goals || [],
+                habits: incoming.habits || [],
+                schedules: incoming.schedules || [],
+                reflections: incoming.reflections || {},
+                settings: incoming.settings || {},
+                focusSessions: incoming.focusSessions || []
+              });
+              if (incomingJson !== lastSyncedJsonRef.current) {
+                applyRemoteSnapshot(incoming, activeSession?.user?.user_metadata);
+              }
+            }
+          }
+        )
+        .subscribe();
     };
-    supabase.auth.getSession().then(({ data }) => loadWorkspace(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => loadWorkspace(session));
-    return () => listener.subscription.unsubscribe();
-  }, [setTasks, setGoals, setHabits, setReflections, setSettings, setFocusSessions]);
+
+    const handleSession = (session) => {
+      activeSession = session;
+      loadWorkspace(session);
+      setupRealtime(session?.user?.id);
+    };
+
+    supabase.auth.getSession().then(({ data }) => handleSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => handleSession(session));
+
+    // When returning to tab/app (especially on mobile resume)
+    const handleRecheck = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && activeSession?.user?.id) {
+        loadWorkspace(activeSession);
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleRecheck);
+      document.addEventListener('visibilitychange', handleRecheck);
+    }
+
+    return () => {
+      listener?.subscription?.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleRecheck);
+        document.removeEventListener('visibilitychange', handleRecheck);
+      }
+    };
+  }, [loadWorkspace, applyRemoteSnapshot]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !cloudReady || !cloudUserId) return undefined;
+    if (isApplyingRemoteRef.current) return undefined;
+
+    const currentPayload = {
+      tasks,
+      goals,
+      habits,
+      reflections,
+      settings,
+      focusSessions,
+      schedules
+    };
+    const currentJson = JSON.stringify(currentPayload);
+
+    // Skip echo save if matches last synced state
+    if (currentJson === lastSyncedJsonRef.current) {
+      return undefined;
+    }
+
     const timer = setTimeout(() => {
       supabase.from('workspace_snapshots').upsert({
         user_id: cloudUserId,
         version: 1,
-        data: { tasks, goals, habits, reflections, settings, focusSessions }
+        data: currentPayload
       }).then(({ error }) => {
-        if (error) console.error('Cloud workspace sync failed', error);
-        cloudLoadRef.current = false;
+        if (error) {
+          console.error('Cloud workspace sync failed', error);
+        } else {
+          lastSyncedJsonRef.current = currentJson;
+        }
       });
-    }, cloudLoadRef.current ? 1200 : 500);
+    }, 500);
+
     return () => clearTimeout(timer);
-  }, [cloudUserId, cloudReady, tasks, goals, habits, reflections, settings, focusSessions]);
+  }, [cloudUserId, cloudReady, tasks, goals, habits, reflections, settings, focusSessions, schedules]);
 
   /* Toasts & Undo Stack */
   const [toasts, setToasts] = useState([]);
