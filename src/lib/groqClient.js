@@ -519,14 +519,17 @@ CRITICAL PLANNING PRINCIPLES:
    - If user asks to add tasks to an existing goal, DO NOT recreate that goal! Set "goals": [] or omit that goal from "goals", and set "existingGoalId": "<existing_goal_id>" on the task.
    - If a habit or goal with the same or very similar title already exists in memory, REUSE its ID ('existingGoalId' / 'existingHabitId') instead of proposing a new one in 'goals' or 'habits'.
    - Never create a duplicate task that is already scheduled or open for that date.
-2. Full Multi-Vector Horizon Formulation: When formulating an entirely NEW plan or topic:
+3. TIMETABLE CLASSES & ROUTINE BLOCKS:
+   - When the user asks to schedule classes, university timetable, lectures, labs, or recurring routines (e.g. "CN = 3.30-5.30pm", "Saturday: CML = 9.30-11.30am", "repeats every week till 18 Oct"):
+   - Put them in 'plan.schedules' with title, category ("College"|"Academics"|"Work"|"Personal"), startTime ("HH:MM"), endTime ("HH:MM"), durationMinutes, plannedDate, recurrence ("weekly"|"daily"|"custom"|"none"), repeatDays (0=Sun..6=Sat, e.g. Saturday is [6]), recurrenceEndDate ("YYYY-MM-DD" or null) so they integrate into their Timetable Schedule!
+4. Full Multi-Vector Horizon Formulation: When formulating an entirely NEW plan or topic:
    - HORIZONS (Goals): Create 5-8 distinct anchors covering subjects, creative passions, and discipline commitments only if they do not already exist in memory.
    - DAILY RITUALS (Habits): Create 6-12 specific recurring rituals only if not already active in memory.
-   - EXECUTION TIMELINE (Tasks): Schedule specific study blocks, builds, lectures with concrete time slots (startTime "HH:MM", durationMinutes), areas, and subtasks. Link to existingGoalId/existingHabitId whenever matching items exist in memory!
-3. Ultra-Compact Efficiency: Use concise titles and compact representations so plans fit cleanly in JSON.
-4. Link items: Connect tasks and habits to goals via existingGoalId (preferred if goal exists) or goalIndex (0-based for NEW goals in plan.goals).
-5. If the user only asks a conversational question or sends a greeting (e.g. "hey", "hello", "how are you"), set "hasPlan": false, "plan": null, and write a helpful, natural conversational reply in "message".
-6. In "message", provide a concise, direct response answering the user or summarizing the proposed plan. For greetings, respond conversationally and ask what to organize today. NEVER echo or parrot template example strings.
+   - EXECUTION TIMELINE (Tasks): Schedule specific study blocks, builds, assignments with concrete time slots (startTime "HH:MM", durationMinutes), areas, and subtasks. Link to existingGoalId/existingHabitId whenever matching items exist in memory!
+5. Ultra-Compact Efficiency: Use concise titles and compact representations so plans fit cleanly in JSON.
+6. Link items: Connect tasks and habits to goals via existingGoalId (preferred if goal exists) or goalIndex (0-based for NEW goals in plan.goals).
+7. If the user only asks a conversational question or sends a greeting (e.g. "hey", "hello", "how are you"), set "hasPlan": false, "plan": null, and write a helpful, natural conversational reply in "message".
+8. In "message", provide a concise, direct response answering the user or summarizing the proposed plan. For greetings, respond conversationally and ask what to organize today. NEVER echo or parrot template example strings.
 
 Return ONLY raw JSON object (no markdown code blocks):
 {
@@ -539,6 +542,19 @@ Return ONLY raw JSON object (no markdown code blocks):
     ],
     "habits": [
       {"title": "Habit Title", "cadence": "Morning"|"Afternoon"|"Evening"|"Anytime", "startTime": "HH:MM"|null, "frequency": "Every Day"|"Weekdays"|"3x / week", "duration": "15 mins"|"30 mins"|"45 mins"|"60 mins"|"90 mins"|"120 mins", "icon": "cached"|"terminal"|"fitness_center"|"auto_stories"|"palette"|"menu_book", "colorToken": "primary"|"secondary"|"tertiary", "goalIndex": 0|null}
+    ],
+    "schedules": [
+      {
+        "title": "Class or Routine Title",
+        "category": "College"|"Academics"|"Work"|"Personal",
+        "startTime": "09:30",
+        "endTime": "11:30",
+        "durationMinutes": 120,
+        "plannedDate": "YYYY-MM-DD"|null,
+        "recurrence": "weekly"|"daily"|"custom"|"none",
+        "repeatDays": [0, 1, 2, 3, 4, 5, 6],
+        "recurrenceEndDate": "YYYY-MM-DD"|null
+      }
     ],
     "tasks": [
       {
@@ -654,6 +670,30 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
     });
   }
 
+  if (Array.isArray(plan.schedules)) {
+    plan.schedules = plan.schedules.map((s, idx) => {
+      const dur = Number(s.durationMinutes || s.dur) || 60;
+      const start = s.startTime || s.time || null;
+      const end = s.endTime || (start ? calculateEndTime(start, dur) : null);
+      let repeatDays = Array.isArray(s.repeatDays) ? s.repeatDays : null;
+      if (!repeatDays && s.recurrence === 'custom' && Array.isArray(s.days)) {
+        repeatDays = s.days;
+      }
+      return {
+        title: s.title || `Class / Routine ${idx + 1}`,
+        category: s.category || 'College',
+        areas: Array.isArray(s.areas) && s.areas.length ? s.areas : ['College'],
+        startTime: start,
+        endTime: end,
+        durationMinutes: dur,
+        plannedDate: s.plannedDate ? normalizeIsoDate(s.plannedDate, today) : today,
+        recurrence: s.recurrence || 'weekly',
+        repeatDays,
+        recurrenceEndDate: s.recurrenceEndDate ? normalizeIsoDate(s.recurrenceEndDate, today) : null
+      };
+    });
+  }
+
   if (Array.isArray(plan.tasks)) {
     plan.tasks = plan.tasks.map(t => {
       if (Array.isArray(t)) {
@@ -686,6 +726,9 @@ export function normalizeCopilotPlan(parsed, todayDate = '') {
         priority: t.priority || (t.impact === 'high' ? 'high' : 'normal'),
         energy: t.energy || (t.impact === 'high' ? 'High' : t.impact === 'low' ? 'Low' : 'Normal'),
         recurrence: t.recurrence || 'none',
+        repeatDays: Array.isArray(t.repeatDays) ? t.repeatDays : null,
+        recurrenceEndDate: t.recurrenceEndDate ? normalizeIsoDate(t.recurrenceEndDate, today) : null,
+        category: t.category || (t.areas?.includes('College') ? 'College' : 'Work'),
         deadlineDate: t.deadlineDate ? normalizeIsoDate(t.deadlineDate, today) : null,
         deadlineTime: t.deadlineTime || null,
         areas: Array.isArray(t.areas) ? t.areas : ['Career & Craft'],

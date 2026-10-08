@@ -24,6 +24,7 @@ export default function AiCopilotModal({
   addGoal,
   addHabit,
   addTask,
+  addSchedule,
   toggleTask,
   checkInHabit,
   focusTimer = null,
@@ -79,6 +80,23 @@ export default function AiCopilotModal({
       if (m.id !== messageId || !m.plan?.habits) return m;
       const habits = m.plan.habits.filter((_, idx) => idx !== habitIdx);
       return { ...m, plan: { ...m.plan, habits } };
+    }));
+  };
+
+  const updatePlanSchedule = (messageId, schedIdx, field, value) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.plan?.schedules) return m;
+      const scheds = [...m.plan.schedules];
+      scheds[schedIdx] = { ...scheds[schedIdx], [field]: value };
+      return { ...m, plan: { ...m.plan, schedules: scheds } };
+    }));
+  };
+
+  const removePlanSchedule = (messageId, schedIdx) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.plan?.schedules) return m;
+      const scheds = m.plan.schedules.filter((_, idx) => idx !== schedIdx);
+      return { ...m, plan: { ...m.plan, schedules: scheds } };
     }));
   };
 
@@ -378,7 +396,42 @@ export default function AiCopilotModal({
       });
     }
 
-    // 3. Create & Schedule Tasks with intelligent time-slot collision avoidance
+    // 3. Process Schedules (Timetable classes & fixed routine blocks)
+    let autoSchedulesCount = 0;
+    if (Array.isArray(plan.schedules) && addSchedule) {
+      plan.schedules.forEach((s, idx) => {
+        if (!s.title) return;
+        const cleanTitle = s.title.trim().toLowerCase();
+        const exists = (schedules || []).some(es => 
+          es.title && es.title.trim().toLowerCase() === cleanTitle &&
+          es.startTime === s.startTime
+        );
+        if (exists) return;
+
+        const id = `sched-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
+        const dur = Number(s.durationMinutes) || 60;
+        const start = s.startTime || '09:00';
+        const end = s.endTime || calculateEndTime(start, dur);
+
+        addSchedule({
+          id,
+          title: s.title,
+          category: s.category || 'College',
+          areas: Array.isArray(s.areas) && s.areas.length ? s.areas : ['College'],
+          startTime: start,
+          endTime: end,
+          durationMinutes: dur,
+          plannedDate: s.plannedDate || todayPlanDate(),
+          recurrence: s.recurrence || 'weekly',
+          repeatDays: Array.isArray(s.repeatDays) ? s.repeatDays : [new Date().getDay()],
+          recurrenceEndDate: s.recurrenceEndDate || null,
+          type: 'schedule'
+        });
+        autoSchedulesCount++;
+      });
+    }
+
+    // 4. Create & Schedule Tasks with intelligent time-slot collision avoidance
     if (Array.isArray(plan.tasks)) {
       // Build index of already booked time intervals for the targeted dates
       const bookedSlots = [];
@@ -397,6 +450,48 @@ export default function AiCopilotModal({
         if (!t.title) return;
         const cleanTitle = t.title.trim().toLowerCase();
         const taskDate = t.plannedDate || todayPlanDate();
+
+        // Check if this task represents a timetable class / recurring college routine
+        const isClassOrTimetable = (
+          /lecture|lab|class|timetable|seminar|tutorial/i.test(t.title) ||
+          t.category === 'College' ||
+          t.category === 'Academics' ||
+          (Array.isArray(t.areas) && t.areas.includes('College'))
+        );
+
+        // Auto-bridge timetable classes into Schedules so they appear in "Today's Schedule" & Timetable tray
+        if (isClassOrTimetable && addSchedule) {
+          const alreadyInSchedules = (schedules || []).some(es =>
+            es.title && es.title.trim().toLowerCase() === cleanTitle &&
+            es.startTime === t.startTime
+          );
+          if (!alreadyInSchedules) {
+            const schedId = `sched-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
+            const sDur = Number(t.durationMinutes) || 60;
+            const sStart = t.startTime || '09:00';
+            const sEnd = t.endTime || calculateEndTime(sStart, sDur);
+            const baseDay = new Date(`${taskDate}T12:00:00`).getDay();
+            const schedRepeatDays = Array.isArray(t.repeatDays) && t.repeatDays.length > 0 
+              ? t.repeatDays 
+              : (isNaN(baseDay) ? [1] : [baseDay]);
+
+            addSchedule({
+              id: schedId,
+              title: t.title,
+              category: t.category || 'College',
+              areas: Array.isArray(t.areas) && t.areas.length ? t.areas : ['College'],
+              startTime: sStart,
+              endTime: sEnd,
+              durationMinutes: sDur,
+              plannedDate: taskDate,
+              recurrence: t.recurrence && t.recurrence !== 'none' ? t.recurrence : 'weekly',
+              repeatDays: schedRepeatDays,
+              recurrenceEndDate: t.recurrenceEndDate || null,
+              type: 'schedule'
+            });
+            autoSchedulesCount++;
+          }
+        }
 
         // Check if identical task already exists on this planned date
         const isDuplicateTask = tasks.some(et => 
@@ -473,10 +568,13 @@ export default function AiCopilotModal({
           impact: t.impact || 'medium',
           priority: t.priority || 'normal',
           areas: Array.isArray(t.areas) ? t.areas : ['Career & Craft'],
+          category: t.category || (isClassOrTimetable ? 'College' : 'Work'),
           goalId: linkedGoalId,
           linkedHabitId,
           subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
           recurrence: t.recurrence || 'none',
+          repeatDays: Array.isArray(t.repeatDays) ? t.repeatDays : null,
+          recurrenceEndDate: t.recurrenceEndDate || null,
           deadlineDate: t.deadlineDate || null,
           deadlineTime: t.deadlineTime || null,
           completed: false,
@@ -487,14 +585,15 @@ export default function AiCopilotModal({
 
     setAppliedPlans(prev => new Set([...prev, messageId]));
 
-    // 4. Harvest newly approved verbs and entities into local offline memory
+    // 5. Harvest newly approved verbs and entities into local offline memory
     harvestCopilotPlan(plan);
 
-    // 5. Inject confirmation into chat history so AI dynamically retains this context across subsequent turns
+    // 6. Inject confirmation into chat history so AI dynamically retains this context across subsequent turns
     const goalsCount = plan.goals?.length || 0;
     const habitsCount = plan.habits?.length || 0;
+    const schedulesCount = autoSchedulesCount || (plan.schedules?.length || 0);
     const tasksCount = plan.tasks?.length || 0;
-    const confirmationText = `Plan successfully added to schedule: ${goalsCount} goals, ${habitsCount} habits, and ${tasksCount} tasks are now live in your workspace.`;
+    const confirmationText = `Plan successfully added to schedule: ${goalsCount} goals, ${habitsCount} habits, ${schedulesCount} timetable schedules, and ${tasksCount} tasks are now live in your workspace.`;
 
     setMessages(prev => [
       ...prev,
@@ -669,6 +768,7 @@ export default function AiCopilotModal({
                             {[
                               msg.plan.goals?.length ? `${msg.plan.goals.length} goals` : null,
                               msg.plan.habits?.length ? `${msg.plan.habits.length} habits` : null,
+                              msg.plan.schedules?.length ? `${msg.plan.schedules.length} schedules` : null,
                               msg.plan.tasks?.length ? `${msg.plan.tasks.length} tasks` : null,
                             ].filter(Boolean).join(' • ')}
                           </span>
@@ -807,6 +907,71 @@ export default function AiCopilotModal({
                                       })()}
                                     </div>
                                     <span className="text-[10px] text-[#8E8E93]">{h.frequency || h.cadence}</span>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Timetable & Fixed Routine Schedules */}
+                        {Array.isArray(msg.plan.schedules) && msg.plan.schedules.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Timetable & Classes</span>
+                            {msg.plan.schedules.map((s, idx) => (
+                              <div key={idx} className="p-2 rounded-lg bg-indigo-50/50 border border-indigo-100/80 text-xs flex items-center justify-between gap-2">
+                                {isEditing ? (
+                                  <>
+                                    <input
+                                      type="text"
+                                      value={s.title || ''}
+                                      onChange={(e) => updatePlanSchedule(msg.id, idx, 'title', e.target.value)}
+                                      className="flex-1 py-0.5 px-1.5 bg-white border border-indigo-200 rounded font-medium text-indigo-950 text-xs outline-none focus:border-indigo-500"
+                                      placeholder="Class or routine name..."
+                                    />
+                                    <input
+                                      type="time"
+                                      value={s.startTime || '09:00'}
+                                      onChange={(e) => updatePlanSchedule(msg.id, idx, 'startTime', e.target.value)}
+                                      className="py-0.5 px-1 bg-white border border-indigo-200 rounded text-[10px] font-mono text-indigo-800 outline-none"
+                                      title="Start time"
+                                    />
+                                    <input
+                                      type="number"
+                                      value={s.durationMinutes || 60}
+                                      onChange={(e) => updatePlanSchedule(msg.id, idx, 'durationMinutes', Number(e.target.value))}
+                                      className="w-12 py-0.5 px-1 bg-white border border-indigo-200 rounded text-[10px] font-mono text-indigo-800 outline-none"
+                                      title="Duration (mins)"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removePlanSchedule(msg.id, idx)}
+                                      className="text-indigo-400 hover:text-red-500 p-0.5 cursor-pointer"
+                                      title="Remove schedule block"
+                                    >
+                                      <span className="material-symbols-outlined text-[15px]">close</span>
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="flex-1 min-w-0 pr-2 flex items-center gap-1.5">
+                                      <span className="material-symbols-outlined text-[14px] text-indigo-600 shrink-0">school</span>
+                                      <span className="font-semibold text-indigo-950 truncate">{s.title}</span>
+                                      <span className="text-[10px] font-mono font-medium text-indigo-700 bg-indigo-100/70 px-1.5 py-0.2 rounded shrink-0">
+                                        {s.startTime ? `${s.startTime}${s.endTime ? `-${s.endTime}` : ''}` : 'Fixed Block'}
+                                      </span>
+                                      {s.recurrence && (
+                                        <span className="text-[9px] text-teal-700 bg-teal-50 px-1 py-0.2 rounded border border-teal-200/50 uppercase font-mono shrink-0">
+                                          {s.recurrence}
+                                        </span>
+                                      )}
+                                      {s.recurrenceEndDate && (
+                                        <span className="text-[9px] text-indigo-600/80 font-mono truncate shrink-0">
+                                          until {s.recurrenceEndDate}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] text-indigo-600 font-mono shrink-0">{s.durationMinutes || 60}m</span>
                                   </>
                                 )}
                               </div>

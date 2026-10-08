@@ -249,6 +249,7 @@ export default function App() {
         addGoal={store.addGoal}
         addHabit={store.addHabit}
         addTask={store.addTask}
+        addSchedule={store.addSchedule}
         toggleTask={store.toggleTask}
         checkInHabit={store.checkInHabit}
         focusTimer={store.focusTimer}
