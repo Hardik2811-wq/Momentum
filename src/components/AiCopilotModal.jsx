@@ -123,10 +123,53 @@ export default function AiCopilotModal({
   }, [isOpen]);
 
   useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      if (input) {
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
+      }
+    }
+  }, [input]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating, isParsingDoc]);
 
   if (!isOpen) return null;
+
+  const handleKeyDown = (e) => {
+    if (e.isComposing || e.nativeEvent?.isComposing) return;
+
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // Shift + Enter: Allow natural newline insertion
+        return;
+      }
+
+      // Ctrl + Enter or Cmd + Enter always submits
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        handleSendMessage();
+        return;
+      }
+
+      // On Android / mobile touch keyboards, Return key creates newline
+      // and the circular arrow button sends the message
+      const isTouchMobile = typeof window !== 'undefined' && (
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      );
+
+      if (isTouchMobile) {
+        return;
+      }
+
+      // Desktop: Enter sends
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -1097,7 +1140,7 @@ export default function AiCopilotModal({
         <footer className="p-3 sm:p-4 border-t border-black/[0.06] bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <form
             onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-            className="flex items-center gap-2 bg-[#F5F5F7] p-1.5 px-2.5 rounded-xl border border-black/[0.04] focus-within:bg-white focus-within:border-black/[0.15] transition"
+            className="flex items-end gap-2 bg-[#F5F5F7] p-1.5 px-2.5 rounded-xl border border-black/[0.04] focus-within:bg-white focus-within:border-black/[0.15] transition"
           >
             {/* Hidden File Input */}
             <input
@@ -1113,26 +1156,28 @@ export default function AiCopilotModal({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               title="Attach document (PDF, DOCX, TXT)"
-              className="text-[#8E8E93] hover:text-[#1A1B1F] p-1 rounded-lg transition cursor-pointer shrink-0"
+              className="text-[#8E8E93] hover:text-[#1A1B1F] p-1 rounded-lg transition cursor-pointer shrink-0 mb-0.5"
             >
               <span className="material-symbols-outlined text-[19px]">attach_file</span>
             </button>
 
-            {/* Input */}
-            <input
+            {/* Multiline Composer Textarea */}
+            <textarea
               ref={textareaRef}
-              type="text"
+              rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={attachedDoc ? "Add instruction or press Enter..." : "Ask Copilot or attach a file..."}
-              className="flex-1 py-1.5 text-[13px] bg-transparent text-[#1A1B1F] placeholder-[#8E8E93] outline-none"
+              onKeyDown={handleKeyDown}
+              placeholder={attachedDoc ? "Add instruction (Shift+Enter for newline)..." : "Ask Copilot... (Shift+Enter for newline)"}
+              enterKeyHint="enter"
+              className="flex-1 py-1.5 px-1 text-[13px] leading-5 bg-transparent text-[#1A1B1F] placeholder-[#8E8E93] outline-none resize-none max-h-32 min-h-[34px] overflow-y-auto"
             />
 
             {/* Send Arrow */}
             <button
               type="submit"
               disabled={(!input.trim() && !attachedDoc) || isGenerating}
-              className={`w-7 h-7 rounded-lg flex items-center justify-center transition shrink-0 cursor-pointer ${
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition shrink-0 cursor-pointer mb-0.5 ${
                 (input.trim() || attachedDoc) && !isGenerating
                   ? 'bg-[#1A1B1F] text-white shadow-2xs active:scale-95'
                   : 'text-[#C7C7CC] cursor-not-allowed'
