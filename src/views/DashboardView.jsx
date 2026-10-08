@@ -326,7 +326,7 @@ const DashboardView = React.memo(function DashboardView({
   };
 
   return (
-    <main className="w-full min-h-screen bg-surface pt-16 md:pt-14 px-4 sm:px-6 md:px-8 py-4 sm:py-8">
+    <main className="w-full min-h-screen bg-surface pt-[calc(4rem+env(safe-area-inset-top))] md:pt-14 px-4 sm:px-6 md:px-8 py-4 sm:py-8">
       <div className="mx-auto w-full max-w-[1440px] space-y-6 sm:space-y-8">
         <header data-block-id="dashboard-header" className="flex items-center justify-between gap-3 pt-1">
           <div className="min-w-0">

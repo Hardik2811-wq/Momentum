@@ -6,9 +6,14 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.SizeF;
 import android.widget.RemoteViews;
 import com.hardik.momentum.MainActivity;
 import com.hardik.momentum.R;
+import java.util.HashMap;
+import java.util.Map;
 
 public class QuickActionsWidgetProvider extends AppWidgetProvider {
 
@@ -28,9 +33,40 @@ public class QuickActionsWidgetProvider extends AppWidgetProvider {
     }
   }
 
-  private static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
-    RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_quick_actions);
+  @Override
+  public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
+    super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
+    updateWidget(context, appWidgetManager, appWidgetId);
+  }
 
+  private static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
+    RemoteViews views;
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      // Modern Android 12+ (API 31+) native responsive layouts
+      RemoteViews wideViews = new RemoteViews(context.getPackageName(), R.layout.widget_quick_actions);
+      bindActions(context, wideViews);
+
+      RemoteViews squareViews = new RemoteViews(context.getPackageName(), R.layout.widget_quick_actions_square);
+      bindActions(context, squareViews);
+
+      Map<SizeF, RemoteViews> viewMapping = new HashMap<>();
+      viewMapping.put(new SizeF(110f, 40f), wideViews);
+      viewMapping.put(new SizeF(110f, 110f), squareViews);
+      views = new RemoteViews(viewMapping);
+    } else {
+      // API < 31 fallback: inspect height from options
+      Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
+      int minHeight = options != null ? options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0) : 0;
+      int layoutId = (minHeight >= 100) ? R.layout.widget_quick_actions_square : R.layout.widget_quick_actions;
+      views = new RemoteViews(context.getPackageName(), layoutId);
+      bindActions(context, views);
+    }
+
+    appWidgetManager.updateAppWidget(appWidgetId, views);
+  }
+
+  private static void bindActions(Context context, RemoteViews views) {
     // 1. Task / Schedule Add Intent
     Intent taskIntent = new Intent(context, MainActivity.class);
     taskIntent.setAction("com.hardik.momentum.ACTION_QUICK_ADD_TASK");
@@ -70,6 +106,15 @@ public class QuickActionsWidgetProvider extends AppWidgetProvider {
     );
     views.setOnClickPendingIntent(R.id.btn_quick_add_habit, habitPI);
 
-    appWidgetManager.updateAppWidget(appWidgetId, views);
+    // Root click opens app
+    Intent rootIntent = new Intent(context, MainActivity.class);
+    rootIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    PendingIntent rootPI = PendingIntent.getActivity(
+        context,
+        100,
+        rootIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+    );
+    views.setOnClickPendingIntent(R.id.widget_quick_add_root, rootPI);
   }
 }

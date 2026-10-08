@@ -5,29 +5,30 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_pill_bg"
     android:paddingStart="16dp"
-    android:paddingTop="8dp"
-    android:paddingEnd="16dp"
-    android:paddingBottom="8dp">
+    android:paddingTop="6dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="6dp">
 
-    <!-- Clock / Status Icon Left -->
+    <!-- Prefix Tag Left -->
     <TextView
         android:id="@+id/widget_pill_prefix"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_centerVertical="true"
-        android:text="NEXT:"
+        android:text="NEXT"
+        android:fontFamily="sans-serif-condensed"
         android:textColor="#38BDF8"
-        android:textSize="11sp"
+        android:textSize="10sp"
         android:textStyle="bold"
-        android:letterSpacing="0.08" />
+        android:letterSpacing="0.12" />
 
     <!-- Title & Time in Center -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="10dp"
         android:layout_marginEnd="8dp"
         android:layout_toEndOf="@id/widget_pill_prefix"
         android:layout_toStartOf="@+id/widget_pill_duration"
@@ -41,7 +42,8 @@
             android:maxLines="1"
             android:text="No upcoming tasks"
             android:textColor="#FFFFFF"
-            android:textSize="13sp"
+            android:textSize="12.5sp"
+            android:fontFamily="sans-serif-medium"
             android:textStyle="bold" />
 
         <TextView
@@ -52,24 +54,25 @@
             android:maxLines="1"
             android:text="Tap to plan today"
             android:textColor="#94A3B8"
-            android:textSize="10sp" />
+            android:textSize="9.5sp" />
     </LinearLayout>
 
-    <!-- Duration / Complete Chip on Right -->
+    <!-- Duration / Status Chip on Right -->
     <TextView
         android:id="@+id/widget_pill_duration"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
         android:layout_centerVertical="true"
-        android:background="@drawable/widget_add_btn_bg"
-        android:paddingStart="8dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="8dp"
-        android:paddingBottom="4dp"
+        android:background="@drawable/widget_item_bg"
+        android:paddingStart="9dp"
+        android:paddingTop="3dp"
+        android:paddingEnd="9dp"
+        android:paddingBottom="3dp"
         android:text="45m"
         android:textColor="#38BDF8"
-        android:textSize="11sp"
+        android:textSize="10.5sp"
+        android:fontFamily="sans-serif-medium"
         android:textStyle="bold" />
 
 </RelativeLayout>

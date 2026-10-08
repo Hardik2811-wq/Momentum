@@ -144,6 +144,8 @@ const TodayView = React.memo(function TodayView({
   const touchDragRef = useRef(null);
   const holdTimerRef = useRef(null);
   const touchStartPosRef = useRef({ x: 0, y: 0 });
+  const didJustDragRef = useRef(false);
+  const [isMobileQuickTrayOpen, setIsMobileQuickTrayOpen] = useState(false);
   const [dragOverSlot, setDragOverSlot] = useState(null); // { date, hour }
   const [editingTask, setEditingTask] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
@@ -406,6 +408,10 @@ const TodayView = React.memo(function TodayView({
     return tasks.filter(t => !t.completed && !t.startTime).length;
   }, [tasks]);
 
+  const unscheduledTasks = useMemo(() => {
+    return tasks.filter(t => !t.completed && !t.startTime);
+  }, [tasks]);
+
   const handleUnslotTask = (taskId) => {
     onUpdateTask(taskId, {
       startTime: null,
@@ -436,6 +442,7 @@ const TodayView = React.memo(function TodayView({
 
     // Directly switch mobile to calendar timeline so user can drag and drop onto it!
     setMobileTab('timeline');
+    setIsMobileQuickTrayOpen(false);
   }, [isMultiSelectMode]);
 
   const handleEndDrag = useCallback(() => {
@@ -461,7 +468,7 @@ const TodayView = React.memo(function TodayView({
     const scrollX = calendarScrollRef.current.scrollLeft;
     const relY = Math.max(0, clientY - rect.top + scrollY);
 
-    // Each hour slot is 70px (HOUR_HEIGHT)
+    // Each hour slot is 64px (HOUR_HEIGHT)
     const rawHour = Math.floor(relY / HOUR_HEIGHT);
     const clampedHour = Math.max(0, Math.min(TOTAL_HOURS - 1, rawHour));
     const hourNum = START_HOUR + clampedHour;
@@ -490,11 +497,21 @@ const TodayView = React.memo(function TodayView({
 
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
 
-    // Fast 220ms hold threshold to activate drag
+    // Responsive 190ms hold threshold to activate drag
     holdTimerRef.current = setTimeout(() => {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try { navigator.vibrate(35); } catch (_) {}
+        try { navigator.vibrate([35, 20]); } catch (_) {}
       }
+
+      let dur = Number(item.durationMinutes);
+      if (!dur || isNaN(dur)) {
+        if (item.startTime && item.endTime) {
+          dur = calculateDuration(item.startTime, item.endTime);
+        } else if (item.duration) {
+          dur = parseCompoundDuration(item.duration);
+        }
+      }
+      if (!dur || isNaN(dur)) dur = 45;
 
       let initialHour = item.startTime ? `${item.startTime.slice(0, 2)}:00` : '09:00';
       const slot = calculateGridSlotFromCoords(touch.clientX, touch.clientY);
@@ -505,9 +522,10 @@ const TodayView = React.memo(function TodayView({
           type,
           id: item.id,
           title: item.title,
-          durationMinutes: Number(item.durationMinutes) || 45,
+          durationMinutes: dur,
           duration: item.duration,
           startTime: item.startTime,
+          endTime: item.endTime,
           ...item
         },
         currentX: touch.clientX,
@@ -519,23 +537,26 @@ const TodayView = React.memo(function TodayView({
       touchDragRef.current = dragData;
       setActiveTouchDrag(dragData);
       setMobileTab('timeline');
-    }, 220);
+      setIsMobileQuickTrayOpen(false);
+    }, 190);
   }, [isMultiSelectMode, calculateGridSlotFromCoords, viewDate]);
 
   const handleTouchMoveCard = useCallback((e) => {
-    // If drag hasn't started yet, cancel hold if finger moves > 10px (user is scrolling)
+    // If drag hasn't started yet, allow minor thumb jitter up to 24px before cancelling
     if (!touchDragRef.current) {
       const touch = e.touches?.[0];
       if (touch) {
         const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
         const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
-        if (dx > 10 || dy > 10) {
+        if (dx > 24 || dy > 24) {
           if (holdTimerRef.current) {
             clearTimeout(holdTimerRef.current);
             holdTimerRef.current = null;
           }
         }
       }
+    } else {
+      if (e.cancelable) e.preventDefault();
     }
   }, []);
 
@@ -573,6 +594,8 @@ const TodayView = React.memo(function TodayView({
     const handleWindowTouchEnd = () => {
       const current = touchDragRef.current;
       if (current && current.item && current.targetHour && current.targetDate) {
+        didJustDragRef.current = true;
+        setTimeout(() => { didJustDragRef.current = false; }, 350);
         handleSlotDroppedItem(current.item, current.targetHour, current.targetDate);
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           try { navigator.vibrate(45); } catch (_) {}
@@ -600,14 +623,37 @@ const TodayView = React.memo(function TodayView({
 
     if (type === 'schedule') {
       const targetSched = schedules.find(s => String(s.id) === String(id));
-      const dur = targetSched ? (Number(targetSched.durationMinutes) || 60) : 60;
+      let dur = Number(itemPayload.durationMinutes);
+      if (!dur || isNaN(dur)) {
+        if (targetSched) {
+          dur = Number(targetSched.durationMinutes);
+          if (!dur || isNaN(dur)) {
+            if (targetSched.startTime && targetSched.endTime) {
+              dur = calculateDuration(targetSched.startTime, targetSched.endTime);
+            }
+          }
+        }
+      }
+      if (!dur || isNaN(dur)) dur = 60;
+
       const endTime = calculateEndTime(hourLabel, dur);
-      onUpdateSchedule?.(id, {
+      const patch = {
         startTime: hourLabel,
-        endTime,
-        plannedDate: colDate
-      });
-      toast.success(`Scheduled "${targetSched?.title || 'Class'}" at ${formatTimeString(hourLabel)}`);
+        endTime
+      };
+
+      if (colDate) {
+        patch.plannedDate = colDate;
+        if (targetSched && targetSched.recurrence === 'weekly' && Array.isArray(targetSched.repeatDays)) {
+          const newDayOfWeek = new Date(`${colDate}T12:00:00`).getDay();
+          if (!targetSched.repeatDays.includes(newDayOfWeek)) {
+            patch.repeatDays = [...targetSched.repeatDays, newDayOfWeek];
+          }
+        }
+      }
+
+      onUpdateSchedule?.(id, patch);
+      toast.success(`Rescheduled "${targetSched?.title || 'Class'}" to ${formatTimeString(hourLabel)}`);
     } else if (type === 'habit') {
       const targetHabit = habits.find(h => String(h.id) === String(id));
       if (onUpdateHabit) {
@@ -617,6 +663,7 @@ const TodayView = React.memo(function TodayView({
     } else {
       handleSlotTask(id, hourLabel, colDate);
     }
+    setIsMobileQuickTrayOpen(false);
   }, [schedules, habits, onUpdateSchedule, onUpdateHabit, handleSlotTask]);
 
   const handleCreateTrayTask = (e) => {
@@ -1513,13 +1560,15 @@ const TodayView = React.memo(function TodayView({
                           onTouchEnd={handleTouchEndCard}
                           onTouchCancel={handleTouchEndCard}
                           onClick={() => {
+                            if (didJustDragRef.current) return;
                             if (isMultiSelectMode) {
                               toggleSelectSchedule(sched.id);
                             } else {
                               setEditingSchedule(sched);
                             }
                           }}
-                          className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-2.5 cursor-pointer group shadow-2xs ${
+                          style={{ touchAction: 'none', userSelect: 'none' }}
+                          className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-2.5 cursor-pointer group shadow-2xs select-none touch-none ${
                             isSelected
                               ? 'ring-2 ring-[#0A84FF] border-[#0A84FF] bg-blue-50/70 shadow-xs'
                               : isDone
@@ -1632,7 +1681,11 @@ const TodayView = React.memo(function TodayView({
                           onTouchMove={handleTouchMoveCard}
                           onTouchEnd={handleTouchEndCard}
                           onTouchCancel={handleTouchEndCard}
-                          className={`p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing ${
+                          onClick={() => {
+                            if (didJustDragRef.current) return;
+                          }}
+                          style={{ touchAction: 'none', userSelect: 'none' }}
+                          className={`p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing select-none touch-none ${
                             isChecked
                               ? 'bg-emerald-50/70 border-emerald-200 opacity-80'
                               : 'bg-white hover:bg-emerald-50/30 border-black/[0.06]'
@@ -1701,13 +1754,15 @@ const TodayView = React.memo(function TodayView({
                         onTouchEnd={handleTouchEndCard}
                         onTouchCancel={handleTouchEndCard}
                         onClick={() => {
+                          if (didJustDragRef.current) return;
                           if (isMultiSelectMode) {
                             toggleSelectTask(task.id);
                           } else {
                             setEditingTask(task);
                           }
                         }}
-                        className={`relative p-2.5 rounded-xl border transition-all ${
+                        style={{ touchAction: 'none', userSelect: 'none' }}
+                        className={`relative p-2.5 rounded-xl border transition-all select-none touch-none ${
                           isMultiSelectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
                         } hover:shadow-xs group ${
                           isSelected
@@ -2126,6 +2181,7 @@ const TodayView = React.memo(function TodayView({
                               <div
                                 key={sched.id}
                                 onClick={(e) => {
+                                  if (didJustDragRef.current) return;
                                   e.stopPropagation();
                                   setEditingSchedule(sched);
                                 }}
@@ -2140,10 +2196,15 @@ const TodayView = React.memo(function TodayView({
                                   top: `${topPx}px`,
                                   height: `${heightPx}px`,
                                   left: '6px',
-                                  right: '6px'
+                                  right: '6px',
+                                  touchAction: 'none',
+                                  userSelect: 'none',
+                                  WebkitUserSelect: 'none'
                                 }}
-                                className={`absolute rounded-xl pointer-events-auto border transition-all p-2 flex flex-col justify-between shadow-xs z-10 group cursor-pointer ${
-                                  isDone
+                                className={`absolute rounded-xl pointer-events-auto border transition-all p-2 flex flex-col justify-between shadow-xs z-10 group cursor-pointer select-none touch-none ${
+                                  activeTouchDrag?.item?.id === sched.id
+                                    ? 'opacity-40 ring-2 ring-[#0A84FF] scale-[0.98]'
+                                    : isDone
                                     ? 'border-emerald-300 bg-emerald-50/90 hover:bg-emerald-100/90 opacity-90'
                                     : 'border-indigo-200/90 bg-indigo-50/85 hover:bg-indigo-100/90'
                                 }`}
@@ -2224,6 +2285,9 @@ const TodayView = React.memo(function TodayView({
                             return (
                               <div
                                 key={`cal-habit-${habit.id}`}
+                                onClick={() => {
+                                  if (didJustDragRef.current) return;
+                                }}
                                 onTouchStart={(e) => {
                                   if (e.target.closest('button')) return;
                                   handleTouchStartCard('habit', habit, e);
@@ -2235,10 +2299,15 @@ const TodayView = React.memo(function TodayView({
                                   top: `${topPx}px`,
                                   height: `${heightPx}px`,
                                   left: '6px',
-                                  right: '6px'
+                                  right: '6px',
+                                  touchAction: 'none',
+                                  userSelect: 'none',
+                                  WebkitUserSelect: 'none'
                                 }}
-                                className={`absolute rounded-xl pointer-events-auto border transition-all p-2 flex items-center justify-between shadow-xs z-15 group ${
-                                  isChecked
+                                className={`absolute rounded-xl pointer-events-auto border transition-all p-2 flex items-center justify-between shadow-xs z-15 group select-none touch-none ${
+                                  activeTouchDrag?.item?.id === habit.id
+                                    ? 'opacity-40 ring-2 ring-emerald-500 scale-[0.98]'
+                                    : isChecked
                                     ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 opacity-80'
                                     : 'bg-emerald-50/60 hover:bg-emerald-50/95 border-emerald-200/90 text-emerald-950'
                                 }`}
@@ -2364,6 +2433,7 @@ const TodayView = React.memo(function TodayView({
                             <div
                               key={task.id}
                               onClick={(e) => {
+                                if (didJustDragRef.current) return;
                                 if (isEditorMode) {
                                   e.stopPropagation();
                                   if (e.ctrlKey || e.metaKey || isEditorMode) {
@@ -2404,10 +2474,15 @@ const TodayView = React.memo(function TodayView({
                                 width: widthStyle,
                                 left: leftStyle,
                                 zIndex: isSelectedForTransform ? 60 : zIndexVal,
-                                cursor: isSelectedForTransform ? 'move' : isEditorMode ? 'pointer' : 'pointer'
+                                cursor: isSelectedForTransform ? 'move' : isEditorMode ? 'pointer' : 'pointer',
+                                touchAction: 'none',
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none'
                               }}
-                              className={`absolute rounded-xl pointer-events-auto transition-all ${
-                                isSelectedForTransform
+                              className={`absolute rounded-xl pointer-events-auto transition-all select-none touch-none ${
+                                activeTouchDrag?.item?.id === task.id
+                                  ? 'opacity-40 ring-2 ring-[#0A84FF] scale-[0.98]'
+                                  : isSelectedForTransform
                                   ? 'ring-2 ring-[#0A84FF] shadow-[0_0_0_2px_rgba(10,132,255,0.4),0_12px_32px_rgba(0,0,0,0.18)] z-40'
                                   : isEditorMode
                                   ? 'hover:ring-1 hover:ring-amber-400 hover:shadow-md'
@@ -2836,21 +2911,121 @@ const TodayView = React.memo(function TodayView({
          ══════════════════════════════════════════════════════ */}
       <button
         type="button"
-        onClick={() => setMobileTab(prev => prev === 'timeline' ? 'tray' : 'timeline')}
+        onClick={() => {
+          if (mobileTab === 'timeline') {
+            setIsMobileQuickTrayOpen(prev => !prev);
+          } else {
+            setMobileTab('timeline');
+          }
+        }}
         className={`lg:hidden fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-30 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${
           mobileTab === 'timeline'
-            ? 'bg-[#1A1B1F] text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)] ring-2 ring-white/60'
+            ? isMobileQuickTrayOpen
+              ? 'bg-[#1A1B1F] text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] ring-2 ring-white/60'
+              : 'bg-[#0A84FF] text-white shadow-[0_8px_24px_rgba(10,132,255,0.5)]'
             : 'bg-[#0A84FF] text-white shadow-[0_8px_24px_rgba(10,132,255,0.4)] hover:bg-[#0071E3]'
         }`}
-        aria-label={mobileTab === 'timeline' ? 'Back to Task Tray' : 'View Calendar Timeline'}
-        title={mobileTab === 'timeline' ? 'Back to Task Tray' : 'View Calendar Timeline'}
+        aria-label={mobileTab === 'timeline' ? (isMobileQuickTrayOpen ? 'Close Task Tray' : 'Open Task Tray') : 'View Calendar Timeline'}
+        title={mobileTab === 'timeline' ? (isMobileQuickTrayOpen ? 'Close Task Tray' : 'Quick-drag from tray') : 'View Calendar Timeline'}
       >
         {mobileTab === 'timeline' ? (
-          <Inbox className="w-5 h-5 transition-transform" />
+          isMobileQuickTrayOpen ? (
+            <X className="w-5 h-5 transition-transform" />
+          ) : (
+            <Inbox className="w-5 h-5 transition-transform" />
+          )
         ) : (
           <Calendar className="w-5 h-5 transition-transform" />
         )}
       </button>
+
+      
+      {/* ══════════════════════════════════════════════════════
+          MOBILE QUICK TRAY DRAWER (slide-up when on timeline)
+          Drag unscheduled tasks directly onto calendar from here
+         ══════════════════════════════════════════════════════ */}
+      {mobileTab === 'timeline' && isMobileQuickTrayOpen && !activeTouchDrag && (
+        <div
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-40 animate-slideUp"
+          style={{ maxHeight: '55vh' }}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 -top-screen bg-black/20 backdrop-blur-[1px]"
+            onClick={() => setIsMobileQuickTrayOpen(false)}
+            style={{ top: '-100vh' }}
+          />
+          {/* Drawer panel */}
+          <div className="relative bg-white rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.18)] border-t border-black/[0.06] flex flex-col overflow-hidden"
+            style={{ maxHeight: '55vh' }}
+          >
+            {/* Drag handle */}
+            <div className="flex items-center justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-black/15" />
+            </div>
+            {/* Header */}
+            <div className="px-4 pb-2 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <Inbox className="w-4 h-4 text-[#0A84FF]" />
+                <span className="text-[13px] font-bold text-[#1A1B1F]">Quick Drag to Calendar</span>
+                <span className="px-2 py-0.5 rounded-full bg-[#F5F4FA] text-[#64748B] text-[10px] font-bold">
+                  {unscheduledTasks.length}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileQuickTrayOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-[#F5F4FA] transition text-[#64748B] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Hint */}
+            <div className="px-4 pb-2 shrink-0">
+              <p className="text-[10px] text-[#64748B] flex items-center gap-1">
+                <span className="material-symbols-outlined text-[13px] text-[#0A84FF]">touch_app</span>
+                Hold any card 0.2s, then drag onto a time slot above to schedule it.
+              </p>
+            </div>
+            {/* Task list */}
+            <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-2 min-h-0">
+              {unscheduledTasks.length === 0 ? (
+                <div className="py-6 text-center">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto mb-1.5" />
+                  <p className="text-[11px] font-semibold text-[#1A1B1F]">All tasks scheduled!</p>
+                </div>
+              ) : (
+                unscheduledTasks.map(task => {
+                  const impactDot =
+                    task.impact === 'high' || task.priority === 'high'
+                      ? 'bg-red-500'
+                      : task.impact === 'low'
+                      ? 'bg-emerald-500'
+                      : 'bg-amber-400';
+                  return (
+                    <div
+                      key={`qt-${task.id}`}
+                      onTouchStart={(e) => handleTouchStartCard('task', task, e)}
+                      onTouchMove={handleTouchMoveCard}
+                      onTouchEnd={handleTouchEndCard}
+                      onTouchCancel={handleTouchEndCard}
+                      style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#FAFAFC] border border-black/[0.06] cursor-grab active:cursor-grabbing select-none touch-none active:ring-2 active:ring-[#0A84FF] active:bg-blue-50/60 transition-all"
+                    >
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${impactDot}`} />
+                      <span className="text-[12px] font-semibold text-[#1A1B1F] truncate flex-1">{task.title}</span>
+                      {task.durationMinutes && (
+                        <span className="text-[10px] font-mono text-[#64748B] shrink-0">{task.durationMinutes}m</span>
+                      )}
+                      <span className="material-symbols-outlined text-[16px] text-[#94A3B8] shrink-0">drag_indicator</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════
           FLOATING THUMB PILL (FOLLOWS USER'S THUMB DURING DRAG)

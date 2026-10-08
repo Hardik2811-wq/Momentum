@@ -75,7 +75,7 @@ export default function Header({
     .slice(0, 3);
 
   return (
-    <header className="fixed top-0 left-0 md:left-[248px] right-0 h-14 md:h-12 z-40 flex items-center justify-between px-4 md:px-6 backdrop-blur-2xl border-b transition-colors duration-300 bg-white/85 border-black/[0.06]">
+    <header className="fixed top-0 left-0 md:left-[248px] right-0 h-[calc(3.5rem+env(safe-area-inset-top))] md:h-12 pt-[env(safe-area-inset-top)] md:pt-0 z-40 flex items-center justify-between px-4 md:px-6 backdrop-blur-2xl border-b transition-colors duration-300 bg-white/85 border-black/[0.06]">
 
       {/* ── Breadcrumb & Mobile App Brand ── */}
       <div className="flex items-center gap-2">

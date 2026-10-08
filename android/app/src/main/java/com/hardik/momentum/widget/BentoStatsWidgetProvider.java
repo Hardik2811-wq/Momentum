@@ -11,13 +11,18 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.SizeF;
 import android.widget.RemoteViews;
 import com.hardik.momentum.MainActivity;
 import com.hardik.momentum.R;
 import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class BentoStatsWidgetProvider extends AppWidgetProvider {
 
@@ -38,17 +43,21 @@ public class BentoStatsWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    private static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_bento_stats);
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
+        updateWidget(context, appWidgetManager, appWidgetId);
+    }
 
+    private static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         // Read snapshot
         SharedPreferences prefs = context.getSharedPreferences(WidgetBridgePlugin.PREFERENCES, Context.MODE_PRIVATE);
         String raw = prefs.getString(WidgetBridgePlugin.SNAPSHOT, null);
 
         float percent = 0f;
         String statusSubtext = "STATUS: NO TASKS";
+        String tasksMetric = "0 / 0 DONE";
 
-        // Check if date has crossed midnight (resets to 0% if new day)
         String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
         if (raw != null && !raw.trim().isEmpty()) {
@@ -56,45 +65,69 @@ public class BentoStatsWidgetProvider extends AppWidgetProvider {
                 JSONObject snapshot = new JSONObject(raw);
                 String snapDate = snapshot.optString("date", "");
 
-                // Reset to 0% at 12:00 AM / new day if snapshot is from previous day
                 if (snapDate.equals(todayDate)) {
                     percent = (float) snapshot.optDouble("completionPercentage", 0.0);
                     int total = snapshot.optInt("totalCount", 0);
                     int completed = snapshot.optInt("completedCount", 0);
                     int pending = snapshot.optInt("pendingCount", 0);
 
+                    tasksMetric = completed + " / " + total + " DONE";
+
                     if (total == 0) {
                         statusSubtext = "STATUS: ZERO TASKS";
                     } else if (pending == 0) {
-                        statusSubtext = "STATUS: 100% COMPLETE ✓";
+                        statusSubtext = "ALL COMPLETE ✓";
                     } else {
-                        statusSubtext = completed + "/" + total + " DONE (" + pending + " LEFT)";
+                        statusSubtext = pending + " REMAINING";
                     }
                 } else {
-                    // New day! Automatic 12:00 AM reset
                     percent = 0f;
-                    statusSubtext = "STATUS: NEW DAY RESET";
+                    statusSubtext = "STATUS: RESET";
                 }
             } catch (Exception ignored) {
                 percent = 0f;
             }
-        } else {
-            percent = 0f;
         }
 
-        // Render circular progress ring with true %
         Bitmap ring = drawProgressRing(context, percent);
+
+        RemoteViews views;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            RemoteViews squareViews = new RemoteViews(context.getPackageName(), R.layout.widget_bento_stats);
+            bindViews(context, squareViews, ring, percent, statusSubtext, tasksMetric);
+
+            RemoteViews wideViews = new RemoteViews(context.getPackageName(), R.layout.widget_bento_wide);
+            bindViews(context, wideViews, ring, percent, statusSubtext, tasksMetric);
+
+            Map<SizeF, RemoteViews> viewMapping = new HashMap<>();
+            viewMapping.put(new SizeF(90f, 90f), squareViews);
+            viewMapping.put(new SizeF(180f, 70f), wideViews);
+            views = new RemoteViews(viewMapping);
+        } else {
+            Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
+            int minWidth = options != null ? options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0) : 0;
+            int layoutId = (minWidth >= 160) ? R.layout.widget_bento_wide : R.layout.widget_bento_stats;
+            views = new RemoteViews(context.getPackageName(), layoutId);
+            bindViews(context, views, ring, percent, statusSubtext, tasksMetric);
+        }
+
+        appWidgetManager.updateAppWidget(appWidgetId, views);
+    }
+
+    private static void bindViews(Context context, RemoteViews views, Bitmap ring, float percent, String statusSubtext, String tasksMetric) {
         views.setImageViewBitmap(R.id.bento_ring, ring);
         views.setTextViewText(R.id.bento_stats_percent, Math.round(percent) + "%");
         views.setTextViewText(R.id.bento_subtext, statusSubtext);
+
+        try {
+            views.setTextViewText(R.id.bento_tasks_metric, tasksMetric);
+        } catch (Exception ignored) {}
 
         // Click opens app
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_bento_container, pendingIntent);
-
-        appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
     private static Bitmap drawProgressRing(Context context, float percent) {
@@ -108,11 +141,11 @@ public class BentoStatsWidgetProvider extends AppWidgetProvider {
         float pad = strokeWidth / 2f + (2 * density);
         RectF rect = new RectF(pad, pad, size - pad, size - pad);
 
-        // Track (soft dark blue-gray ring)
+        // Track (soft translucent sky-blue ring)
         Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         trackPaint.setStyle(Paint.Style.STROKE);
         trackPaint.setStrokeWidth(strokeWidth);
-        trackPaint.setColor(0x3338BDF8); // Translucent sky blue base
+        trackPaint.setColor(0x3338BDF8);
         trackPaint.setStrokeCap(Paint.Cap.ROUND);
         canvas.drawArc(rect, 0, 360, false, trackPaint);
 

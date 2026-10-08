@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import QuickAddModal from './components/QuickAddModal';
@@ -23,6 +23,7 @@ import HabitModal from './components/HabitModal';
 import AiCopilotModal from './components/AiCopilotModal';
 import ApiKeyModal from './components/ApiKeyModal';
 import AndroidWidgetSync from './components/AndroidWidgetSync';
+import { requestNotificationPermissions, setupNotificationChannels, setupListeners, syncDailyBriefing, syncScheduleReminders } from './lib/notifications';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -34,6 +35,24 @@ export default function App() {
   const [quickAddProps, setQuickAddProps] = useState({});
   const [isUniversalEditorMode, setIsUniversalEditorMode] = useState(false);
   const store = useStore();
+
+  useEffect(() => {
+    // Initialize Capacitor Local Notifications
+    requestNotificationPermissions().then((granted) => {
+      if (granted) {
+        setupNotificationChannels();
+        setupListeners();
+        syncDailyBriefing();
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    // Re-sync schedule reminders whenever schedules change
+    if (store.schedules && store.schedules.length > 0) {
+      syncScheduleReminders(store.schedules);
+    }
+  }, [store.schedules]);
 
   const openQuickAdd = (props = {}) => {
     setQuickAddProps(props);

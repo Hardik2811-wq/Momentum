@@ -55,6 +55,12 @@ public class TodayWidgetProvider extends AppWidgetProvider {
   }
 
   @Override
+  public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, android.os.Bundle newOptions) {
+    super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
+    update(context, appWidgetManager, appWidgetId);
+  }
+
+  @Override
   public void onReceive(Context context, Intent intent) {
     super.onReceive(context, intent);
     if (intent == null) return;
@@ -334,6 +340,12 @@ public class TodayWidgetProvider extends AppWidgetProvider {
     int[] titleIds = { R.id.widget_title_1, R.id.widget_title_2, R.id.widget_title_3 };
     int[] metaIds = { R.id.widget_meta_1, R.id.widget_meta_2, R.id.widget_meta_3 };
 
+    // Check widget options for responsive height
+    android.os.Bundle widgetOptions = manager.getAppWidgetOptions(appWidgetId);
+    int widgetMinHeight = widgetOptions != null ? widgetOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0) : 0;
+    int maxDisplayTasks = (widgetMinHeight > 0 && widgetMinHeight < 140) ? 2 : MAX_TASK_ROWS;
+    int maxDisplayHabits = (widgetMinHeight > 0 && widgetMinHeight < 140) ? 0 : MAX_HABIT_ROWS;
+
     if (allTasks.isEmpty()) {
       views.setViewVisibility(R.id.widget_empty_view, View.VISIBLE);
       views.setViewVisibility(R.id.label_section_tasks, View.GONE);
@@ -345,7 +357,7 @@ public class TodayWidgetProvider extends AppWidgetProvider {
       views.setViewVisibility(R.id.label_section_tasks, View.VISIBLE);
 
       for (int i = 0; i < MAX_TASK_ROWS; i++) {
-        if (i < allTasks.size()) {
+        if (i < allTasks.size() && i < maxDisplayTasks) {
           TaskItem item = allTasks.get(i);
           views.setViewVisibility(rowIds[i], View.VISIBLE);
 
@@ -429,14 +441,14 @@ public class TodayWidgetProvider extends AppWidgetProvider {
     int[] hTitleIds = { R.id.widget_habit_title_1, R.id.widget_habit_title_2 };
     int[] hStreakIds = { R.id.widget_habit_streak_1, R.id.widget_habit_streak_2 };
 
-    if (allHabits.isEmpty()) {
+    if (allHabits.isEmpty() || maxDisplayHabits == 0) {
       views.setViewVisibility(R.id.label_section_habits, View.GONE);
       views.setViewVisibility(hRowIds[0], View.GONE);
       views.setViewVisibility(hRowIds[1], View.GONE);
     } else {
       views.setViewVisibility(R.id.label_section_habits, View.VISIBLE);
       for (int i = 0; i < MAX_HABIT_ROWS; i++) {
-        if (i < allHabits.size()) {
+        if (i < allHabits.size() && i < maxDisplayHabits) {
           HabitItem h = allHabits.get(i);
           views.setViewVisibility(hRowIds[i], View.VISIBLE);
           views.setTextViewText(hTitleIds[i], h.title);

@@ -36,7 +36,26 @@ export default {
         error: '#FF453A', 'error-container': '#FFDAD6', 'on-error-container': '#93000A'
       },
       borderRadius: { DEFAULT: '0.25rem', lg: '0.5rem', xl: '0.75rem', '2xl': '1rem', '3xl': '1.5rem', full: '9999px' },
-      spacing: { 'sidebar-width': '248px', 'gutter-xs': '4px', 'gutter-sm': '8px', 'gutter-md': '12px', 'gutter-base': '16px', 'gutter-lg': '20px', 'gutter-xl': '24px', 'gutter-2xl': '32px', 'margin-desktop': '32px' }
+      spacing: { 'sidebar-width': '248px', 'gutter-xs': '4px', 'gutter-sm': '8px', 'gutter-md': '12px', 'gutter-base': '16px', 'gutter-lg': '20px', 'gutter-xl': '24px', 'gutter-2xl': '32px', 'margin-desktop': '32px' },
+      keyframes: {
+        slideUp: {
+          '0%': { transform: 'translateY(100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        scaleIn: {
+          '0%': { transform: 'translate(-50%, -130%) scale(0.75)', opacity: '0' },
+          '100%': { transform: 'translate(-50%, -130%) scale(1)', opacity: '1' }
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        }
+      },
+      animation: {
+        slideUp: 'slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1) both',
+        scaleIn: 'scaleIn 0.18s ease-out both',
+        fadeIn: 'fadeIn 0.15s ease-out both'
+      }
     }
   },
   plugins: []

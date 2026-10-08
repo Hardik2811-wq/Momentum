@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.widget.RemoteViews;
 import com.hardik.momentum.MainActivity;
 import com.hardik.momentum.R;
@@ -29,6 +30,12 @@ public class UpcomingPillWidgetProvider extends AppWidgetProvider {
     for (int id : appWidgetIds) {
       updateWidget(context, appWidgetManager, id);
     }
+  }
+
+  @Override
+  public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
+    super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
+    updateWidget(context, appWidgetManager, appWidgetId);
   }
 
   private static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
