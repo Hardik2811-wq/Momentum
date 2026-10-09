@@ -4,7 +4,8 @@
  * circadian resonance curves, and Kingman's queuing saturation model.
  */
 
-import { isTaskScheduledForDate } from './taskMetadata.js';
+import { isTaskScheduledForDate, calculateDuration } from './taskMetadata.js';
+import { isScheduleActiveForDate } from './missedScheduleEngine.js';
 
 function parseTimeToHour(timeStr) {
   if (!timeStr) return null;
@@ -21,10 +22,10 @@ function getCircadianCostMultiplier(hour) {
   if (hour === null) return 1.0;
   // Morning peak: 09:00 - 11:30 (High alertness) -> cost multiplier 0.9 (energetic)
   if (hour >= 9 && hour <= 11.5) return 0.9;
-  // Post-prandial circadian dip: 13:30 - 15:30 -> cost multiplier 1.35 (sluggish)
-  if (hour >= 13.5 && hour <= 15.5) return 1.35;
-  // Late evening fatigue: after 20:30 -> cost multiplier 1.3
-  if (hour >= 20.5) return 1.3;
+  // Post-prandial circadian dip: 13:30 - 15:30 -> cost multiplier 1.25 (sluggish)
+  if (hour >= 13.5 && hour <= 15.5) return 1.25;
+  // Late evening fatigue: after 21:00 -> cost multiplier 1.25
+  if (hour >= 21) return 1.25;
   // Rest of day
   return 1.0;
 }
@@ -33,10 +34,11 @@ function getCircadianCostMultiplier(hour) {
  * Evaluates context-switching entropy between two items
  */
 function getContextSwitchCost(areaA, areaB) {
-  if (!areaA || !areaB) return 5; // default 5 mins equivalent
+  if (!areaA || !areaB) return 5;
   if (areaA === areaB) return 0;
+  if (areaA === 'Fixed Schedule' || areaB === 'Fixed Schedule') return 5;
   // High friction switch: Deep Focus <-> Meetings or Health <-> Creative
-  return 15; // 15 mins equivalent cognitive tax
+  return 12; // 12 mins equivalent cognitive tax
 }
 
 /**
@@ -48,11 +50,15 @@ export function evaluateCapacityLoad({
   date = '',
   dailyTargetHours = 6.0
 }) {
-  if (!date) return { status: 'optimal', utilization: 0, effectiveHours: 0, rawHours: 0 };
+  if (!date) return { status: 'optimal', utilization: 0, effectiveHours: 0, rawHours: 0, isOverloaded: false };
 
-  // Filter items on target date
+  // Filter items on target date (exclude completed deliverables & completed schedules)
   const dayTasks = (tasks || []).filter(t => !t.completed && isTaskScheduledForDate(t, date));
-  const daySchedules = (schedules || []).filter(s => s.plannedDate === date || (s.repeat && s.repeat !== 'never'));
+  const daySchedules = (schedules || []).filter(s => {
+    const isDone = Boolean(s.completed || (Array.isArray(s.completedDates) && s.completedDates.includes(date)));
+    if (isDone) return false;
+    return isScheduleActiveForDate(s, date);
+  });
 
   let rawMinutes = 0;
   let effectiveMinutes = 0;
@@ -69,7 +75,7 @@ export function evaluateCapacityLoad({
     if (isHigh) highEffortCount++;
 
     const circadianMult = getCircadianCostMultiplier(hour);
-    const effortWeight = isHigh ? 1.3 : effort === 'low' ? 0.8 : 1.0;
+    const effortWeight = isHigh ? 1.25 : effort === 'low' ? 0.85 : 1.0;
 
     rawMinutes += dur;
     effectiveMinutes += dur * circadianMult * effortWeight;
@@ -82,7 +88,14 @@ export function evaluateCapacityLoad({
   }
 
   for (const s of daySchedules) {
-    const dur = Number(s.durationMinutes) || 60;
+    let dur = Number(s.durationMinutes);
+    if (!dur || isNaN(dur)) {
+      if (s.startTime && s.endTime) {
+        dur = calculateDuration(s.startTime, s.endTime);
+      }
+    }
+    if (!dur || isNaN(dur)) dur = 60;
+
     const hour = parseTimeToHour(s.startTime);
     rawMinutes += dur;
     effectiveMinutes += dur * getCircadianCostMultiplier(hour);
@@ -97,14 +110,22 @@ export function evaluateCapacityLoad({
   // Sort by time of day
   items.sort((a, b) => a.time - b.time);
 
-  // Calculate context-switch entropy
+  // Calculate context-switch entropy only when tasks are close in time (< 60m apart)
   let switchTaxMinutes = 0;
   let switchCount = 0;
   for (let i = 1; i < items.length; i++) {
-    const tax = getContextSwitchCost(items[i - 1].area, items[i].area);
-    if (tax > 0) {
-      switchTaxMinutes += tax;
-      switchCount++;
+    const prevItem = items[i - 1];
+    const currItem = items[i];
+    const prevEndTime = prevItem.time + (prevItem.duration / 60);
+    const gapHours = currItem.time - prevEndTime;
+
+    // Only assess switching tax if happening within a tight cognitive window (< 60 min gap)
+    if (gapHours >= 0 && gapHours <= 1.0) {
+      const tax = getContextSwitchCost(prevItem.area, currItem.area);
+      if (tax > 0) {
+        switchTaxMinutes += tax;
+        switchCount++;
+      }
     }
   }
 
@@ -114,21 +135,21 @@ export function evaluateCapacityLoad({
   const effectiveHours = Number((totalEffectiveMinutes / 60).toFixed(1));
 
   // Capacity utilization ratio rho
-  const capacityMinutes = dailyTargetHours * 60;
-  const utilization = Math.min(2.0, Number((totalEffectiveMinutes / capacityMinutes).toFixed(2)));
+  const capacityMinutes = Math.max(1, dailyTargetHours * 60);
+  const utilization = Math.min(2.5, Number((totalEffectiveMinutes / capacityMinutes).toFixed(2)));
   const utilizationPct = Math.round(utilization * 100);
 
-  // Status classification based on Kingman saturation threshold
+  // Status classification based on Kingman saturation threshold (calibrated)
   let status = 'optimal';
   let message = 'Workload within optimal flow envelope.';
 
-  if (utilization >= 1.15) {
+  if (utilization >= 1.25) {
     status = 'burnout';
     message = `Critical saturation (${utilizationPct}%). Cognitive switching entropy threatens execution fidelity.`;
-  } else if (utilization >= 0.85) {
+  } else if (utilization >= 1.00) {
     status = 'overload';
     message = `Heavy cognitive load (${utilizationPct}%). Near saturation ceiling. Recommend deferring low-impact tasks.`;
-  } else if (utilization >= 0.65) {
+  } else if (utilization >= 0.70) {
     status = 'moderate';
     message = `Balanced active load (${utilizationPct}%). Good flow momentum.`;
   }
@@ -144,6 +165,6 @@ export function evaluateCapacityLoad({
     utilizationPct,
     status,
     message,
-    isOverloaded: utilization >= 0.85
+    isOverloaded: utilization >= 1.00
   };
 }

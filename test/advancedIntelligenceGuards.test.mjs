@@ -145,6 +145,22 @@ test('Capacity Overload Guard: flags high cognitive entropy and Kingman saturati
   assert.ok(result.effectiveHours > result.rawHours, 'Effective cognitive hours must amplify due to context switches and circadian dip');
   assert.equal(result.isOverloaded, true);
   assert.ok(result.status === 'overload' || result.status === 'burnout');
+
+  // Verify completed items and non-matching recurring schedules do NOT cause false overload
+  const lightDayTasks = [
+    { id: 10, title: 'Short Review', startTime: '10:00', durationMinutes: 45, plannedDate: '2026-10-09', areas: ['Career & Craft'] },
+    { id: 11, title: 'Completed Heavy Task', completed: true, startTime: '14:00', durationMinutes: 180, plannedDate: '2026-10-09' }
+  ];
+  const schedules = [
+    { id: 's1', title: 'Completed Schedule', completed: true, startTime: '09:00', endTime: '11:00', plannedDate: '2026-10-09' },
+    // Sunday only recurring schedule - should be inactive on Friday 2026-10-09
+    { id: 's2', title: 'Sunday Workshop', repeat: 'custom', repeatDays: [0], startTime: '14:00', endTime: '18:00' }
+  ];
+
+  const lightResult = evaluateCapacityLoad({ tasks: lightDayTasks, schedules, date: '2026-10-09', dailyTargetHours: 6.0 });
+  assert.equal(lightResult.isOverloaded, false, 'Light day with completed items must not trigger overload');
+  assert.equal(lightResult.status, 'optimal', 'Status should remain optimal');
+  assert.ok(lightResult.rawHours <= 1.0, 'Only active incomplete task should count');
 });
 
 test('Life Graph DAG Engine: detects dependency cycles and topological execution order', () => {

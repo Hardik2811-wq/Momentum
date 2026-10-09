@@ -152,6 +152,7 @@ const TodayView = React.memo(function TodayView({
   const [recurringDeleteTarget, setRecurringDeleteTarget] = useState(null); // { task, date }
   const [singleDeleteTarget, setSingleDeleteTarget] = useState(null); // { type, id, title }
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [dismissedCapacityAlertDate, setDismissedCapacityAlertDate] = useState(null);
 
   /* ── Multi-Select Batch Deletion State ── */
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
@@ -1223,7 +1224,7 @@ const TodayView = React.memo(function TodayView({
         )}
 
         {/* ── Capacity Overload Guard Alert ── */}
-        {capacityAnalytics.isOverloaded && (
+        {capacityAnalytics.isOverloaded && dismissedCapacityAlertDate !== viewDate && (
           <div className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-rose-50/90 border border-rose-200/80 text-[12px] text-rose-950 shadow-2xs animate-fadeIn">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center shrink-0">
@@ -1244,6 +1245,15 @@ const TodayView = React.memo(function TodayView({
                 </div>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setDismissedCapacityAlertDate(viewDate)}
+              className="p-1 rounded-lg text-rose-800/70 hover:text-rose-950 hover:bg-rose-100 transition shrink-0 cursor-pointer"
+              title="Dismiss for today"
+              aria-label="Dismiss capacity saturation alert"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
