@@ -1548,6 +1548,7 @@ const TodayView = React.memo(function TodayView({
                           : sched.repeatDays.length === 7 ? 'Every day'
                           : sched.repeatDays.map(d => ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d]).join(', '))
                         : (sched.recurrence || 'Once');
+                      const isSelected = isMultiSelectMode && selectedScheduleIds.has(sched.id);
 
                       return (
                         <div

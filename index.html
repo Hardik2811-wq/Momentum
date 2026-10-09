@@ -163,18 +163,20 @@
 
           window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js').then((reg) => {
-              // Force check on initial load
-              reg.update();
+              // Force check on initial load (safely catch network failures)
+              reg.update().catch(() => {});
 
               // Auto-check whenever user reopens or switches to the mobile web app
               document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {
-                  reg.update();
+                  reg.update().catch(() => {});
                 }
               });
 
               // Also poll for update in background every 30 seconds
-              setInterval(() => reg.update(), 30000);
+              setInterval(() => {
+                reg.update().catch(() => {});
+              }, 30000);
             }).catch((err) => console.log('SW registration skipped:', err));
           });
         }
