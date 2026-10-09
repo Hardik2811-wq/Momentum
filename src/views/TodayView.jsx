@@ -488,6 +488,56 @@ const TodayView = React.memo(function TodayView({
     return { hour: hourLabel, date: targetDate };
   }, [viewDate, scope, columnDates]);
 
+  const handleSlotDroppedItem = useCallback((itemPayload, hourLabel, colDate) => {
+    if (!itemPayload) return;
+    const type = itemPayload.type || (itemPayload.taskId ? 'task' : itemPayload.scheduleId ? 'schedule' : itemPayload.habitId ? 'habit' : 'task');
+    const id = itemPayload.id || itemPayload[`${type}Id`];
+
+    if (type === 'schedule') {
+      const targetSched = schedules.find(s => String(s.id) === String(id));
+      let dur = Number(itemPayload.durationMinutes);
+      if (!dur || isNaN(dur)) {
+        if (targetSched) {
+          dur = Number(targetSched.durationMinutes);
+          if (!dur || isNaN(dur)) {
+            if (targetSched.startTime && targetSched.endTime) {
+              dur = calculateDuration(targetSched.startTime, targetSched.endTime);
+            }
+          }
+        }
+      }
+      if (!dur || isNaN(dur)) dur = 60;
+
+      const endTime = calculateEndTime(hourLabel, dur);
+      const patch = {
+        startTime: hourLabel,
+        endTime
+      };
+
+      if (colDate) {
+        patch.plannedDate = colDate;
+        if (targetSched && targetSched.recurrence === 'weekly' && Array.isArray(targetSched.repeatDays)) {
+          const newDayOfWeek = new Date(`${colDate}T12:00:00`).getDay();
+          if (!targetSched.repeatDays.includes(newDayOfWeek)) {
+            patch.repeatDays = [...targetSched.repeatDays, newDayOfWeek];
+          }
+        }
+      }
+
+      onUpdateSchedule?.(id, patch);
+      toast.success(`Rescheduled "${targetSched?.title || 'Class'}" to ${formatTimeString(hourLabel)}`);
+    } else if (type === 'habit') {
+      const targetHabit = habits.find(h => String(h.id) === String(id));
+      if (onUpdateHabit) {
+        onUpdateHabit(id, { startTime: hourLabel });
+      }
+      toast.success(`Scheduled ritual "${targetHabit?.title || 'Habit'}" at ${formatTimeString(hourLabel)}`);
+    } else {
+      handleSlotTask(id, hourLabel, colDate);
+    }
+    setIsMobileQuickTrayOpen(false);
+  }, [schedules, habits, onUpdateSchedule, onUpdateHabit, handleSlotTask]);
+
   const handleTouchStartCard = useCallback((type, item, e) => {
     if (isMultiSelectMode) return;
     const touch = e.touches?.[0];
@@ -615,56 +665,6 @@ const TodayView = React.memo(function TodayView({
       window.removeEventListener('touchcancel', handleWindowTouchEnd);
     };
   }, [activeTouchDrag, calculateGridSlotFromCoords, handleSlotDroppedItem]);
-
-  const handleSlotDroppedItem = useCallback((itemPayload, hourLabel, colDate) => {
-    if (!itemPayload) return;
-    const type = itemPayload.type || (itemPayload.taskId ? 'task' : itemPayload.scheduleId ? 'schedule' : itemPayload.habitId ? 'habit' : 'task');
-    const id = itemPayload.id || itemPayload[`${type}Id`];
-
-    if (type === 'schedule') {
-      const targetSched = schedules.find(s => String(s.id) === String(id));
-      let dur = Number(itemPayload.durationMinutes);
-      if (!dur || isNaN(dur)) {
-        if (targetSched) {
-          dur = Number(targetSched.durationMinutes);
-          if (!dur || isNaN(dur)) {
-            if (targetSched.startTime && targetSched.endTime) {
-              dur = calculateDuration(targetSched.startTime, targetSched.endTime);
-            }
-          }
-        }
-      }
-      if (!dur || isNaN(dur)) dur = 60;
-
-      const endTime = calculateEndTime(hourLabel, dur);
-      const patch = {
-        startTime: hourLabel,
-        endTime
-      };
-
-      if (colDate) {
-        patch.plannedDate = colDate;
-        if (targetSched && targetSched.recurrence === 'weekly' && Array.isArray(targetSched.repeatDays)) {
-          const newDayOfWeek = new Date(`${colDate}T12:00:00`).getDay();
-          if (!targetSched.repeatDays.includes(newDayOfWeek)) {
-            patch.repeatDays = [...targetSched.repeatDays, newDayOfWeek];
-          }
-        }
-      }
-
-      onUpdateSchedule?.(id, patch);
-      toast.success(`Rescheduled "${targetSched?.title || 'Class'}" to ${formatTimeString(hourLabel)}`);
-    } else if (type === 'habit') {
-      const targetHabit = habits.find(h => String(h.id) === String(id));
-      if (onUpdateHabit) {
-        onUpdateHabit(id, { startTime: hourLabel });
-      }
-      toast.success(`Scheduled ritual "${targetHabit?.title || 'Habit'}" at ${formatTimeString(hourLabel)}`);
-    } else {
-      handleSlotTask(id, hourLabel, colDate);
-    }
-    setIsMobileQuickTrayOpen(false);
-  }, [schedules, habits, onUpdateSchedule, onUpdateHabit, handleSlotTask]);
 
   const handleCreateTrayTask = (e) => {
     if (e) e.preventDefault();
