@@ -443,90 +443,137 @@ const DashboardView = React.memo(function DashboardView({
     } : null;
   }, [todaySchedules, currentMinutes, todayPlan]);
 
-  const timelineBranches = useMemo(() => {
+  const todayTimelineItems = useMemo(() => {
     const parseToMin = (t) => {
-      if (!t) return 0;
+      if (!t) return 9999;
       const [h, m] = t.split(':').map(Number);
       return (h || 0) * 60 + (m || 0);
     };
 
-    if (!todaySchedules.length) {
-      return [];
-    }
-
     const items = [];
-    const firstSched = todaySchedules[0];
-    const firstMin = parseToMin(firstSched?.startTime);
 
-    // 1. Synthetic branch ABOVE if the first event starts after 8:30 AM
-    if (firstMin > 510) {
-      items.push({
-        id: 'synthetic-morning',
-        isSynthetic: true,
-        time: '08:00 AM',
-        title: 'Morning Kickoff',
-        category: 'Routine',
-        isDone: currentMinutes >= 510,
-        status: 'passed'
-      });
-    }
-
-    // 2. Real schedules
-    todaySchedules.forEach((s) => {
+    // 1. Real Schedules
+    (todaySchedules || []).forEach(s => {
       const isDone = Boolean(
         s.completed ||
         (Array.isArray(s.completedDates) && s.completedDates.includes(todayPlan))
       );
       items.push({
-        id: s.id,
-        isSynthetic: false,
-        sched: s,
-        time: formatTime(s.startTime),
+        id: `sched-${s.id}`,
+        rawId: s.id,
+        type: 'schedule',
+        raw: s,
         title: s.title,
+        startTime: s.startTime || '09:00',
+        endTime: s.endTime || (s.startTime ? calculateEndTime(s.startTime, s.durationMinutes || 60) : ''),
+        timeMin: parseToMin(s.startTime || '09:00'),
+        durationMinutes: s.durationMinutes || 60,
         category: s.category || 'Class',
         isDone,
-        rawStartTime: s.startTime
       });
     });
 
-    const lastSched = todaySchedules[todaySchedules.length - 1];
-    const lastMin = parseToMin(lastSched?.endTime || calculateEndTime(lastSched?.startTime, lastSched?.durationMinutes || 60));
+    // 2. Real Habits (real user habits with scheduled/preferred time)
+    (habits || []).forEach(h => {
+      const isDone = Boolean((h.completedDays || []).includes(today));
+      const sTime = h.startTime || '08:00';
+      items.push({
+        id: `habit-${h.id}`,
+        rawId: h.id,
+        type: 'habit',
+        raw: h,
+        title: h.title,
+        startTime: sTime,
+        endTime: calculateEndTime(sTime, h.durationMinutes || 30),
+        timeMin: parseToMin(sTime),
+        durationMinutes: h.durationMinutes || 30,
+        category: 'Habit',
+        isDone,
+      });
+    });
 
-    // 3. Synthetic branches BELOW
-    if (todaySchedules.length === 1) {
-      const focusStart = lastSched.endTime || calculateEndTime(lastSched.startTime, lastSched.durationMinutes || 60);
+    // 3. Real Today Tasks
+    const scheduledTasks = (todayTasks || []).filter(t => t.startTime);
+    scheduledTasks.forEach(t => {
+      const isDone = isTaskCompletedForDate(t, todayPlan);
       items.push({
-        id: 'synthetic-focus',
-        isSynthetic: true,
-        time: formatTime(focusStart),
-        title: 'Open Focus Runway',
-        category: 'Deep Work',
-        isDone: currentMinutes > parseToMin(focusStart) + 120,
-        status: 'open'
+        id: `task-${t.id}`,
+        rawId: t.id,
+        type: 'task',
+        raw: t,
+        title: t.title,
+        startTime: t.startTime,
+        endTime: calculateEndTime(t.startTime, t.durationMinutes || 30),
+        timeMin: parseToMin(t.startTime),
+        durationMinutes: t.durationMinutes || 30,
+        category: t.category || 'Task',
+        isDone,
       });
-      items.push({
-        id: 'synthetic-evening',
-        isSynthetic: true,
-        time: '08:00 PM',
-        title: 'Evening Wrap-up',
-        category: 'Routine',
-        isDone: false,
-        status: 'upcoming'
-      });
-    } else if (lastMin < 1140) {
-      items.push({
-        id: 'synthetic-evening',
-        isSynthetic: true,
-        time: '08:00 PM',
-        title: 'Evening Review',
-        category: 'Routine',
-        isDone: currentMinutes > 1200,
-        status: 'upcoming'
+    });
+
+    // If total items is low (< 4), slot in unscheduled today tasks into open daytime hours so branches always exist naturally
+    if (items.length < 4) {
+      const unscheduledTasks = (todayTasks || []).filter(t => !t.startTime);
+      const needed = 4 - items.length;
+      const candidateSlots = ['10:00', '13:30', '15:30', '19:00'];
+
+      unscheduledTasks.slice(0, needed).forEach((t, idx) => {
+        const isDone = isTaskCompletedForDate(t, todayPlan);
+        const assignedSlot = candidateSlots[idx % candidateSlots.length];
+        items.push({
+          id: `task-${t.id}`,
+          rawId: t.id,
+          type: 'task',
+          raw: t,
+          title: t.title,
+          startTime: assignedSlot,
+          endTime: calculateEndTime(assignedSlot, t.durationMinutes || 30),
+          timeMin: parseToMin(assignedSlot),
+          durationMinutes: t.durationMinutes || 30,
+          category: t.category || 'Task',
+          isDone,
+        });
       });
     }
 
-    return items;
-  }, [todaySchedules, currentMinutes, todayPlan]);
+    // Sort chronologically by timeMin
+    return items.sort((a, b) => {
+      if (a.timeMin !== b.timeMin) return a.timeMin - b.timeMin;
+      return a.title.localeCompare(b.title);
+    });
+  }, [todaySchedules, habits, todayTasks, todayPlan, today]);
+
+  const getPillPalette = (item, index) => {
+    if (item.isDone) {
+      return {
+        bg: 'bg-[#2E7D32] hover:bg-[#1B5E20] text-white shadow-2xs',
+        nodeBorder: 'border-[#2E7D32]',
+        lineColor: 'bg-[#2E7D32]/40'
+      };
+    }
+    const cat = (item.category || '').toLowerCase();
+    if (item.type === 'schedule' || cat.includes('college') || cat.includes('class')) {
+      return {
+        bg: 'bg-[#0D47A1] hover:bg-[#0A387E] text-white shadow-2xs',
+        nodeBorder: 'border-[#0D47A1]',
+        lineColor: 'bg-[#0D47A1]/40'
+      };
+    }
+    if (item.type === 'habit' || cat.includes('fitness') || cat.includes('gym') || cat.includes('workout')) {
+      return {
+        bg: 'bg-[#388E3C] hover:bg-[#2E7D32] text-white shadow-2xs',
+        nodeBorder: 'border-[#388E3C]',
+        lineColor: 'bg-[#388E3C]/40'
+      };
+    }
+    const palettes = [
+      { bg: 'bg-[#283593] hover:bg-[#1A237E] text-white shadow-2xs', nodeBorder: 'border-[#283593]', lineColor: 'bg-[#283593]/40' },
+      { bg: 'bg-[#0288D1] hover:bg-[#0277BD] text-white shadow-2xs', nodeBorder: 'border-[#0288D1]', lineColor: 'bg-[#0288D1]/40' },
+      { bg: 'bg-[#6A1B9A] hover:bg-[#4A148C] text-white shadow-2xs', nodeBorder: 'border-[#6A1B9A]', lineColor: 'bg-[#6A1B9A]/40' },
+      { bg: 'bg-[#00897B] hover:bg-[#00695C] text-white shadow-2xs', nodeBorder: 'border-[#00897B]', lineColor: 'bg-[#00897B]/40' }
+    ];
+    return palettes[index % palettes.length];
+  };
 
   const last7Days = useMemo(() => {
     const days = [];
@@ -583,7 +630,7 @@ const DashboardView = React.memo(function DashboardView({
           
           {/* ══════════════════════════════════════════════════════════
               PANE 1: DAILY TIMELINE (Left 4 Cols)
-              Dynamic Active-Node Rail (Schedules Only)
+              Faithful Capsule Metro Rail (Real Items Only)
               ══════════════════════════════════════════════════════════ */}
           <aside className="lg:col-span-4 bg-white dark:bg-[#1A1A1E] rounded-2xl border border-black/[0.07] dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-black/[0.05] dark:border-white/[0.06]">
@@ -591,7 +638,7 @@ const DashboardView = React.memo(function DashboardView({
                 <Calendar className="w-4 h-4 text-[#0F52BA] dark:text-[#6495ED]" />
                 <h2 className="text-sm font-semibold tracking-tight text-[#161618] dark:text-[#F7F6F2]">Daily Timeline</h2>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-black/[0.05] dark:bg-white/[0.08] text-[#6B6A72] dark:text-[#8E8E93]">
-                  {todaySchedules.length} {todaySchedules.length === 1 ? 'event' : 'events'}
+                  {todayTimelineItems.length} {todayTimelineItems.length === 1 ? 'item' : 'items'}
                 </span>
               </div>
               <button
@@ -605,118 +652,83 @@ const DashboardView = React.memo(function DashboardView({
               </button>
             </div>
 
-            {/* Dynamic Active-Node Rail Canvas */}
-            {timelineBranches.length > 0 ? (
+            {/* Faithful Capsule Metro Timeline Canvas */}
+            {todayTimelineItems.length > 0 ? (
               <div className="relative py-2 space-y-3.5 max-h-[calc(100vh-210px)] overflow-y-auto pr-1 scrollbar-thin">
                 {/* Continuous Vertical Rail Track */}
-                <div className="absolute left-[17px] top-4 bottom-4 w-[2px] bg-indigo-500/30 dark:bg-indigo-400/30" />
+                <div className="absolute left-[16px] top-0 bottom-0 w-[2.5px] bg-slate-300 dark:bg-slate-700" />
 
-                {timelineBranches.map((item) => {
-                  const isExpanded = activeScheduleInfo?.id === item.id;
+                {todayTimelineItems.map((item, index) => {
+                  const palette = getPillPalette(item, index);
                   const isDone = item.isDone;
+                  const sMin = item.timeMin;
+                  const dur = item.durationMinutes || 60;
+                  const eMin = sMin + dur;
+                  const isCurrentActive = currentMinutes >= sMin && currentMinutes < eMin && !isDone;
 
                   return (
-                    <div key={item.id} className="relative flex items-center pl-9 group min-h-[44px]">
-                      {/* Circle Node on the Vertical Rail */}
+                    <div key={item.id} className="relative flex items-center pl-9 group min-h-[40px]">
+                      {/* Node on Vertical Rail */}
                       <div className={`absolute left-[10px] z-10 flex items-center justify-center transition-all ${
-                        isExpanded
-                          ? 'w-4 h-4 rounded-full bg-[#0F52BA] text-white ring-4 ring-[#0F52BA]/25 -translate-x-[1px]'
+                        isCurrentActive
+                          ? 'w-4 h-4 rounded-full bg-[#0D47A1] text-white ring-4 ring-[#0D47A1]/35 -translate-x-[1px]'
                           : isDone
-                            ? 'w-3.5 h-3.5 rounded-full bg-emerald-600 text-white shadow-2xs'
-                            : 'w-3.5 h-3.5 rounded-full border-2 border-indigo-500 bg-white dark:bg-[#1A1A1E]'
+                            ? 'w-3.5 h-3.5 rounded-full bg-[#2E7D32] text-white shadow-2xs'
+                            : `w-3.5 h-3.5 rounded-full border-2 ${palette.nodeBorder} bg-white dark:bg-[#1A1A1E]`
                       }`}>
                         {isDone && <Check className="w-2 h-2 stroke-[3]" />}
                       </div>
 
                       {/* Horizontal Branch Arm */}
-                      <div className="absolute left-[18px] w-5 h-[2px] bg-indigo-500/30 dark:bg-indigo-400/30" />
+                      <div className="absolute left-[17px] w-5 h-[2px] bg-slate-300 dark:bg-slate-700" />
 
-                      {/* Content: Capsule or Expanded Active Card */}
-                      {isExpanded && item.sched ? (
-                        /* ── EXPANDED ACTIVE CARD (Option 3 Hero Card) ── */
-                        <div
-                          onClick={() => setEditingSchedule(item.sched)}
-                          className="w-full rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-[#1E40AF] via-[#2563EB] to-[#3B82F6] text-white shadow-[0_12px_28px_rgba(37,99,235,0.30)] relative overflow-hidden space-y-2 cursor-pointer hover:shadow-[0_16px_36px_rgba(37,99,235,0.40)] transition-all"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-mono uppercase tracking-wider font-bold px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
-                              {activeScheduleInfo?.statusLabel || 'Active Event'}: {item.sched.category || 'Class'}
-                            </span>
-                            <span className="text-xs font-mono text-white/85">
-                              {formatTime(item.sched.startTime)} – {formatTime(item.sched.endTime)}
-                            </span>
-                          </div>
-
-                          <h3 className="text-base sm:text-lg font-bold tracking-tight text-white truncate">
-                            {item.sched.title}
-                          </h3>
-
-                          <div className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight text-white py-0.5">
-                            {activeScheduleInfo?.countdownText || 'Now'}
-                          </div>
-
-                          <div className="flex items-center gap-2 pt-2 border-t border-white/20">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleScheduleDone(item.sched, todayPlan, e);
-                              }}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#161618] hover:bg-black text-white text-xs font-bold shadow-tactile active:scale-95 transition cursor-pointer"
-                            >
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
-                              <span>{isDone ? 'Attended ✓' : 'Mark Attended'}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingSchedule(item.sched);
-                              }}
-                              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white/85 hover:text-white transition cursor-pointer ml-auto"
-                            >
-                              Details
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* ── COMPACT CAPSULE (Option 3 Past/Future Capsule) ── */
-                        <div
-                          onClick={() => {
-                            if (!item.isSynthetic && item.sched) setEditingSchedule(item.sched);
-                            else onOpenQuickAdd?.({ initialMode: 'schedule' });
-                          }}
-                          className={`inline-flex items-center rounded-full border transition-all cursor-pointer shadow-2xs hover:scale-[1.02] active:scale-[0.99] ${
-                            item.isDone
-                              ? 'bg-black/[0.03] dark:bg-white/[0.04] border-black/[0.07] dark:border-white/[0.08] opacity-65'
-                              : item.isSynthetic
-                                ? 'bg-indigo-500/5 dark:bg-indigo-500/10 border-dashed border-indigo-400/40 hover:border-indigo-500'
-                                : 'bg-indigo-500/10 dark:bg-indigo-500/20 border-indigo-500/25 dark:border-indigo-400/30'
-                          }`}
-                        >
-                          <span className={`px-2.5 py-1 font-mono text-[11px] font-bold rounded-full shrink-0 ${
-                            item.isDone
-                              ? 'bg-black/10 dark:bg-white/10 text-[#6B6A72] dark:text-[#8E8E93]'
-                              : item.isSynthetic
-                                ? 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
-                                : 'bg-indigo-600 dark:bg-indigo-500 text-white'
-                          }`}>
-                            {item.time}
+                      {/* Tactile Pill Capsule (Matching Reference Image) */}
+                      <div
+                        onClick={() => {
+                          if (item.type === 'schedule') setEditingSchedule(item.raw);
+                          else if (item.type === 'task') setEditingTask(item.raw);
+                          else handleHabitCheck(item.rawId);
+                        }}
+                        className={`inline-flex items-center justify-between gap-3 px-3.5 py-2 rounded-full transition-all cursor-pointer select-none hover:scale-[1.01] active:scale-[0.99] max-w-full ${palette.bg}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono text-xs font-bold tabular-nums shrink-0">
+                            {formatTime(item.startTime)}
                           </span>
-                          <span className={`px-3 py-1 text-xs font-semibold truncate ${
-                            item.isDone
-                              ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]'
-                              : 'text-indigo-950 dark:text-indigo-100'
-                          }`}>
+                          <span className="opacity-60 text-xs shrink-0">•</span>
+                          <span className={`text-xs font-medium truncate ${isDone ? 'line-through opacity-85' : ''}`}>
                             {item.title}
                           </span>
                           {item.category && (
-                            <span className="pr-3 text-[10px] font-mono uppercase font-bold text-indigo-600 dark:text-indigo-300 opacity-75 shrink-0">
-                              {item.category}
+                            <span className="text-[10px] font-mono opacity-80 uppercase tracking-wider hidden sm:inline-block">
+                              ({item.category})
                             </span>
                           )}
                         </div>
-                      )}
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isDone ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold opacity-95">
+                              <span>{item.type === 'schedule' ? 'Attended' : 'Done'}</span>
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (item.type === 'schedule') handleToggleScheduleDone(item.raw, todayPlan, e);
+                                else if (item.type === 'habit') handleHabitCheck(item.rawId);
+                                else handleToggleTask(item.rawId);
+                              }}
+                              className="w-[18px] h-[18px] rounded-full border border-white/70 hover:border-white hover:bg-white/20 flex items-center justify-center transition-all cursor-pointer"
+                              title={item.type === 'schedule' ? 'Mark attended' : 'Mark done'}
+                            >
+                              <Check className="w-2.5 h-2.5 text-white opacity-0 hover:opacity-100 stroke-[3]" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
@@ -724,9 +736,9 @@ const DashboardView = React.memo(function DashboardView({
             ) : (
               <div className="p-6 text-center rounded-xl border border-dashed border-black/10 dark:border-white/10">
                 <Clock className="w-8 h-8 text-[#6B6A72]/40 mx-auto mb-2" />
-                <p className="text-xs font-medium text-[#161618] dark:text-[#F7F6F2]">No fixed timetable events</p>
+                <p className="text-xs font-medium text-[#161618] dark:text-[#F7F6F2]">No items scheduled today</p>
                 <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
-                  Click + Time Block to add college classes, gym, or routines.
+                  Click + Time Block or add tasks with a start time.
                 </p>
                 <button
                   type="button"
