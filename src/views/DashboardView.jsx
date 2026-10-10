@@ -341,33 +341,107 @@ const DashboardView = React.memo(function DashboardView({
     );
   }, [todayTasks, todaySchedules]);
 
-  const timelineHours = useMemo(() => {
-    let minH = 8;
-    let maxH = 22;
-    todaySchedules.forEach(s => {
-      if (s.startTime) {
-        const h = parseInt(s.startTime.split(':')[0], 10);
-        if (!isNaN(h)) {
-          if (h < minH) minH = Math.max(6, h);
-          if (h > maxH) maxH = Math.min(23, h);
-        }
-      }
-    });
-    todayTasks.forEach(t => {
-      if (t.startTime) {
-        const h = parseInt(t.startTime.split(':')[0], 10);
-        if (!isNaN(h)) {
-          if (h < minH) minH = Math.max(6, h);
-          if (h > maxH) maxH = Math.min(23, h);
-        }
-      }
-    });
-    const hours = [];
-    for (let h = minH; h <= maxH; h++) {
-      hours.push(h);
+  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+
+  const getScheduleColor = (category = '') => {
+    const c = category.toLowerCase();
+    if (c.includes('college') || c.includes('class') || c.includes('study') || c.includes('lecture')) {
+      return {
+        pillBg: 'bg-[#0F52BA]/10 text-[#0F52BA] dark:bg-[#0F52BA]/20 dark:text-[#6495ED] border-[#0F52BA]/25',
+        badgeBg: 'bg-[#0F52BA]/20 text-[#0F52BA] dark:bg-[#0F52BA]/30 dark:text-[#6495ED]',
+        ringBorder: 'border-[#0F52BA]',
+        glow: 'from-[#0F52BA] to-[#1E3A8A]',
+        accent: '#0F52BA'
+      };
     }
-    return hours;
-  }, [todaySchedules, todayTasks]);
+    if (c.includes('gym') || c.includes('fitness') || c.includes('workout') || c.includes('sport')) {
+      return {
+        pillBg: 'bg-[#2E6F40]/10 text-[#2E6F40] dark:bg-[#2E6F40]/20 dark:text-emerald-400 border-[#2E6F40]/25',
+        badgeBg: 'bg-[#2E6F40]/20 text-[#2E6F40] dark:bg-[#2E6F40]/30 dark:text-emerald-400',
+        ringBorder: 'border-[#2E6F40]',
+        glow: 'from-[#2E6F40] to-[#1E4D2B]',
+        accent: '#2E6F40'
+      };
+    }
+    if (c.includes('deep') || c.includes('focus') || c.includes('lab') || c.includes('project') || c.includes('work')) {
+      return {
+        pillBg: 'bg-purple-500/10 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300 border-purple-500/25',
+        badgeBg: 'bg-purple-500/20 text-purple-700 dark:bg-purple-500/30 dark:text-purple-300',
+        ringBorder: 'border-purple-500',
+        glow: 'from-purple-700 to-indigo-900',
+        accent: '#7c3aed'
+      };
+    }
+    return {
+      pillBg: 'bg-sky-500/10 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300 border-sky-500/25',
+      badgeBg: 'bg-sky-500/20 text-sky-700 dark:bg-sky-500/30 dark:text-sky-300',
+      ringBorder: 'border-sky-500',
+      glow: 'from-sky-700 to-blue-900',
+      accent: '#0284c7'
+    };
+  };
+
+  const activeScheduleInfo = useMemo(() => {
+    if (!todaySchedules.length) return null;
+
+    const parseToMin = (t) => {
+      if (!t) return 0;
+      const [h, m] = t.split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    // 1. Is any schedule currently happening now?
+    for (const sched of todaySchedules) {
+      const sMin = parseToMin(sched.startTime);
+      const dur = sched.durationMinutes || 60;
+      const eMin = sched.endTime ? parseToMin(sched.endTime) : sMin + dur;
+      const isDone = Boolean(
+        sched.completed ||
+        (Array.isArray(sched.completedDates) && sched.completedDates.includes(todayPlan))
+      );
+      if (!isDone && currentMinutes >= sMin && currentMinutes < eMin) {
+        return {
+          id: sched.id,
+          sched,
+          isActive: true,
+          statusLabel: 'Active Now',
+          countdownText: `${eMin - currentMinutes}m remaining`
+        };
+      }
+    }
+
+    // 2. Otherwise find the first upcoming uncompleted schedule
+    for (const sched of todaySchedules) {
+      const sMin = parseToMin(sched.startTime);
+      const isDone = Boolean(
+        sched.completed ||
+        (Array.isArray(sched.completedDates) && sched.completedDates.includes(todayPlan))
+      );
+      if (!isDone && sMin > currentMinutes) {
+        const diff = sMin - currentMinutes;
+        const countdownText = diff <= 60
+          ? `In ${diff} mins`
+          : `In ${Math.floor(diff / 60)}h ${diff % 60 > 0 ? `${diff % 60}m` : ''}`;
+        return {
+          id: sched.id,
+          sched,
+          isActive: false,
+          statusLabel: 'Up Next',
+          countdownText
+        };
+      }
+    }
+
+    // 3. Fallback: first uncompleted or first item
+    const fallback = todaySchedules.find(s => !s.completed && !(Array.isArray(s.completedDates) && s.completedDates.includes(todayPlan))) || todaySchedules[0];
+    return fallback ? {
+      id: fallback.id,
+      sched: fallback,
+      isActive: false,
+      statusLabel: 'Scheduled',
+      countdownText: formatTime(fallback.startTime)
+    } : null;
+  }, [todaySchedules, currentMinutes, todayPlan]);
 
   const last7Days = useMemo(() => {
     const days = [];
@@ -423,166 +497,199 @@ const DashboardView = React.memo(function DashboardView({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
           
           {/* ══════════════════════════════════════════════════════════
-              PANE 1: TODAY'S TIMELINE (Left 4 Cols)
-              Sunsama / Cron Hour-by-Hour Calendar Track
+              PANE 1: DAILY TIMELINE (Left 4 Cols)
+              Dynamic Active-Node Rail (Schedules Only)
               ══════════════════════════════════════════════════════════ */}
           <aside className="lg:col-span-4 bg-white dark:bg-[#1A1A1E] rounded-2xl border border-black/[0.07] dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-black/[0.05] dark:border-white/[0.06]">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#0F52BA] dark:text-[#6495ED]" />
-                <h2 className="text-sm font-semibold tracking-tight text-[#161618] dark:text-[#F7F6F2]">Today's Timeline</h2>
+                <h2 className="text-sm font-semibold tracking-tight text-[#161618] dark:text-[#F7F6F2]">Daily Timeline</h2>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-black/[0.05] dark:bg-white/[0.08] text-[#6B6A72] dark:text-[#8E8E93]">
-                  {todaySchedules.length + todayTasks.filter(t => t.startTime).length} scheduled
+                  {todaySchedules.length} {todaySchedules.length === 1 ? 'event' : 'events'}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0F52BA] dark:text-[#6495ED] hover:underline cursor-pointer"
-                  title="Add timetable schedule block"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Time Block</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0F52BA] dark:text-[#6495ED] hover:underline cursor-pointer"
+                title="Add timetable schedule block"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Time Block</span>
+              </button>
             </div>
 
-            {/* Hourly Timeline Canvas */}
-            <div className="relative max-h-[calc(100vh-210px)] overflow-y-auto pr-1 scrollbar-thin divide-y divide-black/[0.04] dark:divide-white/[0.04]">
-              {timelineHours.map((h) => {
-                const hourFormatted = `${h % 12 || 12}:00 ${h >= 12 ? 'PM' : 'AM'}`;
-                const isCurrentHour = currentTime.getHours() === h;
-                const schedulesInHour = todaySchedules.filter(s => {
-                  if (!s.startTime) return false;
-                  return parseInt(s.startTime.split(':')[0], 10) === h;
-                });
-                const tasksInHour = todayTasks.filter(t => {
-                  if (!t.startTime) return false;
-                  return parseInt(t.startTime.split(':')[0], 10) === h;
-                });
-                const hasItems = schedulesInHour.length > 0 || tasksInHour.length > 0;
+            {/* Dynamic Active-Node Rail Canvas */}
+            {todaySchedules.length > 0 ? (
+              <div className="relative pl-7 py-1 space-y-4 max-h-[calc(100vh-210px)] overflow-y-auto pr-1 scrollbar-thin">
+                {/* Continuous Vertical Rail Track */}
+                <div className="absolute left-[11px] top-3 bottom-3 w-[2px] bg-black/[0.07] dark:bg-white/[0.08]" />
 
-                return (
-                  <div key={h} className="group/hour flex items-start gap-3 py-2 min-h-[48px] relative transition-colors">
-                    {/* Hour Gutter Label */}
-                    <div className="w-14 shrink-0 pt-0.5 text-right font-mono text-[10px] text-[#6B6A72]/80 dark:text-[#8E8E93]/80 select-none">
-                      {hourFormatted}
-                    </div>
+                {todaySchedules.map((sched, index) => {
+                  const isDone = Boolean(
+                    sched.completed ||
+                    (Array.isArray(sched.completedDates) && sched.completedDates.includes(todayPlan))
+                  );
+                  const isExpanded = activeScheduleInfo?.id === sched.id;
+                  const color = getScheduleColor(sched.category);
+                  
+                  const parseToMin = (t) => {
+                    if (!t) return 0;
+                    const [h, m] = t.split(':').map(Number);
+                    return (h || 0) * 60 + (m || 0);
+                  };
+                  const sMin = parseToMin(sched.startTime);
+                  const prevSched = todaySchedules[index - 1];
+                  const prevMin = prevSched ? parseToMin(prevSched.startTime) : -1;
+                  const showCurrentTimeBefore = currentMinutes > prevMin && currentMinutes <= sMin && index > 0;
 
-                    {/* Timeline Content Track */}
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      {/* Live Current Time Line Indicator */}
-                      {isCurrentHour && (
-                        <div className="flex items-center gap-1.5 my-1 z-10">
-                          <span className="relative flex h-2 w-2">
+                  return (
+                    <React.Fragment key={sched.id}>
+                      {/* Live Current Time Marker between items */}
+                      {showCurrentTimeBefore && (
+                        <div className="relative -left-7 flex items-center gap-2 py-1 my-1 z-10">
+                          <span className="relative flex h-2 w-2 ml-[8px]">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                           </span>
                           <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 tabular-nums">
-                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} Now
                           </span>
-                          <div className="flex-1 h-[1.5px] bg-rose-500/60 dark:bg-rose-500/80" />
+                          <div className="flex-1 h-[1.5px] bg-rose-500/50" />
                         </div>
                       )}
 
-                      {/* Schedule Blocks (Classes, Meetings, Routines) */}
-                      {schedulesInHour.map((sched) => {
-                        const schedIsDone = Boolean(
-                          sched.completed ||
-                          (Array.isArray(sched.completedDates) && sched.completedDates.includes(todayPlan))
-                        );
-                        return (
+                      <div className="relative group">
+                        {/* Node ring on vertical rail */}
+                        <div className="absolute -left-[24px] top-2.5 z-10 flex items-center justify-center">
+                          {isDone ? (
+                            <div className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-2xs">
+                              <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            </div>
+                          ) : isExpanded ? (
+                            <div className="relative flex h-4 w-4">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0F52BA] opacity-60"></span>
+                              <span className="relative inline-flex rounded-full h-4 w-4 bg-[#0F52BA] ring-2 ring-white dark:ring-[#1A1A1E]" />
+                            </div>
+                          ) : (
+                            <div className={`w-3.5 h-3.5 rounded-full border-2 ${color.ringBorder} bg-white dark:bg-[#1A1A1E] group-hover:scale-110 transition-transform`} />
+                          )}
+                        </div>
+
+                        {/* Event Content: Expanded Card vs Compact Capsule */}
+                        {isExpanded ? (
+                          /* ── EXPANDED ACTIVE / NEXT UP CARD ── */
                           <div
-                            key={sched.id}
                             onClick={() => setEditingSchedule(sched)}
-                            className={`group/block flex items-start justify-between gap-2 p-2 rounded-xl border transition-all cursor-pointer ${
-                              schedIsDone
-                                ? 'bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] border-emerald-500/20 opacity-70'
-                                : 'bg-[#0F52BA]/[0.05] dark:bg-[#0F52BA]/[0.10] border-[#0F52BA]/20 hover:border-[#0F52BA]/40 hover:bg-[#0F52BA]/[0.08]'
-                            }`}
+                            className={`p-4 rounded-2xl bg-gradient-to-br ${color.glow} text-white shadow-tactile transition-all cursor-pointer relative overflow-hidden`}
                           >
-                            <div className="flex items-start gap-2 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
+                                {activeScheduleInfo.statusLabel}
+                              </span>
+                              {sched.category && (
+                                <span className="text-[10px] font-mono uppercase font-bold tracking-wider opacity-85">
+                                  {sched.category}
+                                </span>
+                              )}
+                            </div>
+
+                            <h3 className="text-base sm:text-lg font-semibold tracking-tight text-white mb-1 truncate">
+                              {sched.title}
+                            </h3>
+
+                            <div className="flex items-center gap-2 text-xs font-mono text-white/90 mb-3">
+                              <Clock className="w-3.5 h-3.5 shrink-0" />
+                              <span>{formatTime(sched.startTime)} {sched.endTime ? `– ${formatTime(sched.endTime)}` : ''}</span>
+                              <span>•</span>
+                              <span>{sched.durationMinutes || 60}m</span>
+                            </div>
+
+                            <div className="text-2xl font-bold font-mono tracking-tight text-white mb-3">
+                              {activeScheduleInfo.countdownText}
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1 border-t border-white/15">
                               <button
                                 type="button"
                                 onClick={(e) => handleToggleScheduleDone(sched, todayPlan, e)}
-                                className={`mt-0.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                                  schedIsDone
-                                    ? 'bg-emerald-600 border-emerald-600 text-white'
-                                    : 'border-black/25 dark:border-white/30 hover:border-[#0F52BA]'
-                                }`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-[#161618] hover:bg-white/90 text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
                               >
-                                {schedIsDone && <Check className="w-2 h-2 stroke-[3]" />}
+                                <Check className="w-3 h-3 stroke-[3]" />
+                                <span>{isDone ? 'Attended ✓' : 'Mark Attended'}</span>
                               </button>
-                              <div className="min-w-0">
-                                <div className={`text-xs font-semibold truncate ${
-                                  schedIsDone ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : 'text-[#161618] dark:text-[#F7F6F2]'
-                                }`}>
-                                  {sched.title}
-                                </div>
-                                <div className="flex items-center gap-1.5 mt-0.5 text-[10px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">
-                                  <span>{formatTime(sched.startTime)} {sched.endTime ? `– ${formatTime(sched.endTime)}` : ''}</span>
-                                  {sched.category && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="uppercase text-[9px] font-bold text-[#0F52BA] dark:text-[#6495ED]">{sched.category}</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Scheduled Tasks in this Hour (Compact Anchor Chips) */}
-                      {tasksInHour.map((task) => {
-                        const taskIsDone = isTaskCompletedForDate(task, todayPlan);
-                        return (
-                          <div
-                            key={task.id}
-                            onClick={() => setEditingTask(task)}
-                            className="flex items-center justify-between gap-2 px-2 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] hover:border-[#0F52BA]/30 hover:bg-black/[0.04] transition cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleToggleTask(task.id);
+                                  setEditingSchedule(sched);
                                 }}
-                                className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                                  taskIsDone
-                                    ? 'bg-emerald-600 border-emerald-600 text-white'
-                                    : 'border-black/25 dark:border-white/30 hover:border-[#0F52BA]'
-                                }`}
+                                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white transition cursor-pointer ml-auto"
                               >
-                                {taskIsDone && <Check className="w-2 h-2 stroke-[3]" />}
+                                Details
                               </button>
-                              <span className={`text-[11px] truncate ${
-                                taskIsDone ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : 'font-medium text-[#161618] dark:text-[#F7F6F2]'
-                              }`}>
-                                {task.title}
+                            </div>
+                          </div>
+                        ) : (
+                          /* ── COMPACT CAPSULE (Matches User Reference Image) ── */
+                          <div
+                            onClick={() => setEditingSchedule(sched)}
+                            className={`flex items-center justify-between gap-3 px-3.5 py-2 rounded-full border transition-all cursor-pointer shadow-2xs hover:scale-[1.01] active:scale-[0.99] ${color.pillBg} ${isDone ? 'opacity-55' : ''}`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-mono text-xs font-semibold tabular-nums shrink-0">
+                                {formatTime(sched.startTime)}
+                              </span>
+                              <span className="opacity-40 text-xs">•</span>
+                              <span className={`text-xs font-medium truncate ${isDone ? 'line-through opacity-75' : ''}`}>
+                                {sched.title}
                               </span>
                             </div>
-                            <span className="text-[10px] font-mono text-[#6B6A72] dark:text-[#8E8E93] shrink-0">
-                              {formatTime(task.startTime)}
-                            </span>
-                          </div>
-                        );
-                      })}
 
-                      {/* Empty Hour Slot Placeholder */}
-                      {!hasItems && !isCurrentHour && (
-                        <div className="h-4 flex items-center">
-                          <span className="text-[10px] font-mono text-black/[0.12] dark:text-white/[0.12] tracking-widest select-none">···</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {sched.category && (
+                                <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${color.badgeBg}`}>
+                                  {sched.category}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleScheduleDone(sched, todayPlan, e)}
+                                className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
+                                  isDone
+                                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                                    : 'border-black/30 dark:border-white/35 hover:border-[#0F52BA]'
+                                }`}
+                                title={isDone ? 'Mark uncompleted' : 'Mark attended'}
+                              >
+                                {isDone && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-6 text-center rounded-xl border border-dashed border-black/10 dark:border-white/10">
+                <Clock className="w-8 h-8 text-[#6B6A72]/40 mx-auto mb-2" />
+                <p className="text-xs font-medium text-[#161618] dark:text-[#F7F6F2]">No fixed timetable events</p>
+                <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
+                  Click + Time Block to add college classes, gym, or routines.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
+                  className="mt-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] text-xs font-semibold text-[#0F52BA] hover:bg-black/[0.08] transition cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Timetable Event</span>
+                </button>
+              </div>
+            )}
           </aside>
 
           {/* ══════════════════════════════════════════════════════════
