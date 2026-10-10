@@ -341,57 +341,24 @@ const DashboardView = React.memo(function DashboardView({
     );
   }, [todayTasks, todaySchedules]);
 
-  const chronologicalAgenda = useMemo(() => {
-    const items = [];
-    (todaySchedules || []).forEach(s => {
-      const isDone = Boolean(
-        s.completed ||
-        (Array.isArray(s.completedDates) && s.completedDates.includes(todayPlan))
-      );
-      items.push({
-        id: `sched-${s.id}`,
-        rawId: s.id,
-        type: 'schedule',
-        title: s.title,
-        startTime: s.startTime || '09:00',
-        endTime: s.endTime || (s.startTime ? calculateEndTime(s.startTime, s.durationMinutes || 60) : ''),
-        category: s.category || 'Schedule',
-        durationMinutes: s.durationMinutes || 60,
-        completed: isDone,
-        raw: s
-      });
-    });
-
-    (todayTasks || []).forEach(t => {
-      if (t.startTime) {
-        const isDone = isTaskCompletedForDate(t, todayPlan);
-        items.push({
-          id: `task-${t.id}`,
-          rawId: t.id,
-          type: 'task',
-          title: t.title,
-          startTime: t.startTime,
-          endTime: calculateEndTime(t.startTime, t.durationMinutes || 30),
-          category: t.category || 'Task',
-          durationMinutes: t.durationMinutes || 30,
-          completed: isDone,
-          raw: t
-        });
-      }
-    });
-
-    return items.sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [todaySchedules, todayTasks, todayPlan]);
-
-  const agendaHours = useMemo(() => {
+  const timelineHours = useMemo(() => {
     let minH = 8;
-    let maxH = 20;
-    chronologicalAgenda.forEach(item => {
-      if (item.startTime) {
-        const h = parseInt(item.startTime.split(':')[0], 10);
+    let maxH = 22;
+    todaySchedules.forEach(s => {
+      if (s.startTime) {
+        const h = parseInt(s.startTime.split(':')[0], 10);
         if (!isNaN(h)) {
           if (h < minH) minH = Math.max(6, h);
-          if (h > maxH) maxH = Math.min(23, h + 1);
+          if (h > maxH) maxH = Math.min(23, h);
+        }
+      }
+    });
+    todayTasks.forEach(t => {
+      if (t.startTime) {
+        const h = parseInt(t.startTime.split(':')[0], 10);
+        if (!isNaN(h)) {
+          if (h < minH) minH = Math.max(6, h);
+          if (h > maxH) maxH = Math.min(23, h);
         }
       }
     });
@@ -400,7 +367,7 @@ const DashboardView = React.memo(function DashboardView({
       hours.push(h);
     }
     return hours;
-  }, [chronologicalAgenda]);
+  }, [todaySchedules, todayTasks]);
 
   const last7Days = useMemo(() => {
     const days = [];
@@ -427,7 +394,7 @@ const DashboardView = React.memo(function DashboardView({
               <span className="text-xl">{progressEmotion.emoji}</span>
             </h1>
             <p className="font-editorial text-xs sm:text-sm italic text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
-              Things 3 × Sunsama daily execution workspace · Focus on the next single action.
+              Focus on what matters right now · Lock your momentum.
             </p>
           </div>
 
@@ -449,14 +416,6 @@ const DashboardView = React.memo(function DashboardView({
                 <span>{checkedHabits}/{habits.length} habits</span>
               </div>
             </div>
-
-            <button
-              onClick={() => onOpenQuickAdd?.()}
-              className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white px-3.5 py-1.5 text-xs font-semibold shadow-tactile active:scale-95 transition-all cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Task</span>
-            </button>
           </div>
         </header>
 
@@ -464,16 +423,16 @@ const DashboardView = React.memo(function DashboardView({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
           
           {/* ══════════════════════════════════════════════════════════
-              PANE 1: TODAY'S AGENDA (Left 31% / 4 Cols)
-              Time-blocking calendar with live red time marker
+              PANE 1: TODAY'S TIMELINE (Left 4 Cols)
+              Sunsama / Cron Hour-by-Hour Calendar Track
               ══════════════════════════════════════════════════════════ */}
           <aside className="lg:col-span-4 bg-white dark:bg-[#1A1A1E] rounded-2xl border border-black/[0.07] dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-black/[0.05] dark:border-white/[0.06]">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#0F52BA] dark:text-[#6495ED]" />
-                <h2 className="text-sm font-semibold tracking-tight text-[#161618] dark:text-[#F7F6F2]">Today's Agenda</h2>
+                <h2 className="text-sm font-semibold tracking-tight text-[#161618] dark:text-[#F7F6F2]">Today's Timeline</h2>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-black/[0.05] dark:bg-white/[0.08] text-[#6B6A72] dark:text-[#8E8E93]">
-                  {chronologicalAgenda.length} blocks
+                  {todaySchedules.length + todayTasks.filter(t => t.startTime).length} scheduled
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -489,97 +448,140 @@ const DashboardView = React.memo(function DashboardView({
               </div>
             </div>
 
-            {/* Time Blocking Timeline Canvas */}
-            <div className="relative space-y-2 max-h-[calc(100vh-210px)] overflow-y-auto pr-1 scrollbar-thin">
-              {/* Live Red Time Indicator */}
-              <div className="flex items-center gap-2 py-1 px-2 rounded-lg bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/20 text-rose-600 dark:text-rose-400">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-                </span>
-                <span className="text-[11px] font-mono font-bold tabular-nums">
-                  Current Time: {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
+            {/* Hourly Timeline Canvas */}
+            <div className="relative max-h-[calc(100vh-210px)] overflow-y-auto pr-1 scrollbar-thin divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+              {timelineHours.map((h) => {
+                const hourFormatted = `${h % 12 || 12}:00 ${h >= 12 ? 'PM' : 'AM'}`;
+                const isCurrentHour = currentTime.getHours() === h;
+                const schedulesInHour = todaySchedules.filter(s => {
+                  if (!s.startTime) return false;
+                  return parseInt(s.startTime.split(':')[0], 10) === h;
+                });
+                const tasksInHour = todayTasks.filter(t => {
+                  if (!t.startTime) return false;
+                  return parseInt(t.startTime.split(':')[0], 10) === h;
+                });
+                const hasItems = schedulesInHour.length > 0 || tasksInHour.length > 0;
 
-              {chronologicalAgenda.length > 0 ? (
-                chronologicalAgenda.map((item) => {
-                  const isTask = item.type === 'task';
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        if (isTask) setEditingTask(item.raw);
-                        else setEditingSchedule(item.raw);
-                      }}
-                      className={`group relative flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
-                        item.completed
-                          ? 'bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] border-emerald-500/20 opacity-70'
-                          : 'bg-black/[0.02] dark:bg-white/[0.03] hover:bg-black/[0.04] dark:hover:bg-white/[0.05] border-black/[0.06] dark:border-white/[0.07] hover:border-black/[0.12]'
-                      }`}
-                    >
-                      {/* Checkbox button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isTask) handleToggleTask(item.rawId);
-                          else handleToggleScheduleDone(item.raw, todayPlan, e);
-                        }}
-                        className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                          item.completed
-                            ? 'bg-emerald-600 border-emerald-600 text-white'
-                            : 'border-black/25 dark:border-white/30 hover:border-[#0F52BA]'
-                        }`}
-                      >
-                        {item.completed && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                      </button>
-
-                      {/* Content */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={`text-xs font-semibold truncate ${
-                            item.completed ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : 'text-[#161618] dark:text-[#F7F6F2]'
-                          }`}>
-                            {item.title}
-                          </span>
-                          <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold uppercase shrink-0 ${
-                            isTask
-                              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                              : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                          }`}>
-                            {isTask ? 'Task' : (item.raw.category || 'Class')}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-[#0F52BA]" />
-                            <span>{formatTime(item.startTime)} {item.endTime ? `– ${formatTime(item.endTime)}` : ''}</span>
-                          </span>
-                          <span>•</span>
-                          <span>{item.durationMinutes}m</span>
-                        </div>
-                      </div>
+                return (
+                  <div key={h} className="group/hour flex items-start gap-3 py-2 min-h-[48px] relative transition-colors">
+                    {/* Hour Gutter Label */}
+                    <div className="w-14 shrink-0 pt-0.5 text-right font-mono text-[10px] text-[#6B6A72]/80 dark:text-[#8E8E93]/80 select-none">
+                      {hourFormatted}
                     </div>
-                  );
-                })
-              ) : (
-                <div className="p-6 text-center rounded-xl border border-dashed border-black/10 dark:border-white/10">
-                  <Clock className="w-8 h-8 text-[#6B6A72]/40 mx-auto mb-2" />
-                  <p className="text-xs font-medium text-[#161618] dark:text-[#F7F6F2]">No time blocks scheduled</p>
-                  <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
-                    Click + Time Block to add classes, gym, or deep work sessions.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
-                    className="mt-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] text-xs font-semibold text-[#0F52BA] hover:bg-black/[0.08] transition cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Schedule block</span>
-                  </button>
-                </div>
-              )}
+
+                    {/* Timeline Content Track */}
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      {/* Live Current Time Line Indicator */}
+                      {isCurrentHour && (
+                        <div className="flex items-center gap-1.5 my-1 z-10">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <div className="flex-1 h-[1.5px] bg-rose-500/60 dark:bg-rose-500/80" />
+                        </div>
+                      )}
+
+                      {/* Schedule Blocks (Classes, Meetings, Routines) */}
+                      {schedulesInHour.map((sched) => {
+                        const schedIsDone = Boolean(
+                          sched.completed ||
+                          (Array.isArray(sched.completedDates) && sched.completedDates.includes(todayPlan))
+                        );
+                        return (
+                          <div
+                            key={sched.id}
+                            onClick={() => setEditingSchedule(sched)}
+                            className={`group/block flex items-start justify-between gap-2 p-2 rounded-xl border transition-all cursor-pointer ${
+                              schedIsDone
+                                ? 'bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] border-emerald-500/20 opacity-70'
+                                : 'bg-[#0F52BA]/[0.05] dark:bg-[#0F52BA]/[0.10] border-[#0F52BA]/20 hover:border-[#0F52BA]/40 hover:bg-[#0F52BA]/[0.08]'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2 min-w-0">
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleScheduleDone(sched, todayPlan, e)}
+                                className={`mt-0.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                                  schedIsDone
+                                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                                    : 'border-black/25 dark:border-white/30 hover:border-[#0F52BA]'
+                                }`}
+                              >
+                                {schedIsDone && <Check className="w-2 h-2 stroke-[3]" />}
+                              </button>
+                              <div className="min-w-0">
+                                <div className={`text-xs font-semibold truncate ${
+                                  schedIsDone ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : 'text-[#161618] dark:text-[#F7F6F2]'
+                                }`}>
+                                  {sched.title}
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-0.5 text-[10px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+                                  <span>{formatTime(sched.startTime)} {sched.endTime ? `– ${formatTime(sched.endTime)}` : ''}</span>
+                                  {sched.category && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="uppercase text-[9px] font-bold text-[#0F52BA] dark:text-[#6495ED]">{sched.category}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Scheduled Tasks in this Hour (Compact Anchor Chips) */}
+                      {tasksInHour.map((task) => {
+                        const taskIsDone = isTaskCompletedForDate(task, todayPlan);
+                        return (
+                          <div
+                            key={task.id}
+                            onClick={() => setEditingTask(task)}
+                            className="flex items-center justify-between gap-2 px-2 py-1 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] hover:border-[#0F52BA]/30 hover:bg-black/[0.04] transition cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleTask(task.id);
+                                }}
+                                className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                                  taskIsDone
+                                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                                    : 'border-black/25 dark:border-white/30 hover:border-[#0F52BA]'
+                                }`}
+                              >
+                                {taskIsDone && <Check className="w-2 h-2 stroke-[3]" />}
+                              </button>
+                              <span className={`text-[11px] truncate ${
+                                taskIsDone ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : 'font-medium text-[#161618] dark:text-[#F7F6F2]'
+                              }`}>
+                                {task.title}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono text-[#6B6A72] dark:text-[#8E8E93] shrink-0">
+                              {formatTime(task.startTime)}
+                            </span>
+                          </div>
+                        );
+                      })}
+
+                      {/* Empty Hour Slot Placeholder */}
+                      {!hasItems && !isCurrentHour && (
+                        <div className="h-4 flex items-center">
+                          <span className="text-[10px] font-mono text-black/[0.12] dark:text-white/[0.12] tracking-widest select-none">···</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </aside>
 
@@ -731,7 +733,7 @@ const DashboardView = React.memo(function DashboardView({
             {/* Drag and drop sortable queue */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={activeQueueTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3 sm:space-y-3.5">
+                <div className="space-y-2">
                   {activeQueueTasks.length ? (
                     activeQueueTasks.map(task => (
                       <SortableTaskItem key={task.id} id={task.id}>

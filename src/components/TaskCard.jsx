@@ -115,52 +115,70 @@ const TaskCard = React.memo(function TaskCard({
           }
         }}
         onClick={() => onEditTask?.(task)}
-        className={`group relative flex flex-col p-3.5 sm:p-4 rounded-xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] hover:border-black/[0.14] dark:hover:border-white/[0.15] transition-all cursor-pointer select-none ${
-          task.completed ? 'opacity-55 hover:opacity-80 py-3 sm:py-3.5' : ''
-        } ${impact === 'high' && !task.completed ? 'border-l-[3px] border-l-[#C84B31]' : ''}`}
+        className={`group relative flex flex-col p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl bg-white dark:bg-[#1A1A1E] border border-black/[0.06] dark:border-white/[0.07] hover:border-black/[0.14] dark:hover:border-white/[0.15] shadow-2xs transition-all cursor-pointer select-none ${
+          task.completed ? 'opacity-50 hover:opacity-75' : ''
+        }`}
       >
-        {/* Top Row: Checkbox, Title, Actions */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+        {/* Main Row: Checkbox, Title, Meta, and Actions */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggle();
               }}
-              className={`mt-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
+              className={`w-4.5 h-4.5 rounded-full flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
                 task.completed
                   ? 'bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] shadow-2xs'
                   : 'bg-transparent text-transparent hover:text-[#0F52BA] border border-black/25 dark:border-white/30 hover:border-[#0F52BA]'
               }`}
               title={task.completed ? 'Mark incomplete' : 'Mark complete'}
             >
-              <Check className="w-3 h-3 stroke-[3]" />
+              <Check className="w-2.5 h-2.5 stroke-[3]" />
             </button>
-            <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <span
-                className={`font-medium text-[13.5px] sm:text-[14px] leading-snug text-[#161618] dark:text-[#F7F6F2] tracking-tight group-hover:text-[#0F52BA] dark:group-hover:text-[#6495ED] transition-colors ${
+                className={`font-medium text-[13px] sm:text-[13.5px] leading-snug text-[#161618] dark:text-[#F7F6F2] truncate tracking-tight group-hover:text-[#0F52BA] dark:group-hover:text-[#6495ED] transition-colors ${
                   task.completed ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : ''
                 }`}
               >
                 {task.title}
               </span>
+              {linkedGoal && (
+                <span className="hidden md:inline-flex items-center text-[10px] font-medium text-[#0F52BA] dark:text-[#6495ED] bg-[#0F52BA]/5 dark:bg-[#0F52BA]/15 px-1.5 py-0.2 rounded shrink-0 truncate max-w-[130px]">
+                  {linkedGoal.title}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Priority Badge & Delete */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <span
-              className={`px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider ${
-                impact === 'high'
-                  ? 'bg-[#C84B31]/10 text-[#C84B31] border border-[#C84B31]/20 font-bold'
-                  : impact === 'medium'
-                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
-                  : 'hidden sm:inline-block bg-black/[0.04] dark:bg-white/[0.05] text-[#6B6A72] dark:text-[#8E8E93]'
-              }`}
-            >
-              {IMPACT_LABELS[impact]}
-            </span>
+          {/* Right Meta Capsule: Time, Priority Dot, Subtask, Delete */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {task.startTime && (
+              <span className="text-[11px] font-mono text-[#6B6A72] dark:text-[#8E8E93] bg-black/[0.03] dark:bg-white/[0.04] px-1.5 py-0.5 rounded">
+                {formatTimeStr(task.startTime)}
+              </span>
+            )}
+            {task.subtasks && task.subtasks.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSubtasksOpen(!subtasksOpen);
+                }}
+                className="inline-flex items-center gap-0.5 text-[10.5px] font-mono text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] transition-colors cursor-pointer"
+              >
+                <ListChecks className="w-3 h-3 text-[#0F52BA]" />
+                <span>{completedSubtasksCount}/{task.subtasks.length}</span>
+              </button>
+            )}
+            {/* Priority Dot */}
+            {impact === 'high' ? (
+              <span className="w-2 h-2 rounded-full bg-[#C84B31] shrink-0" title="High impact" />
+            ) : impact === 'medium' ? (
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" title="Medium impact" />
+            ) : null}
             {onDeleteTask && (
               <button
                 type="button"
@@ -172,80 +190,13 @@ const TaskCard = React.memo(function TaskCard({
                     setShowConfirmDelete(true);
                   }
                 }}
-                className="p-1 rounded-full text-outline hover:text-error hover:bg-error-container/30 transition-colors opacity-0 group-hover:opacity-100"
+                className="p-1 rounded-full text-[#6B6A72] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors opacity-0 group-hover:opacity-100"
                 title={task.recurrence && task.recurrence !== 'none' ? 'Delete recurring event' : 'Delete task'}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
-        </div>
-
-        {/* Plan, deadline, effort, linked goal/habit, and subtask count — Typography-driven negative space */}
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 mt-2.5 text-xs text-on-surface-variant">
-          <span className="inline-flex items-center gap-1 font-mono tabular-nums font-medium text-on-surface-variant">
-            <Clock className="w-3.5 h-3.5 text-primary/80" />
-            <span>{task.startTime ? formatDueTime() : plannedLabel}</span>
-          </span>
-
-          {deadline && (
-            <>
-              <span className="text-outline-variant/50">•</span>
-              <span className={`inline-flex items-center gap-1 font-semibold ${
-                deadline.tone === 'overdue' ? 'text-rose-600' : deadline.tone === 'today' ? 'text-amber-700' : 'text-on-surface-variant'
-              }`}>
-                <Flag className="w-3 h-3" />
-                <span>{deadline.label}</span>
-              </span>
-            </>
-          )}
-
-          <span className="text-outline-variant/50">•</span>
-          <span className="inline-flex items-center gap-1 font-mono tabular-nums text-on-surface-variant/80">
-            {isFlexible ? <InfinityIcon className="w-3.5 h-3.5 text-on-surface-variant/60" /> : <Timer className="w-3.5 h-3.5 text-on-surface-variant/60" />}
-            <span>{workDuration}</span>
-          </span>
-
-          {/* Linked Goal */}
-          {linkedGoal && (
-            <>
-              <span className="text-outline-variant/50 hidden sm:inline">•</span>
-              <span className="inline-flex items-center gap-1 text-primary/90 font-medium max-w-[130px] sm:max-w-[170px] truncate">
-                <Flag className="w-3 h-3 text-primary" />
-                <span className="truncate">{linkedGoal.title}</span>
-              </span>
-            </>
-          )}
-
-          {/* Linked Habit */}
-          {linkedHabit && (
-            <>
-              <span className="text-outline-variant/50 hidden sm:inline">•</span>
-              <span className="inline-flex items-center gap-1 text-rose-600 font-medium max-w-[130px] sm:max-w-[170px] truncate">
-                <Repeat className="w-3 h-3 text-rose-500" />
-                <span className="truncate">{linkedHabit.title}</span>
-              </span>
-            </>
-          )}
-
-          {/* Subtask inline indicator */}
-          {task.subtasks && task.subtasks.length > 0 && (
-            <>
-              <span className="text-outline-variant/50">•</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSubtasksOpen(!subtasksOpen);
-                }}
-                className="inline-flex items-center gap-1 font-mono tabular-nums font-semibold text-primary hover:text-primary-hover transition-colors cursor-pointer"
-              >
-                <ListChecks className="w-3.5 h-3.5" />
-                <span>{completedSubtasksCount}/{task.subtasks.length}</span>
-                {subtasksOpen ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
-              </button>
-            </>
-          )}
         </div>
 
         {uniqueReasons.length > 0 && (
