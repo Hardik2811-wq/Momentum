@@ -27,6 +27,7 @@ import { requestNotificationPermissions, setupNotificationChannels, setupListene
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
@@ -237,8 +238,10 @@ export default function App() {
         onOpenQuickAdd={openQuickAdd}
         onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
         settings={store.settings}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(v => !v)}
       />
-      <div className="pl-0 md:pl-[256px] min-h-screen flex flex-col pb-28 md:pb-16">
+      <div className={`pl-0 ${isSidebarCollapsed ? 'md:pl-[64px]' : 'md:pl-[240px]'} min-h-screen flex flex-col pb-28 md:pb-16 transition-all duration-200`}>
         <Header
           activeTab={activeTab}
           tasks={store.tasks}
@@ -247,6 +250,9 @@ export default function App() {
           isUniversalEditorMode={isUniversalEditorMode}
           onToggleUniversalEditor={() => setIsUniversalEditorMode(v => !v)}
           onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
+          onOpenQuickAdd={openQuickAdd}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => setIsSidebarCollapsed(v => !v)}
         />
         <div className="flex-1 w-full">
           {renderView()}

@@ -17,7 +17,10 @@ export default function Header({
   setActiveTab,
   isUniversalEditorMode = false,
   onToggleUniversalEditor,
-  onOpenAiCopilot
+  onOpenAiCopilot,
+  onOpenQuickAdd,
+  isSidebarCollapsed = false,
+  onToggleSidebar
 }) {
   const searchRef = useRef(null);
   const notifRef = useRef(null);
@@ -27,6 +30,16 @@ export default function Header({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const mobileMenuRef = useRef(null);
+
+  const completedTasksCount = tasks.filter(t => t.completed).length;
+  const totalTasksCount = tasks.length;
+  const completionPct = totalTasksCount ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+  const todayDateFormatted = new Date().toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  });
 
   useEffect(() => {
     const handler = (e) => {
@@ -74,70 +87,130 @@ export default function Header({
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     .slice(0, 3);
 
+  const TABS = [
+    { id: 'dashboard', label: 'Today' },
+    { id: 'today',     label: 'Planner' },
+    { id: 'habits',    label: 'Habits' },
+    { id: 'goals',     label: 'Goals' },
+    { id: 'analytics', label: 'Analytics' }
+  ];
+
   return (
-    <header className="fixed top-0 left-0 md:left-[256px] right-0 h-[calc(3.5rem+env(safe-area-inset-top))] md:h-12 pt-[env(safe-area-inset-top)] md:pt-0 z-40 flex items-center justify-between px-4 md:px-6 backdrop-blur-xl border-b transition-colors duration-200 bg-[#F7F6F2]/85 dark:bg-[#121214]/85 border-black/[0.07] dark:border-white/[0.08]">
+    <header className={`fixed top-0 left-0 ${isSidebarCollapsed ? 'md:left-[64px]' : 'md:left-[240px]'} right-0 h-[calc(3.5rem+env(safe-area-inset-top))] md:h-12 pt-[env(safe-area-inset-top)] md:pt-0 z-40 flex items-center justify-between px-3 md:px-5 backdrop-blur-xl border-b transition-all duration-200 bg-[#F7F6F2]/90 dark:bg-[#121214]/90 border-black/[0.07] dark:border-white/[0.08]`}>
 
-      {/* ── Breadcrumb & Mobile App Brand ── */}
-      <div className="flex items-center gap-2.5">
-        <div className="md:hidden w-7 h-7 rounded-md bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] flex items-center justify-center font-mono font-bold text-xs shadow-xs">
-          M
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-wider text-[#6B6A72] dark:text-[#8E8E93]">
-            Momentum
+      {/* ── Left: Sidebar Toggle & Newsreader Date ── */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          title={isSidebarCollapsed ? "Expand sidebar navigation" : "Collapse sidebar"}
+          className="hidden md:flex p-1.5 rounded-lg text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-[#F7F6F2] hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[19px]">
+            {isSidebarCollapsed ? "dock_to_left" : "menu_open"}
           </span>
-          <span className="hidden sm:inline text-[#6B6A72]/40 dark:text-[#8E8E93]/40">/</span>
-          <span className="font-editorial italic text-[15px] sm:text-[16px] text-[#161618] dark:text-[#F7F6F2] tracking-tight">
-            {TITLE_MAP[activeTab] || 'Workspace'}
-          </span>
-        </div>
-      </div>
+        </button>
 
-      {/* ── Search Input ── */}
-      <div className="flex-1 max-w-[160px] sm:max-w-[280px] md:max-w-[320px] mx-1.5 sm:mx-4 md:mx-6 relative">
-        <span className={`material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[15px] pointer-events-none transition-colors ${
-          searchFocused ? 'text-[#0F52BA]' : 'text-[#8E8E93]'
-        }`}>search</span>
-        <input
-          ref={searchRef}
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search…"
-          onFocus={() => setSearchFocused(true)}
-          onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-          className={`w-full h-7.5 pl-8 sm:pl-8 pr-3 sm:pr-8 rounded-lg text-[12px] tracking-tight outline-none border transition-all bg-white/70 dark:bg-[#1A1A1E]/70 border-black/[0.07] dark:border-white/[0.08] text-[#161618] dark:text-[#F7F6F2] placeholder:text-[#8E8E93] ${
-            searchFocused ? 'bg-white dark:bg-[#1E1E22] border-[#0F52BA]/60 shadow-[0_0_0_2px_rgba(15,82,186,0.12)]' : 'hover:border-black/[0.12]'
-          }`}
-        />
-        <kbd className="hidden sm:inline-block absolute right-2 top-1/2 -translate-y-1/2 px-1 py-0.5 rounded text-[9px] font-mono pointer-events-none border bg-black/[0.03] dark:bg-white/[0.05] text-[#8E8E93] border-black/[0.06] dark:border-white/[0.06]">⌘K</kbd>
-        
-        {searchFocused && searchQuery.trim().length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] rounded-xl shadow-double-bezel overflow-hidden z-50">
-            {topResults.length > 0 ? (
-              <ul className="py-1">
-                {topResults.map((result, idx) => (
-                  <li key={idx}>
-                    <button
-                      className="w-full text-left px-3.5 py-2 text-[12px] text-[#161618] dark:text-[#F7F6F2] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
-                      onClick={() => {
-                        if (setActiveTab) setActiveTab(result.tab);
-                        setSearchQuery('');
-                        setSearchFocused(false);
-                      }}
-                    >
-                      <div className="font-medium truncate">{result.title}</div>
-                      <div className="text-[10px] font-mono text-[#8E8E93] capitalize">{result.type}</div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="px-4 py-3 text-[12px] text-[#8E8E93]">No results found.</div>
-            )}
+        <div className="flex items-center gap-2">
+          <div className="md:hidden w-7 h-7 rounded-md bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] flex items-center justify-center font-mono font-bold text-xs shadow-xs">
+            M
           </div>
-        )}
+          <span className="font-editorial text-[16px] sm:text-[18px] text-[#161618] dark:text-[#F7F6F2] tracking-tight whitespace-nowrap">
+            {todayDateFormatted}
+          </span>
+        </div>
+
+        {/* Things 3 Mini Progress Circle */}
+        <div className="hidden lg:flex items-center gap-1.5 pl-2 border-l border-black/[0.08] dark:border-white/[0.08]">
+          <div className="relative w-4.5 h-4.5 flex items-center justify-center">
+            <svg className="w-4.5 h-4.5 -rotate-90" viewBox="0 0 36 36">
+              <path className="text-black/10 dark:text-white/10" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path className="text-[#0F52BA] transition-all duration-500" strokeDasharray={`${completionPct}, 100`} strokeWidth="4" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+          </div>
+          <span className="font-mono text-[10px] text-[#6B6A72] dark:text-[#8E8E93] tabular-nums whitespace-nowrap">
+            {completedTasksCount}/{totalTasksCount} done
+          </span>
+        </div>
       </div>
+
+      {/* ── Center: Segmented Navigation Switcher (Things 3 / Sunsama style) ── */}
+      <div className="hidden md:flex items-center p-0.5 bg-black/[0.04] dark:bg-white/[0.06] rounded-xl border border-black/[0.05] dark:border-white/[0.07] mx-2">
+        {TABS.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-3 py-1 rounded-lg text-[11.5px] font-medium transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs font-semibold'
+                  : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white'
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Right Controls: + New Task, Search, Copilot, Status ── */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* + New Task Button */}
+        <button
+          type="button"
+          onClick={onOpenQuickAdd}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] text-[11px] font-semibold hover:opacity-90 active:scale-95 shadow-tactile transition cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[14px]">add</span>
+          <span className="hidden sm:inline">New Task</span>
+        </button>
+
+        {/* ── Search Input ── */}
+        <div className="max-w-[120px] sm:max-w-[180px] lg:max-w-[220px] relative">
+          <span className={`material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[14px] pointer-events-none transition-colors ${
+            searchFocused ? 'text-[#0F52BA]' : 'text-[#8E8E93]'
+          }`}>search</span>
+          <input
+            ref={searchRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search…"
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+            className={`w-full h-7 pl-6.5 pr-2 sm:pr-7 rounded-lg text-[11.5px] tracking-tight outline-none border transition-all bg-white/70 dark:bg-[#1A1A1E]/70 border-black/[0.07] dark:border-white/[0.08] text-[#161618] dark:text-[#F7F6F2] placeholder:text-[#8E8E93] ${
+              searchFocused ? 'bg-white dark:bg-[#1E1E22] border-[#0F52BA]/60 shadow-[0_0_0_2px_rgba(15,82,186,0.12)]' : 'hover:border-black/[0.12]'
+            }`}
+          />
+          <kbd className="hidden sm:inline-block absolute right-1.5 top-1/2 -translate-y-1/2 px-1 py-0.2 rounded text-[8.5px] font-mono pointer-events-none border bg-black/[0.03] dark:bg-white/[0.05] text-[#8E8E93] border-black/[0.06] dark:border-white/[0.06]">⌘K</kbd>
+          
+          {searchFocused && searchQuery.trim().length > 0 && (
+            <div className="absolute top-full right-0 w-64 mt-1 bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] rounded-xl shadow-double-bezel overflow-hidden z-50">
+              {topResults.length > 0 ? (
+                <ul className="py-1">
+                  {topResults.map((result, idx) => (
+                    <li key={idx}>
+                      <button
+                        className="w-full text-left px-3 py-1.5 text-[11.5px] text-[#161618] dark:text-[#F7F6F2] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
+                        onClick={() => {
+                          if (setActiveTab) setActiveTab(result.tab);
+                          setSearchQuery('');
+                          setSearchFocused(false);
+                        }}
+                      >
+                        <div className="font-medium truncate">{result.title}</div>
+                        <div className="text-[9.5px] font-mono text-[#8E8E93] capitalize">{result.type}</div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="px-3 py-2 text-[11px] text-[#8E8E93]">No results found.</div>
+              )}
+            </div>
+          )}
+        </div>
 
       {/* ── Right Controls ── */}
       <div className="flex items-center gap-2">
@@ -268,6 +341,7 @@ export default function Header({
         </div>
 
       </div>
-    </header>
-  );
+    </div>
+  </header>
+);
 }
