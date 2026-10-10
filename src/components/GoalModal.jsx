@@ -162,21 +162,21 @@ export default function GoalModal({
       onClick={resetForm}
     >
       <div
-        className="w-full max-w-4xl max-h-[92vh] sm:max-h-[88vh] rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col text-[#1A1B1F] dark:text-white transition-all animate-in zoom-in-95 duration-200"
+        className="w-full max-w-4xl max-h-[92vh] sm:max-h-[88vh] rounded-2xl bg-surface-bone dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col text-ink-primary dark:text-[#F7F6F2] transition-all animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-[#FAFAFC] dark:bg-[#252528] shrink-0">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
           <div className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#0A84FF]" />
-            <h3 className="text-[13px] font-bold text-[#1A1B1F] dark:text-white uppercase tracking-wider">
+            <span className="w-2.5 h-2.5 rounded-full bg-accent-cobalt" />
+            <h3 className="font-editorial text-[17px] font-normal text-ink-primary dark:text-[#F7F6F2] tracking-tight">
               Create Strategic Goal
             </h3>
           </div>
           <button
             type="button"
             onClick={resetForm}
-            className="p-1.5 rounded-xl text-[#8E8E93] hover:text-[#1A1B1F] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-ink-secondary hover:text-ink-primary dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer"
             title="Close (Esc)"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
@@ -187,15 +187,15 @@ export default function GoalModal({
         <form onSubmit={handleAddGoal} className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
             {/* Left Column (7 cols ~ 58%) */}
-            <div className="lg:col-span-7 p-5 sm:p-6 overflow-visible lg:overflow-y-auto space-y-5 border-r-0 lg:border-r border-black/[0.06] dark:border-white/[0.06]">
+            <div className="lg:col-span-7 p-5 sm:p-6 overflow-visible lg:overflow-y-auto space-y-5 border-r-0 lg:border-r border-black/[0.07] dark:border-white/[0.08]">
               {/* Goal Title */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <label className="block font-mono text-[10px] font-bold uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">
                     Goal Title *
                   </label>
                   {nlpDetected && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0A84FF] bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full animate-fadeIn">
+                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold text-accent-cobalt bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full animate-fadeIn">
                       <span className="material-symbols-outlined text-[12px]">auto_awesome</span>
                       <span>NLP auto-detected {nlpDetected.category ? CATEGORY_MAP[nlpDetected.category]?.label : ''} {nlpDetected.horizon ? `(${nlpDetected.horizon})` : ''}</span>
                     </span>
@@ -208,7 +208,7 @@ export default function GoalModal({
                   value={newGoalForm.title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="e.g. Ship Portfolio Website v3, Run Half Marathon..."
-                  className="w-full text-xl sm:text-2xl font-bold text-[#1A1B1F] dark:text-white placeholder-slate-300 dark:placeholder-slate-600 bg-transparent border-none outline-none resize-none tracking-tight leading-snug focus:ring-0"
+                  className="w-full font-editorial text-2xl sm:text-3xl font-normal text-ink-primary dark:text-[#F7F6F2] placeholder-black/20 dark:placeholder-white/20 bg-transparent border-none outline-none resize-none tracking-tight leading-snug focus:ring-0"
                 />
               </div>
 
@@ -396,17 +396,17 @@ export default function GoalModal({
           </div>
 
           {/* Footer */}
-          <div className="px-5 sm:px-6 py-3.5 border-t border-black/[0.06] dark:border-white/[0.06] bg-[#FAFAFC] dark:bg-[#252528] flex items-center justify-end gap-2 shrink-0">
+          <div className="px-5 sm:px-6 py-3.5 border-t border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] flex items-center justify-end gap-2 shrink-0">
             <button
               type="button"
               onClick={resetForm}
-              className="px-4 py-2 text-[12px] font-semibold text-[#64748B] dark:text-slate-400 hover:bg-black/[0.05] dark:hover:bg-white/5 rounded-xl transition cursor-pointer"
+              className="px-4 py-2 text-[12px] font-medium text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2] hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-[12px] font-semibold text-white bg-[#0A84FF] hover:bg-[#0071E3] rounded-xl shadow-xs transition active:scale-95 cursor-pointer"
+              className="px-5 py-2 text-[12px] font-semibold text-white dark:text-[#121214] bg-ink-primary dark:bg-white hover:opacity-90 rounded-lg shadow-tactile transition active:scale-95 cursor-pointer"
             >
               Save Strategic Goal
             </button>

@@ -241,30 +241,30 @@ export default function AnalyticsView({
   }, [tasks]);
 
   return (
-    <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-surface">
+    <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-canvas dark:bg-canvas-dark text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
       <div className="flex flex-col w-full space-y-4 sm:space-y-gutter-xl">
         
         {/* Top Navigation & Context Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-gutter-base">
           <div className="flex flex-col">
-            <div className="flex items-center gap-gutter-xs text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
-              <span>Executive Insights</span>
-              <span className="text-outline-variant">•</span>
-              <span className="text-primary font-label-sm text-label-sm">Updated Live</span>
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">
+              <span>Executive Telemetry</span>
+              <span className="w-1 h-1 rounded-full bg-[#8E8E93]" />
+              <span className="text-[#0F52BA] dark:text-[#6495ED] font-bold">Updated Live</span>
             </div>
-            <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-0.5">Focus &amp; Cognitive Flow</h1>
+            <h1 className="font-editorial text-2xl sm:text-3xl font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2] mt-0.5">Focus &amp; Cognitive Flow</h1>
           </div>
           
           {/* Segmented Control Bar */}
-          <div className="flex items-center bg-surface-container p-1 rounded-full self-start md:self-auto shadow-sm">
+          <div className="flex items-center bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.06] p-0.5 rounded-xl self-start md:self-auto shadow-xs">
             {timeframes.map((tf) => (
               <button
                 key={tf}
                 onClick={() => setTimeframe(tf)}
-                className={`px-gutter-md py-1 rounded-full font-label-md text-label-md transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   timeframe === tf
-                    ? 'bg-surface-container-lowest text-primary shadow-[0_1px_3px_rgba(0,0,0,0.08)] font-semibold'
-                    : 'text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs'
+                    : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618]'
                 }`}
               >
                 {tf}
@@ -274,17 +274,17 @@ export default function AnalyticsView({
         </div>
 
         {/* Row 1: High-Impact Metric Tiles */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter-base">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           
           {/* Tile 1: Accuracy */}
-          <div className="group relative overflow-hidden bg-surface-container-lowest rounded-2xl p-gutter-lg shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:shadow-md transition-all">
+          <div className="group relative overflow-hidden bg-white dark:bg-[#1A1A1E] rounded-2xl p-5 border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] hover:border-black/[0.12] transition-all">
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
-                <span className="font-label-md text-label-md text-on-surface-variant">Execution Accuracy ({timeframe})</span>
-                <div className="flex items-baseline gap-gutter-xs mt-1">
-                  <span className="font-display text-[44px] leading-tight text-on-surface font-semibold tracking-tight">{displayCompletionRate}%</span>
-                  <span className={`inline-flex items-center font-label-sm text-label-sm px-1.5 py-0.5 rounded-full ${
-                    rateDelta >= 0 ? 'text-secondary bg-secondary-container/30' : 'text-amber-600 bg-amber-50'
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Execution Accuracy ({timeframe})</span>
+                <div className="flex items-baseline gap-2 mt-1.5">
+                  <span className="font-mono tabular-nums text-[40px] sm:text-[44px] leading-tight text-[#161618] dark:text-[#F7F6F2] font-bold tracking-tight">{displayCompletionRate}%</span>
+                  <span className={`inline-flex items-center font-mono text-[10px] px-1.5 py-0.5 rounded-md ${
+                    rateDelta >= 0 ? 'text-[#2E6F40] bg-[#2E6F40]/10 border border-[#2E6F40]/20' : 'text-[#C84B31] bg-[#C84B31]/10 border border-[#C84B31]/20'
                   }`}>
                     {rateDelta > 0 && <span className="material-symbols-outlined text-[12px] mr-0.5">arrow_upward</span>}
                     {rateDelta < 0 && <span className="material-symbols-outlined text-[12px] mr-0.5">arrow_downward</span>}
@@ -292,40 +292,40 @@ export default function AnalyticsView({
                   </span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: '"FILL" 1' }}>timer</span>
+              <div className="w-9 h-9 rounded-xl bg-[#0F52BA]/10 flex items-center justify-center text-[#0F52BA]">
+                <span className="material-symbols-outlined text-[19px]" style={{ fontVariationSettings: '"FILL" 1' }}>timer</span>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-surface-container/60 flex items-start gap-2 text-on-surface-variant">
-              <span className="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">lightbulb</span>
-              <p className="font-body-sm text-body-sm leading-snug">
+            <div className="mt-4 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-start gap-2 text-[#6B6A72] dark:text-[#8E8E93]">
+              <span className="material-symbols-outlined text-[15px] text-[#0F52BA] shrink-0 mt-0.5">lightbulb</span>
+              <p className="font-sans text-xs leading-snug">
                 {periodCompleted} of {periodTotal} deliverables verified across {timeframe.toLowerCase()}.
               </p>
             </div>
           </div>
 
           {/* Tile 2: Velocity */}
-          <div className="group relative overflow-hidden bg-surface-container-lowest rounded-2xl p-gutter-lg shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:shadow-md transition-all">
+          <div className="group relative overflow-hidden bg-white dark:bg-[#1A1A1E] rounded-2xl p-5 border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] hover:border-black/[0.12] transition-all">
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
-                <span className="font-label-md text-label-md text-on-surface-variant">Goal Velocity ({timeframe})</span>
-                <div className="flex items-baseline gap-gutter-xs mt-1">
-                  <span className="font-display text-[44px] leading-tight text-on-surface font-semibold tracking-tight">{displayVelocity}x</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">cadence</span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Goal Velocity ({timeframe})</span>
+                <div className="flex items-baseline gap-2 mt-1.5">
+                  <span className="font-mono tabular-nums text-[40px] sm:text-[44px] leading-tight text-[#161618] dark:text-[#F7F6F2] font-bold tracking-tight">{displayVelocity}x</span>
+                  <span className="font-mono text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">cadence</span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-secondary-fixed/50 flex items-center justify-center text-secondary">
-                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: '"FILL" 1' }}>speed</span>
+              <div className="w-9 h-9 rounded-xl bg-[#2E6F40]/10 flex items-center justify-center text-[#2E6F40]">
+                <span className="material-symbols-outlined text-[19px]" style={{ fontVariationSettings: '"FILL" 1' }}>speed</span>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-surface-container/60 flex items-center justify-between text-on-surface-variant">
+            <div className="mt-4 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-[#6B6A72] dark:text-[#8E8E93]">
               <div className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${totalGoals > 0 ? 'bg-secondary' : 'bg-outline-variant'}`}></span>
-                <span className="font-body-sm text-body-sm">
+                <span className={`w-2 h-2 rounded-full ${totalGoals > 0 ? 'bg-[#2E6F40]' : 'bg-[#8E8E93]'}`}></span>
+                <span className="font-sans text-xs">
                   {totalGoals > 0 ? `${goalsOnTrack} of ${totalGoals} goals active` : 'No active goals'}
                 </span>
               </div>
-              <span className="font-label-sm text-label-sm text-secondary font-medium">
+              <span className="font-mono text-xs text-[#2E6F40] font-medium">
                 {totalGoals > 0 ? `${onTrackPercent}% on-track` : '0% target'}
               </span>
             </div>

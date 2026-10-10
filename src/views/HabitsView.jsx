@@ -176,28 +176,27 @@ const HabitsView = React.memo(function HabitsView({ habits = [], checkInHabit, a
     URL.revokeObjectURL(url);
   };
   return (
-    <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-surface">
+    <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-canvas dark:bg-canvas-dark text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
       <div className="flex flex-col w-full space-y-4 sm:space-y-gutter-2xl">
-{/* Dynamic Atmospheric Glow Accent */}
-<div className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-surface-container-lowest via-surface-container-low to-surface-container-lowest p-gutter-xl shadow-sm">
-<div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-primary-fixed-dim/30 blur-3xl pointer-events-none"></div>
-<div className="absolute -left-12 -bottom-12 h-56 w-56 rounded-full bg-secondary-fixed/40 blur-3xl pointer-events-none"></div>
+{/* Bauhaus Editorial Header Masthead */}
+<div className="relative w-full rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] p-6 shadow-double-bezel">
 <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-gutter-lg">
-<div className="space-y-gutter-xs">
-<div className="flex items-center gap-gutter-sm">
-<span className="px-gutter-sm py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Mindful Momentum</span>
-<span className="flex items-center gap-1 font-caption text-caption text-secondary">
-<span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-            Live Sync Active
-          </span>
+<div className="space-y-1">
+<div className="flex items-center gap-2">
+<span className="font-mono text-[10px] uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">Mindful Momentum</span>
+<span className="w-1 h-1 rounded-full bg-[#8E8E93]" />
+<span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-[#2E6F40] dark:text-[#4ADE80]">
+<span className="w-1.5 h-1.5 rounded-full bg-[#2E6F40] dark:bg-[#4ADE80] animate-pulse"></span>
+Live Sync Active
+</span>
 </div>
-<h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Habits &amp; Streaks</h1>
-<p className="font-body-md text-body-md text-on-surface-variant">Calibrated consistency without burnout. Built with graceful resilience.</p>
+<h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#161618] dark:text-[#F7F6F2] tracking-tight">Habits &amp; Streaks</h1>
+<p className="font-sans text-xs sm:text-sm text-[#6B6A72] dark:text-[#8E8E93]">Calibrated consistency without burnout. Built with graceful resilience.</p>
 </div>
 <div className="flex items-center gap-gutter-md self-stretch sm:self-auto">
-<button onClick={handleOpenCreate} className="flex items-center gap-gutter-sm px-gutter-lg py-2.5 rounded-full bg-primary-container text-on-primary-container hover:bg-primary transition-all shadow-sm active:scale-[0.98]">
-<span className="material-symbols-outlined text-[20px]">add</span>
-<span className="font-label-md text-label-md">New Habit</span>
+<button onClick={handleOpenCreate} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white text-xs font-semibold transition-all shadow-double-bezel active:scale-[0.98] cursor-pointer">
+<span className="material-symbols-outlined text-[18px]">add</span>
+<span>New Habit</span>
 </button>
 </div>
 </div>

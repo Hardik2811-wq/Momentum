@@ -243,25 +243,25 @@ export default function TaskDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-5 bg-black/40 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-5 bg-black/50 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
       <div
-        className="w-full h-[100dvh] max-w-4xl max-h-[100dvh] sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-3xl bg-white/95 backdrop-blur-2xl border border-black/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col text-[#1A1B1F] transition-all"
+        className="w-full h-[100dvh] max-w-4xl max-h-[100dvh] sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-2xl bg-surface-bone dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col text-ink-primary dark:text-[#F7F6F2] transition-all"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Refined Linear Header ── */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-black/[0.06] bg-[#FAFAFC]">
+        {/* ── Refined Bauhaus Linear Header ── */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518]">
           <div className="flex items-center gap-3">
             <span className={`w-2.5 h-2.5 rounded-full ${IMPACT_CONFIG[formData.impact]?.dot || 'bg-amber-400'}`} />
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-semibold text-[#1A1B1F]">
-                Task #{task.id}
+              <span className="font-mono text-[12px] font-semibold text-ink-primary dark:text-[#F7F6F2]">
+                TASK #{task.id}
               </span>
-              <span className="text-slate-300">•</span>
-              <span className="text-[11px] font-medium text-[#64748B]">
+              <span className="text-black/20 dark:text-white/20">•</span>
+              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">
                 {task.completed ? 'Completed' : 'In Progress'}
               </span>
             </div>
@@ -272,16 +272,16 @@ export default function TaskDetailModal({
               type="button"
               onClick={triggerDelete}
               title="Delete task"
-              className="p-1.5 rounded-xl text-[#8E8E93] hover:text-red-500 hover:bg-red-50 transition"
+              className="p-1.5 rounded-lg text-ink-secondary hover:text-accent-terracotta hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
             >
               <span className="material-symbols-outlined text-[18px]">delete</span>
             </button>
-            <div className="w-px h-4 bg-black/[0.08] mx-1" />
+            <div className="w-px h-4 bg-black/[0.08] dark:bg-white/[0.08] mx-1" />
             <button
               type="button"
               onClick={onClose}
               title="Close (Esc)"
-              className="p-1.5 rounded-xl text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-black/5 transition"
+              className="p-1.5 rounded-lg text-ink-secondary hover:text-ink-primary dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
@@ -312,14 +312,14 @@ export default function TaskDetailModal({
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="What needs to get done?"
-                className="w-full text-xl sm:text-2xl font-bold text-[#1A1B1F] placeholder-slate-300 bg-transparent border-none outline-none resize-none tracking-tight leading-snug focus:ring-0"
+                className="w-full font-editorial text-2xl sm:text-3xl font-normal text-ink-primary dark:text-[#F7F6F2] placeholder-black/20 dark:placeholder-white/20 bg-transparent border-none outline-none resize-none tracking-tight leading-snug focus:ring-0"
               />
             </div>
 
             {/* Notes & Documentation Canvas */}
             <div>
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                <span className="material-symbols-outlined text-[15px] text-slate-400">subject</span>
+              <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-ink-secondary dark:text-[#8E8E93] uppercase tracking-wider mb-2">
+                <span className="material-symbols-outlined text-[15px]">subject</span>
                 <span>Execution Notes &amp; Context</span>
               </div>
               <textarea
@@ -327,7 +327,7 @@ export default function TaskDetailModal({
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Capture specs, kickoff checklists, reference links, or acceptance criteria..."
-                className="w-full p-4 rounded-2xl bg-[#F8F8FB] border border-black/[0.06] text-[13px] leading-relaxed text-[#1A1B1F] placeholder-slate-400 outline-none focus:bg-white focus:border-[#0A84FF] focus:ring-3 focus:ring-[#0A84FF]/10 transition resize-none shadow-2xs min-h-[100px]"
+                className="w-full p-4 rounded-xl bg-[#F0EFEA] dark:bg-[#202024] border border-black/[0.07] dark:border-white/[0.08] text-[13px] leading-relaxed text-ink-primary dark:text-[#F7F6F2] placeholder-slate-400 outline-none focus:bg-white dark:focus:bg-[#151518] focus:border-accent-cobalt transition resize-none shadow-2xs min-h-[100px]"
               />
             </div>
 
@@ -1226,14 +1226,14 @@ export default function TaskDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-[12px] font-medium text-[#71717A] hover:bg-black/[0.05] transition"
+              className="px-4 py-2 rounded-lg text-[12px] font-medium text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2] hover:bg-black/5 dark:hover:bg-white/5 transition"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-5 py-2 rounded-xl text-[12px] font-semibold bg-[#0A84FF] text-white hover:bg-[#0071E3] transition active:scale-95 shadow-sm shadow-blue-500/25"
+              className="px-5 py-2 rounded-lg text-[12px] font-semibold bg-ink-primary dark:bg-white text-white dark:text-[#121214] hover:opacity-90 transition active:scale-95 shadow-tactile"
             >
               Save Changes
             </button>

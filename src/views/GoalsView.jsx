@@ -443,31 +443,31 @@ const GoalsView = React.memo(function GoalsView({
   );
 
   return (
-    <main className="w-full min-h-screen bg-[#F8F8FC] pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl">
+    <main className="w-full min-h-screen bg-canvas dark:bg-canvas-dark pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
       <div className="mx-auto w-full max-w-[1440px] space-y-6">
 
         {/* ── Top Header Block ── */}
         <header data-block-id="goals-header" className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] uppercase tracking-wider text-[#0A84FF] font-bold">Strategic Horizons</span>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">Strategic Horizons</span>
               <span className="w-1 h-1 rounded-full bg-[#8E8E93]" />
-              <span className="text-[11px] text-[#64748B] font-semibold">Vision to Daily Execution</span>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Vision to Daily Execution</span>
             </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#1A1B1F]">Goals &amp; Horizons</h1>
-            <p className="mt-0.5 text-[13px] text-[#64748B]">
+            <h1 className="mt-1 text-2xl sm:text-3xl font-editorial font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2]">Goals &amp; Horizons</h1>
+            <p className="mt-0.5 text-xs text-[#6B6A72] dark:text-[#8E8E93]">
               Anchor meaningful long-term vectors. Daily tasks and rituals drive real progress.
             </p>
           </div>
 
           <div className="flex items-center gap-2 self-start md:self-auto">
             {/* View Mode Toggle: Grid vs Matrix */}
-            <div className="p-1 rounded-xl bg-[#F0EFF5] border border-black/[0.04] flex items-center">
+            <div className="p-0.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.06] flex items-center">
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition ${
-                  viewMode === 'grid' ? 'bg-white text-[#0A84FF] shadow-xs' : 'text-[#64748B] hover:text-[#1A1B1F]'
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                  viewMode === 'grid' ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs' : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[15px]">grid_view</span>
@@ -476,8 +476,8 @@ const GoalsView = React.memo(function GoalsView({
               <button
                 type="button"
                 onClick={() => setViewMode('matrix')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition ${
-                  viewMode === 'matrix' ? 'bg-white text-[#0A84FF] shadow-xs' : 'text-[#64748B] hover:text-[#1A1B1F]'
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                  viewMode === 'matrix' ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs' : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[15px]">dashboard_customize</span>
@@ -488,7 +488,7 @@ const GoalsView = React.memo(function GoalsView({
             <button
               type="button"
               onClick={() => setShowNewGoal(!showNewGoal)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0A84FF] text-white text-[12px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-95"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white text-xs font-semibold shadow-double-bezel active:scale-95 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
               <span>New Goal</span>
@@ -498,35 +498,35 @@ const GoalsView = React.memo(function GoalsView({
 
         {/* ── Top Executive Horizon Pulse Ribbon ── */}
         <section data-block-id="goals-stats-ribbon" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs">
-            <span className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-wider">Active Horizons</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-[#1A1B1F] tracking-tight">{horizonStats.total}</span>
-              <span className="text-[11px] font-semibold text-[#0A84FF]">Live Projects</span>
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Active Horizons</span>
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.total}</span>
+              <span className="text-[11px] font-mono font-medium text-[#0F52BA] dark:text-[#6495ED]">Live Projects</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs">
-            <span className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-wider">Strategic Velocity</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-emerald-600 tracking-tight">{horizonStats.onTrackPct}%</span>
-              <span className="text-[11px] font-semibold text-[#64748B]">{horizonStats.onTrack} On Track</span>
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Strategic Velocity</span>
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#2E6F40] dark:text-[#4ADE80]">{horizonStats.onTrackPct}%</span>
+              <span className="text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">{horizonStats.onTrack} On Track</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs">
-            <span className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-wider">Execution Pipeline</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-[#1A1B1F] tracking-tight">{horizonStats.activeTasks}</span>
-              <span className="text-[11px] font-semibold text-[#64748B]">Active Tasks</span>
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Execution Pipeline</span>
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.activeTasks}</span>
+              <span className="text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">Active Tasks</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs">
-            <span className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-wider">Driving Rituals</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-purple-600 tracking-tight">{horizonStats.linkedHabitsCount}</span>
-              <span className="text-[11px] font-semibold text-[#64748B]">Linked Habits</span>
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Driving Rituals</span>
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#6C4AB6] dark:text-[#A78BFA]">{horizonStats.linkedHabitsCount}</span>
+              <span className="text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">Linked Habits</span>
             </div>
           </div>
         </section>

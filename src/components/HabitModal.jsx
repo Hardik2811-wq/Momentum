@@ -353,30 +353,30 @@ export default function HabitModal({
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-[0_24px_70px_-12px_rgba(0,0,0,0.22),0_0_1px_1px_rgba(0,0,0,0.06)] border border-black/[0.08] overflow-hidden my-auto max-h-[96vh] flex flex-col">
+      <div className="relative w-full max-w-xl bg-surface-bone dark:bg-[#1A1A1E] rounded-2xl shadow-[0_32px_100px_rgba(0,0,0,0.25)] border border-black/[0.08] dark:border-white/[0.08] overflow-hidden my-auto max-h-[96vh] flex flex-col text-ink-primary dark:text-[#F7F6F2]">
         {/* Subtle Ambient Color Line */}
         <div
           className="h-1 w-full transition-colors duration-300 shrink-0"
           style={{ backgroundColor: activeSignpost.accentHex }}
         />
 
-        {/* Modal Header (Compact) */}
-        <header className="px-5 sm:px-6 pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.05] bg-surface-container-lowest shrink-0">
+        {/* Modal Header */}
+        <header className="px-5 sm:px-6 pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
           <div>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeSignpost.accentHex }} />
-              <span className="font-label-sm text-[11px] text-neutral-400 font-semibold uppercase tracking-wider">
+              <span className="font-mono text-[10.5px] text-ink-secondary dark:text-[#8E8E93] font-semibold uppercase tracking-wider">
                 {isEditing ? 'Sequence Calibration' : 'New Habit Architecture'}
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-on-surface mt-0.5">
+            <h2 className="font-editorial text-[18px] sm:text-[20px] font-normal tracking-tight text-ink-primary dark:text-[#F7F6F2] mt-0.5">
               {isEditing ? 'Edit Habit Sequence' : 'Create Recurring Habit'}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-outline hover:text-on-surface hover:bg-neutral-100 transition-colors"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-secondary hover:text-ink-primary dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
             aria-label="Close modal"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
@@ -818,13 +818,13 @@ export default function HabitModal({
             </div>
           </div>
 
-          {/* Modal Footer Bar (Slim) */}
-          <footer className="pt-2 border-t border-black/[0.06] flex items-center justify-between gap-3 shrink-0">
+          {/* Modal Footer Bar */}
+          <footer className="pt-2 border-t border-black/[0.07] dark:border-white/[0.08] flex items-center justify-between gap-3 shrink-0">
             {isEditing && onDelete ? (
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-error hover:bg-red-50 text-xs font-semibold transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-accent-terracotta hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold transition-colors"
               >
                 <span className="material-symbols-outlined text-[15px]">delete</span>
                 <span>Delete</span>
@@ -837,13 +837,13 @@ export default function HabitModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-neutral-600 hover:bg-neutral-100 transition-colors"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2] hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className={`flex items-center gap-1.5 px-5 py-2 rounded-full ${activeSignpost.btnClass} font-semibold text-xs tracking-wide shadow-sm hover:opacity-95 active:scale-95 transition-all`}
+                className={`flex items-center gap-1.5 px-5 py-2 rounded-lg ${activeSignpost.btnClass} font-semibold text-xs tracking-wide shadow-tactile hover:opacity-95 active:scale-95 transition-all`}
               >
                 <span className="material-symbols-outlined text-[15px]">
                   {isEditing ? 'check' : 'add'}

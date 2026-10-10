@@ -64,23 +64,54 @@
 ::-webkit-scrollbar-thumb  { background: rgba(150,150,160,0.25); border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(150,150,160,0.4); }
 
-/* ── Light Mode Base Styling ─────────────────── */
+/* ── Editorial Parchment Base Styling ─────────────────── */
+body {
+  background-color: #F7F6F2;
+  color: #161618;
+}
+
+.dark body {
+  background-color: #121214;
+  color: #EAE8E3;
+}
+
 main {
-  background-color: #EFEFF5 !important;
+  background-color: #F7F6F2 !important;
+}
+
+.dark main {
+  background-color: #121214 !important;
 }
 
 [class*="bg-surface-container-lowest"] {
   background-color: #FFFFFF !important;
   border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 8px 24px rgba(0,0,0,0.03) !important;
+}
+
+.dark [class*="bg-surface-container-lowest"] {
+  background-color: #1A1A1E !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2) !important;
 }
 
 .bg-surface {
-  background-color: #EFEFF5 !important;
+  background-color: #F7F6F2 !important;
+}
+
+.dark .bg-surface {
+  background-color: #121214 !important;
 }
 
 [class*="hover:shadow-md"]:hover {
-  box-shadow: 0 6px 24px rgba(0,0,0,0.09) !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.07) !important;
+}
+
+/* Hairline borders */
+.hairline-border {
+  border-color: rgba(0, 0, 0, 0.07);
+}
+.dark .hairline-border {
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ── Typography & OpenType Feature Enhancements ── */
@@ -98,6 +129,7 @@ body, .font-sans {
 .font-editorial {
   font-family: 'Newsreader', Georgia, serif;
   letter-spacing: -0.015em;
+  font-feature-settings: "liga" 1, "onum" 1;
 }
 
 .font-mono, .tabular-nums {

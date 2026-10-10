@@ -10,8 +10,8 @@ import MobileWidgetsShowcase from '../components/MobileWidgetsShowcase';
 const Toggle = ({ checked, onChange }) => (
   <button
     onClick={() => onChange(!checked)}
-    className={`w-10 h-[22px] rounded-full relative transition-colors duration-200 ${
-      checked ? 'bg-[#0A84FF]' : 'bg-[#DCDCE0]'
+    className={`w-10 h-[22px] rounded-full relative transition-colors duration-200 cursor-pointer ${
+      checked ? 'bg-[#0F52BA]' : 'bg-black/15 dark:bg-white/20'
     }`}
   >
     <span className={`absolute top-[2px] left-[2px] w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-transform duration-200 ${
@@ -21,9 +21,9 @@ const Toggle = ({ checked, onChange }) => (
 );
 
 const Section = ({ title, badge, children }) => (
-  <section className="rounded-2xl border overflow-hidden transition-colors bg-white border-black/[0.06] shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
-    <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.05]">
-      <span className="text-[11px] font-bold uppercase tracking-widest text-[#BBBBC0]">
+  <section className="rounded-2xl border overflow-hidden transition-colors bg-white dark:bg-[#1A1A1E] border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
+    <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.06] dark:border-white/[0.06]">
+      <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">
         {title}
       </span>
       {badge}
@@ -33,10 +33,10 @@ const Section = ({ title, badge, children }) => (
 );
 
 const Row = ({ label, hint, children, noBorder }) => (
-  <div className={`flex items-center justify-between py-3 gap-4 ${!noBorder ? 'border-b border-black/[0.04]' : ''}`}>
+  <div className={`flex items-center justify-between py-3 gap-4 ${!noBorder ? 'border-b border-black/[0.04] dark:border-white/[0.05]' : ''}`}>
     <div className="min-w-0">
-      <p className="text-[13px] font-medium text-[#1A1B1F]">{label}</p>
-      {hint && <p className="text-[11px] mt-0.5 text-[#BBBBC0]">{hint}</p>}
+      <p className="text-[13px] font-medium text-[#161618] dark:text-[#F7F6F2]">{label}</p>
+      {hint && <p className="text-[11px] mt-0.5 text-[#6B6A72] dark:text-[#8E8E93]">{hint}</p>}
     </div>
     <div className="flex-shrink-0">{children}</div>
   </div>
@@ -69,7 +69,7 @@ export default function SettingsView({
   const [directiveSaved, setDirectiveSaved] = useState(false);
   const fileInputRef = useRef(null);
 
-  const inputCls = 'bg-[#F5F4FA] border-black/[0.07] text-[#1A1B1F]';
+  const inputCls = 'bg-[#F0EFEA] dark:bg-[#202024] border-black/[0.08] dark:border-white/[0.08] text-ink-primary dark:text-[#F7F6F2] focus:border-accent-cobalt';
   const profile = settings?.profile || {};
 
   const refreshIntelligence = () => setIntelligence(getNlpInsights());
@@ -118,22 +118,24 @@ export default function SettingsView({
   };
 
   return (
-    <main className="w-full pt-16 md:pt-12 min-h-screen transition-colors duration-300 bg-[#EFEFF5] text-[#1A1B1F]">
-      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-4 sm:py-8 pb-24 space-y-5">
+    <main className="w-full pt-16 md:pt-12 min-h-screen transition-colors duration-300 bg-canvas dark:bg-canvas-dark text-ink-primary dark:text-[#F7F6F2]">
+      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-4 sm:py-8 pb-24 space-y-6">
 
         {/* Page header */}
-        <div className="pb-2">
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <span className="material-symbols-outlined text-white text-[15px]">tune</span>
+        <div className="pb-2 border-b border-black/[0.07] dark:border-white/[0.08]">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/10 border border-black/[0.08] dark:border-white/[0.08] flex items-center justify-center">
+              <span className="material-symbols-outlined text-ink-primary dark:text-white text-[17px]">tune</span>
             </div>
-            <h1 className="text-[22px] font-bold tracking-tight text-[#1A1B1F]">
-              System Settings
-            </h1>
+            <div>
+              <h1 className="font-editorial text-[28px] sm:text-[32px] font-normal tracking-tight text-ink-primary dark:text-[#F7F6F2]">
+                System Settings
+              </h1>
+              <p className="font-mono text-[11px] uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">
+                Preferences, focus engine & cloud sync
+              </p>
+            </div>
           </div>
-          <p className="text-[12px] ml-9 text-[#BBBBC0]">
-            Preferences, focus engine, and integrations
-          </p>
         </div>
 
         {/* ── Profile ── */}
@@ -236,37 +238,37 @@ export default function SettingsView({
           title="Local Intelligence & Groq AI"
           badge={<span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-600/15">LOCAL-FIRST</span>}
         >
-          <p className="text-[12px] leading-5 text-[#5E5E6A]">Momentum checks local rules first. Groq runs when you click AI Fill. Accepted suggestions become local patterns automatically.</p>
+          <p className="text-[12px] leading-5 text-ink-secondary dark:text-[#9A9AA0]">Momentum checks local rules first. Groq runs when you click AI Fill. Accepted suggestions become local patterns automatically.</p>
 
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
             {[
-              { label: 'Local resolved', value: `${intelligence.offlineRatio}%`, color: 'text-[#1A1B1F]' },
-              { label: 'Local tasks', value: intelligence.localHits, color: 'text-emerald-700' },
-              { label: 'Groq parsed', value: intelligence.apiHits, color: 'text-blue-700' },
-              { label: 'Groq failed', value: intelligence.apiFailures || 0, color: (intelligence.apiFailures || 0) > 0 ? 'text-rose-600 font-bold' : 'text-[#8E8E93]' },
-              { label: 'Learned patterns', value: intelligence.totalLearned, color: 'text-purple-700' }
+              { label: 'Local resolved', value: `${intelligence.offlineRatio}%`, color: 'text-ink-primary dark:text-[#F7F6F2]' },
+              { label: 'Local tasks', value: intelligence.localHits, color: 'text-emerald-700 dark:text-emerald-400' },
+              { label: 'Groq parsed', value: intelligence.apiHits, color: 'text-accent-cobalt dark:text-blue-400' },
+              { label: 'Groq failed', value: intelligence.apiFailures || 0, color: (intelligence.apiFailures || 0) > 0 ? 'text-accent-terracotta dark:text-rose-400 font-bold' : 'text-ink-secondary dark:text-[#8E8E93]' },
+              { label: 'Learned patterns', value: intelligence.totalLearned, color: 'text-purple-700 dark:text-purple-400' }
             ].map(({ label, value, color }) => (
-              <div key={label} className="rounded-xl border border-black/[0.06] bg-[#F8F8FB] p-3">
-                <p className="text-[10px] font-medium text-[#8E8E93]">{label}</p>
-                <p className={`mt-1 text-[18px] font-semibold tracking-tight ${color}`}>{value}</p>
+              <div key={label} className="rounded-xl border border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] p-3">
+                <p className="font-mono text-[10px] font-medium text-ink-secondary dark:text-[#8E8E93]">{label}</p>
+                <p className={`mt-1 font-mono tabular-nums text-[18px] font-semibold tracking-tight ${color}`}>{value}</p>
               </div>
             ))}
           </div>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">Most used local patterns</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">Most used local patterns</p>
               <div className="mt-2 space-y-1.5">
                 {intelligence.learnedPatterns.slice(0, 4).map((pattern) => (
-                  <div key={pattern.name} className="flex items-center justify-between rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#52525B]">
+                  <div key={pattern.name} className="flex items-center justify-between rounded-lg bg-[#F0EFEA] dark:bg-[#202024] px-3 py-2 text-[11px] text-ink-primary dark:text-[#E0DFD5] border border-black/[0.05] dark:border-white/[0.06]">
                     <span className="font-medium">{pattern.name}</span>
-                    <span>{(Array.isArray(pattern.areas) ? pattern.areas.join(', ') : pattern.context) || 'Career & Craft'} · {pattern.durationMinutes} min</span>
+                    <span className="font-mono text-[10px] text-ink-secondary dark:text-[#8E8E93]">{(Array.isArray(pattern.areas) ? pattern.areas.join(', ') : pattern.context) || 'Career & Craft'} · {pattern.durationMinutes} min</span>
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">Recent decisions & AI logs</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">Recent decisions & AI logs</p>
               <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1">
                 {intelligence.recentActivity.length ? intelligence.recentActivity.slice(0, 6).map((entry) => {
                   const isLocal = entry.type === 'local';
@@ -274,7 +276,7 @@ export default function SettingsView({
                   const isError = entry.type === 'ai_error';
 
                   return (
-                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#52525B]">
+                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#F0EFEA] dark:bg-[#202024] px-3 py-2 text-[11px] text-ink-primary dark:text-[#E0DFD5] border border-black/[0.05] dark:border-white/[0.06]">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`h-2 w-2 rounded-full shrink-0 ${
                           isSuccess ? 'bg-blue-500' : isError ? 'bg-rose-500' : 'bg-emerald-500'
@@ -282,21 +284,21 @@ export default function SettingsView({
                         <span className="font-semibold shrink-0">
                           {isSuccess ? 'Groq AI' : isError ? 'Groq failed' : 'Local rule'}
                         </span>
-                        <span className="truncate text-[#8E8E93]">{entry.label}</span>
+                        <span className="truncate text-ink-secondary dark:text-[#8E8E93]">{entry.label}</span>
                       </div>
                       {isSuccess && entry.model && (
-                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/60 font-mono shrink-0">
+                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-accent-cobalt dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40 font-mono shrink-0">
                           {entry.model}
                         </span>
                       )}
                       {isError && (
-                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200/60 shrink-0 truncate max-w-[120px]" title={entry.error}>
+                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40 text-accent-terracotta dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/40 font-mono shrink-0 truncate max-w-[120px]" title={entry.error}>
                           {entry.error}
                         </span>
                       )}
                     </div>
                   );
-                }) : <p className="rounded-lg bg-[#F5F4FA] px-3 py-2 text-[11px] text-[#8E8E93]">No decisions yet.</p>}
+                }) : <p className="rounded-lg bg-[#F0EFEA] dark:bg-[#202024] px-3 py-2 text-[11px] text-ink-secondary dark:text-[#8E8E93]">No decisions yet.</p>}
               </div>
             </div>
           </div>

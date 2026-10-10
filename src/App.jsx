@@ -230,7 +230,7 @@ export default function App() {
         onOpenNewHabit={() => setIsHabitModalOpen(true)}
       />
       <AuthGate>
-      <div className="min-h-screen font-sans bg-[#EFEFF5] text-[#1A1B1F]">
+      <div className="min-h-screen font-sans bg-[#F7F6F2] dark:bg-[#121214] text-[#161618] dark:text-[#EAE8E3]">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -238,7 +238,7 @@ export default function App() {
         onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
         settings={store.settings}
       />
-      <div className="pl-0 md:pl-[248px] min-h-screen flex flex-col pb-28 md:pb-16">
+      <div className="pl-0 md:pl-[256px] min-h-screen flex flex-col pb-28 md:pb-16">
         <Header
           activeTab={activeTab}
           tasks={store.tasks}

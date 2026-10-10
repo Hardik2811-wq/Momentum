@@ -259,37 +259,38 @@ export default function ReflectionsView({
   };
 
   return (
-    <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-surface">
+    <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-canvas dark:bg-canvas-dark text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
       <div className="flex flex-col w-full space-y-4 sm:space-y-gutter-xl max-w-6xl mx-auto pb-28">
 
         {/* ── Header Row with Scope Switcher ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant font-caption text-[10px] sm:text-[11px] font-semibold tracking-wide uppercase">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">
                 Continuous Calibration
               </span>
-              <span className="text-on-surface-variant font-caption text-xs">
+              <span className="w-1 h-1 rounded-full bg-[#8E8E93]" />
+              <span className="font-mono text-[10px] uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">
                 {currentWeek} • Active Cycle
               </span>
             </div>
-            <h1 className="font-headline-lg text-[20px] sm:text-[24px] md:text-headline-lg text-on-surface tracking-tight font-bold">
+            <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#161618] dark:text-[#F7F6F2] tracking-tight">
               Weekly Review &amp; Reflections
             </h1>
-            <p className="font-body-sm text-xs sm:text-body-sm text-on-surface-variant max-w-xl">
+            <p className="font-sans text-xs sm:text-sm text-[#6B6A72] dark:text-[#8E8E93] max-w-xl">
               Honest audits drive compounding momentum. Review wins, calibrate friction, set intentional trajectories.
             </p>
           </div>
 
           <div className="flex items-center justify-between sm:justify-start gap-2 self-stretch md:self-auto flex-wrap">
             {/* Weekly / Monthly Toggle (#30) */}
-            <div className="inline-flex p-0.5 sm:p-1 rounded-full bg-surface-container shadow-inner">
+            <div className="inline-flex p-0.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.06]">
               <button
                 onClick={() => setViewScope('weekly')}
-                className={`px-3 sm:px-3.5 py-1 rounded-full text-xs sm:text-label-sm font-label-sm transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   viewScope === 'weekly'
-                    ? 'bg-surface-container-lowest text-primary shadow-sm font-semibold'
-                    : 'text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs'
+                    : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618]'
                 }`}
               >
                 <span className="sm:hidden">Weekly</span>
@@ -297,10 +298,10 @@ export default function ReflectionsView({
               </button>
               <button
                 onClick={() => setViewScope('monthly')}
-                className={`px-3 sm:px-3.5 py-1 rounded-full text-xs sm:text-label-sm font-label-sm transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   viewScope === 'monthly'
-                    ? 'bg-surface-container-lowest text-primary shadow-sm font-semibold'
-                    : 'text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs'
+                    : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618]'
                 }`}
               >
                 <span className="sm:hidden">Monthly</span>
@@ -312,17 +313,17 @@ export default function ReflectionsView({
             <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
               <button
                 onClick={() => handleExport('markdown')}
-                className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full bg-surface-container-lowest border border-black/[0.08] hover:bg-surface-container text-on-surface text-xs sm:text-label-sm font-label-sm shadow-sm transition-all"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] hover:bg-black/[0.02] text-[#161618] dark:text-[#F7F6F2] text-xs font-semibold shadow-xs transition-all cursor-pointer"
                 title="Export as Markdown"
               >
-                <span className="material-symbols-outlined text-[16px] text-primary">download</span>
+                <span className="material-symbols-outlined text-[15px] text-[#0F52BA]">download</span>
                 <span className="hidden sm:inline">Export .MD</span>
               </button>
               <button
                 onClick={handleFinalizeWeek}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary-container text-on-primary-container text-xs sm:text-label-sm font-label-sm font-bold shadow-sm hover:brightness-105 active:scale-95 transition-all"
+                className="flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white text-xs font-semibold shadow-double-bezel active:scale-95 transition-all cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                <span className="material-symbols-outlined text-[15px]">task_alt</span>
                 <span className="hidden sm:inline">Finalize Week</span>
                 <span className="sm:hidden">Finalize</span>
               </button>
@@ -331,27 +332,27 @@ export default function ReflectionsView({
         </div>
 
         {exportNotice && (
-          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-fadeIn">
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[#2E6F40] text-xs flex items-center gap-2 animate-fadeIn font-mono">
             <span className="material-symbols-outlined text-[16px]">check_circle</span>
             <span>Reflection exported successfully to your downloads folder.</span>
           </div>
         )}
 
         {/* ── UNIFIED HERO BENTO: Executive Diagnosis & Momentum Engine ── */}
-        <div className="p-4 sm:p-gutter-base rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04] relative overflow-hidden">
-          <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#1A1A1E] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_32px_rgba(0,0,0,0.04)] border border-black/[0.07] dark:border-white/[0.08] relative overflow-hidden">
+          <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-[#0F52BA]/[0.03] blur-3xl pointer-events-none" />
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
             {/* Momentum Score Gauge (Left/Top on Mobile, 4 cols md) */}
-            <div className="md:col-span-4 flex flex-row md:flex-col items-center justify-between sm:justify-around md:justify-center p-3 sm:p-4 rounded-xl bg-surface-container-low/70 border border-black/[0.03] gap-3">
+            <div className="md:col-span-4 flex flex-row md:flex-col items-center justify-between sm:justify-around md:justify-center p-4 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] gap-3">
               <div className="relative w-20 h-20 sm:w-28 sm:h-28 flex items-center justify-center shrink-0">
                 <svg className="w-20 h-20 sm:w-28 sm:h-28 -rotate-90" viewBox="0 0 36 36">
-                  <path className="text-surface-container-high" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3.2" />
-                  <path className="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${momentumScore}, 100`} strokeLinecap="round" strokeWidth="3.2" />
+                  <path className="text-black/[0.06] dark:text-white/[0.08]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3.2" />
+                  <path className="text-[#0F52BA]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${momentumScore}, 100`} strokeLinecap="round" strokeWidth="3.2" />
                 </svg>
                 <div className="absolute flex flex-col items-center justify-center">
-                  <span className="text-xl sm:text-3xl font-bold tracking-tight text-on-surface">{momentumScore}</span>
-                  <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-on-surface-variant">Momentum</span>
+                  <span className="text-xl sm:text-3xl font-mono tabular-nums font-bold tracking-tight text-[#161618] dark:text-[#F7F6F2]">{momentumScore}</span>
+                  <span className="text-[8px] sm:text-[9px] font-mono font-bold uppercase tracking-wider text-[#6B6A72] dark:text-[#8E8E93]">Momentum</span>
                 </div>
               </div>
 

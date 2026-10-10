@@ -727,51 +727,51 @@ export default function QuickAddModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm"
       role="presentation"
       onMouseDown={onClose}
     >
       <div
-        className="w-full max-w-[680px] min-h-0 max-h-[calc(100dvh-1.5rem)] sm:min-h-[470px] sm:max-h-none overflow-visible rounded-[24px] bg-white border border-black/[0.08] shadow-[0_32px_96px_rgba(0,0,0,0.18)] flex flex-col justify-between transition-all text-[#1A1B1F]"
+        className="w-full max-w-[680px] min-h-0 max-h-[calc(100dvh-1.5rem)] sm:min-h-[470px] sm:max-h-none overflow-visible rounded-2xl bg-surface-bone dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_96px_rgba(0,0,0,0.25)] flex flex-col justify-between transition-all text-ink-primary dark:text-[#F7F6F2]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="quick-add-title"
         onMouseDown={(e) => e.stopPropagation()}
         ref={menuRef}
       >
-        {/* ── Refined Apple-Style Header ── */}
-        <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-black/[0.06] bg-[#FAFAFC]">
+        {/* ── Bauhaus Editorial Header ── */}
+        <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518]">
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-xs transition-all ${
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs transition-all ${
               mode === 'schedule'
-                ? 'bg-gradient-to-br from-indigo-500 to-purple-600'
-                : 'bg-gradient-to-br from-[#0A84FF] to-[#5E5CE6]'
+                ? 'bg-ink-primary dark:bg-white dark:text-[#121214]'
+                : 'bg-accent-cobalt text-white'
             }`}>
               <span className="material-symbols-outlined text-[17px]">
                 {mode === 'schedule' ? 'calendar_month' : 'add_task'}
               </span>
             </div>
             <div>
-              <h3 id="quick-add-title" className="text-[15px] font-semibold text-[#1A1B1F] tracking-tight">
-                {mode === 'schedule' ? 'New Schedule Block' : 'Quick Add'}
+              <h3 id="quick-add-title" className="font-editorial text-[18px] font-normal text-ink-primary dark:text-[#F7F6F2] tracking-tight">
+                {mode === 'schedule' ? 'New Schedule Block' : 'Quick Add Task'}
               </h3>
-              <p className="text-[11px] text-[#64748B]">
-                {mode === 'schedule' ? 'Define recurring classes & fixed routine blocks' : 'Capture and slot into your Momentum flow'}
+              <p className="font-mono text-[10.5px] uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">
+                {mode === 'schedule' ? 'Fixed lecture & routine blocks' : 'Immediate capture into workflow'}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-black/5 transition"
+            className="p-1.5 rounded-lg text-ink-secondary hover:text-ink-primary hover:bg-black/5 dark:hover:bg-white/5 transition"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
         {/* ── Mode Switcher: Action Task vs Fixed Schedule ── */}
-        <div className="px-4 sm:px-6 pt-3 pb-1 bg-[#FAFAFC] border-b border-black/[0.04]">
-          <div className="flex p-1 bg-[#EBEBF0] rounded-xl">
+        <div className="px-4 sm:px-6 pt-3 pb-1 bg-[#F7F6F2] dark:bg-[#151518] border-b border-black/[0.06] dark:border-white/[0.08]">
+          <div className="flex p-1 bg-black/[0.05] dark:bg-white/[0.07] rounded-xl">
             <button
               type="button"
               onClick={() => {
@@ -780,11 +780,11 @@ export default function QuickAddModal({
               }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 mode === 'task'
-                  ? 'bg-white text-[#1A1B1F] shadow-xs'
-                  : 'text-[#64748B] hover:text-[#1A1B1F]'
+                  ? 'bg-white dark:bg-[#252529] text-ink-primary dark:text-[#F7F6F2] shadow-xs'
+                  : 'text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2]'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] text-[#0A84FF]">task_alt</span>
+              <span className="material-symbols-outlined text-[16px] text-accent-cobalt">task_alt</span>
               <span>Action Task</span>
             </button>
             <button
@@ -795,11 +795,11 @@ export default function QuickAddModal({
               }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 mode === 'schedule'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-[#64748B] hover:text-indigo-700'
+                  ? 'bg-white dark:bg-[#252529] text-ink-primary dark:text-[#F7F6F2] shadow-xs'
+                  : 'text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2]'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] text-indigo-600">calendar_month</span>
+              <span className="material-symbols-outlined text-[16px]">calendar_month</span>
               <span>Fixed Schedule / Class</span>
             </button>
           </div>
@@ -822,13 +822,13 @@ export default function QuickAddModal({
           )}
           <div className="space-y-4">
             {/* Main Hero Input Card */}
-          <div className={`rounded-2xl bg-[#F5F4FA] border border-black/[0.06] p-3.5 focus-within:bg-white transition-all ${
+          <div className={`rounded-xl bg-[#F0EFEA] dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] p-3.5 focus-within:bg-white dark:focus-within:bg-[#151518] transition-all ${
             mode === 'schedule'
-              ? 'focus-within:border-indigo-500/60 focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.12)]'
-              : 'focus-within:border-[#0A84FF]/60 focus-within:shadow-[0_0_0_3px_rgba(10,132,255,0.12)]'
+              ? 'focus-within:border-ink-primary dark:focus-within:border-white'
+              : 'focus-within:border-accent-cobalt'
           }`}>
             <div className="flex items-center gap-2.5">
-              <span className={`material-symbols-outlined text-[20px] ${mode === 'schedule' ? 'text-indigo-600' : 'text-[#0A84FF]'}`}>
+              <span className={`material-symbols-outlined text-[20px] ${mode === 'schedule' ? 'text-ink-primary dark:text-[#F7F6F2]' : 'text-accent-cobalt'}`}>
                 {mode === 'schedule' ? 'school' : 'edit_note'}
               </span>
               <input
@@ -837,20 +837,20 @@ export default function QuickAddModal({
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder={mode === 'schedule' ? "What class or routine? (e.g. Operating Systems Lecture MWF 10am to 11:30am)" : "What needs to happen? (e.g. Design hero tomorrow 2pm 45m)"}
-                className="min-w-0 flex-1 text-[15px] font-semibold text-[#1A1B1F] placeholder:text-[#94A3B8] placeholder:font-normal bg-transparent outline-none tracking-tight"
+                className="min-w-0 flex-1 text-[15px] font-semibold text-ink-primary dark:text-[#F7F6F2] placeholder:text-[#8E8E93] placeholder:font-normal bg-transparent outline-none tracking-tight"
               />
               <button
                 type="button"
                 onClick={() => handleAiBreakdown()}
                 disabled={isAiParsing || !title.trim()}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold shadow-xs active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold shadow-xs active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
                   aiFeedback?.type === 'success'
-                    ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80'
+                    ? 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 border border-emerald-200/80'
                     : aiFeedback?.type === 'error'
-                    ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80'
+                    ? 'text-rose-700 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 border border-rose-200/80'
                     : mode === 'schedule'
-                    ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60'
-                    : 'text-[#0A84FF] bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60'
+                    ? 'text-ink-primary dark:text-[#F7F6F2] bg-black/5 dark:bg-white/10 hover:bg-black/10'
+                    : 'text-accent-cobalt bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100/80 border border-blue-200/60'
                 }`}
                 title={mode === 'schedule' ? "Auto-extract class timings, days & details" : "Auto-fill details and break down subtasks"}
               >
@@ -1990,25 +1990,25 @@ export default function QuickAddModal({
         )}
 
         {/* ── Footer ── */}
-        <div className="pt-3 flex items-center justify-between border-t border-black/[0.05] mt-auto">
-            <span className="text-[11px] text-[#94A3B8] font-medium hidden sm:inline">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-[#F5F4FA] border border-black/[0.08] font-mono text-[10px] text-slate-600">↵</kbd> to {mode === 'schedule' ? 'add schedule' : 'add task'}
+        <div className="pt-3 flex items-center justify-between border-t border-black/[0.07] dark:border-white/[0.08] mt-auto">
+            <span className="text-[11px] text-ink-secondary dark:text-[#8E8E93] font-medium hidden sm:inline">
+              Press <kbd className="px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 border border-black/[0.08] dark:border-white/[0.1] font-mono text-[10px] text-ink-primary dark:text-[#F7F6F2]">↵</kbd> to {mode === 'schedule' ? 'add schedule' : 'add task'}
             </span>
             <div className="flex items-center gap-2 ml-auto">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3.5 py-1.5 rounded-xl text-[13px] font-medium text-[#64748B] hover:text-[#1A1B1F] hover:bg-black/5 transition cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg text-[13px] font-medium text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2] hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!title.trim()}
-                className={`px-5 py-2 rounded-xl text-[13px] font-semibold text-white shadow-sm active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                className={`px-5 py-2 rounded-lg text-[13px] font-semibold text-white shadow-tactile active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
                   mode === 'schedule'
-                    ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/25'
-                    : 'bg-[#0A84FF] hover:bg-[#0071E3] shadow-blue-500/25'
+                    ? 'bg-ink-primary dark:bg-white dark:text-[#121214] hover:opacity-90'
+                    : 'bg-accent-cobalt hover:bg-accent-cobalt/90'
                 }`}
               >
                 {mode === 'schedule' ? 'Add Schedule Block' : 'Add Task'}

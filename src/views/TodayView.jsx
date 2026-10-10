@@ -998,21 +998,21 @@ const TodayView = React.memo(function TodayView({
   }, [onUpdateSchedule, viewDate]);
 
   return (
-    <main className="w-full min-h-screen bg-[#F8F8FC] pt-16 md:pt-12 px-3 sm:px-6 md:px-margin-desktop py-3 sm:py-6 text-[#1A1B1F] select-none">
+    <main className="w-full min-h-screen bg-canvas dark:bg-canvas-dark pt-16 md:pt-12 px-3 sm:px-6 md:px-margin-desktop py-3 sm:py-6 text-[#161618] dark:text-[#F7F6F2] select-none transition-colors duration-200">
       <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-3 sm:gap-4 min-w-0">
 
         {/* ── TOP HERO CONTROL BAR ── */}
-        <div className="w-full min-w-0 flex flex-col gap-2.5 p-3 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs">
+        <div className="w-full min-w-0 flex flex-col gap-2.5 p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-double-bezel">
           {/* Top Row: Navigation, Date, Capacity, Actions */}
           <div className="flex items-center justify-between gap-2 flex-wrap min-w-0 w-full">
             {/* Left: Navigation & Date Range */}
             <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-              <div className="flex items-center gap-0.5 bg-[#F5F4FA] p-0.5 sm:p-1 rounded-xl border border-black/[0.04] shrink-0">
+              <div className="flex items-center gap-0.5 bg-black/[0.04] dark:bg-white/[0.06] p-0.5 sm:p-1 rounded-xl border border-black/[0.04] dark:border-white/[0.06] shrink-0">
                 <button
                   type="button"
                   onClick={handlePrev}
                   title="Previous Day"
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition active:scale-95"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white hover:bg-white dark:hover:bg-[#1E1E22] transition active:scale-95 cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -1020,26 +1020,26 @@ const TodayView = React.memo(function TodayView({
                   type="button"
                   onClick={handleNext}
                   title="Next Day"
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748B] hover:text-[#1A1B1F] hover:bg-white transition active:scale-95"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white hover:bg-white dark:hover:bg-[#1E1E22] transition active:scale-95 cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 truncate">
-                <h1 className="text-[13.5px] sm:text-[17px] font-bold tracking-tight text-[#1A1B1F] truncate">
+                <h1 className="text-[14px] sm:text-[18px] font-editorial font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2] truncate">
                   <span className="hidden sm:inline">{viewRangeTitle.main}</span>
                   <span className="inline sm:hidden">{viewRangeTitle.short}</span>
                 </h1>
                 {viewRangeTitle.isToday ? (
-                  <span className="px-2 py-0.5 rounded-full text-[9.5px] sm:text-[10px] font-bold bg-blue-50 text-[#0A84FF] border border-blue-200/80 uppercase tracking-wider shrink-0">
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] sm:text-[10px] font-mono font-bold bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] border border-[#0F52BA]/20 uppercase tracking-wider shrink-0">
                     Today
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={handleToday}
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-blue-50 text-[#0A84FF] hover:bg-blue-100 border border-blue-200/80 transition active:scale-95 shrink-0 shadow-3xs"
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-bold bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] hover:bg-[#0F52BA]/20 border border-[#0F52BA]/20 transition active:scale-95 shrink-0 cursor-pointer"
                     title="Jump back to today"
                   >
                     <RotateCcw className="w-3 h-3" />
@@ -1052,13 +1052,13 @@ const TodayView = React.memo(function TodayView({
               {upNextTask && (
                 <div
                   onClick={() => setEditingTask(upNextTask)}
-                  className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50/90 text-amber-950 border border-amber-200/70 text-[11px] font-medium cursor-pointer hover:bg-amber-100 transition shadow-2xs"
+                  className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-900 dark:text-amber-200 border border-amber-500/20 text-[11px] font-medium cursor-pointer hover:bg-amber-500/15 transition shadow-2xs"
                   title="Click to view next upcoming task"
                 >
-                  <Clock className="w-3.5 h-3.5 text-amber-600" />
-                  <span className="font-bold text-amber-900">Next:</span>
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span className="font-bold">Next:</span>
                   <span className="truncate max-w-[150px] font-semibold">{upNextTask.title}</span>
-                  <span className="font-mono text-amber-800 font-bold">({upNextTask.startTime})</span>
+                  <span className="font-mono font-bold">({upNextTask.startTime})</span>
                 </div>
               )}
             </div>
@@ -1066,19 +1066,19 @@ const TodayView = React.memo(function TodayView({
             {/* Right: Workload, Scope (Desktop), Editor & Quick Add */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Workload Capacity Meter */}
-              <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#F5F4FA] border border-black/[0.04] text-[11px]">
-                <Timer className="w-3.5 h-3.5 text-[#0A84FF]" />
+              <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.07] text-[11px]">
+                <Timer className="w-3.5 h-3.5 text-[#0F52BA] dark:text-[#6495ED]" />
                 <div className="flex flex-col min-w-[110px]">
-                  <div className="flex items-center justify-between text-[9.5px] font-semibold text-[#64748B]">
+                  <div className="flex items-center justify-between text-[9.5px] font-mono font-semibold text-[#6B6A72] dark:text-[#8E8E93]">
                     <span>{(totalScheduledMinutesInView / 60).toFixed(1)}h / {(targetMinutesInView / 60).toFixed(0)}h</span>
-                    <span className={capacityPercent > 90 ? 'text-red-600 font-bold' : capacityPercent > 65 ? 'text-amber-600' : 'text-[#0A84FF]'}>
+                    <span className={capacityPercent > 90 ? 'text-[#C84B31] font-bold' : capacityPercent > 65 ? 'text-amber-600' : 'text-[#0F52BA]'}>
                       {capacityPercent > 90 ? 'Full' : capacityPercent > 65 ? 'Balanced' : 'Light'}
                     </span>
                   </div>
-                  <div className="w-full h-1 bg-black/[0.06] rounded-full overflow-hidden mt-0.5">
+                  <div className="w-full h-1 bg-black/[0.06] dark:bg-white/[0.08] rounded-full overflow-hidden mt-0.5">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
-                        capacityPercent > 90 ? 'bg-red-500' : capacityPercent > 65 ? 'bg-amber-500' : 'bg-[#0A84FF]'
+                        capacityPercent > 90 ? 'bg-[#C84B31]' : capacityPercent > 65 ? 'bg-amber-500' : 'bg-[#0F52BA]'
                       }`}
                       style={{ width: `${capacityPercent}%` }}
                     />
@@ -1090,15 +1090,15 @@ const TodayView = React.memo(function TodayView({
               <button
                 type="button"
                 onClick={() => scrollToNow(true)}
-                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-[#F5F4FA] hover:bg-white text-[#64748B] hover:text-red-500 border border-black/[0.04] shadow-3xs transition active:scale-95"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-black/[0.03] dark:bg-white/[0.05] hover:bg-white dark:hover:bg-[#1E1E22] text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#C84B31] border border-black/[0.06] dark:border-white/[0.07] transition active:scale-95 cursor-pointer"
                 title="Center view vertically around current time red line"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C84B31] animate-pulse" />
                 <span>Now</span>
               </button>
 
               {/* Scope Switcher (Desktop) */}
-              <div className="hidden lg:flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04]">
+              <div className="hidden lg:flex items-center p-0.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.06]">
                 {[
                   { id: 'day', label: 'Day' },
                   { id: '3day', label: '3-Day' },
@@ -1110,10 +1110,10 @@ const TodayView = React.memo(function TodayView({
                       key={s.id}
                       type="button"
                       onClick={() => setScope(s.id)}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${
+                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
                         isSelected
-                          ? 'bg-white text-[#0A84FF] shadow-xs'
-                          : 'text-[#64748B] hover:text-[#1A1B1F]'
+                          ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs'
+                          : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white'
                       }`}
                     >
                       {s.label}
@@ -1133,10 +1133,10 @@ const TodayView = React.memo(function TodayView({
                     setTransformState(null);
                   }
                 }}
-                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition active:scale-[0.98] ${
+                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition active:scale-[0.98] cursor-pointer ${
                   isEditorMode
-                    ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-300'
-                    : 'bg-white text-[#64748B] hover:text-[#1A1B1F] border border-black/[0.08] hover:bg-[#F5F4FA]'
+                    ? 'bg-amber-600 text-white shadow-sm ring-2 ring-amber-300'
+                    : 'bg-white dark:bg-[#1E1E22] text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white border border-black/[0.08] dark:border-white/[0.08]'
                 }`}
                 title={isEditorMode ? 'Exit Editor Mode' : 'Toggle Editor Mode: Drag and resize blocks like vector shapes'}
               >
@@ -1144,11 +1144,11 @@ const TodayView = React.memo(function TodayView({
                 <span>{isEditorMode ? 'Save & Done' : 'Editor'}</span>
               </button>
 
-              {/* Quick Add Button (Desktop only, mobile uses bottom nav circular CTA) */}
+              {/* Quick Add Button */}
               <button
                 type="button"
                 onClick={() => onOpenQuickAdd?.()}
-                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[12px] font-semibold hover:bg-[#0071E3] transition shadow-xs active:scale-[0.98] shrink-0"
+                className="hidden lg:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white text-[12px] font-semibold transition shadow-double-bezel active:scale-[0.98] shrink-0 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Task</span>

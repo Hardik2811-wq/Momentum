@@ -115,32 +115,32 @@ const TaskCard = React.memo(function TaskCard({
           }
         }}
         onClick={() => onEditTask?.(task)}
-        className={`group relative flex flex-col p-4 sm:p-5 rounded-2xl bg-surface-container-lowest border border-black/[0.04] shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:border-black/[0.08] hover:shadow-xs transition-colors cursor-pointer select-none ${
+        className={`group relative flex flex-col p-3.5 sm:p-4 rounded-xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] hover:border-black/[0.14] dark:hover:border-white/[0.15] transition-all cursor-pointer select-none ${
           task.completed ? 'opacity-55 hover:opacity-80 py-3 sm:py-3.5' : ''
-        } ${impact === 'high' && !task.completed ? 'border-l-[3.5px] border-l-rose-500' : ''}`}
+        } ${impact === 'high' && !task.completed ? 'border-l-[3px] border-l-[#C84B31]' : ''}`}
       >
         {/* Top Row: Checkbox, Title, Actions */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggle();
               }}
-              className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
+              className={`mt-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
                 task.completed
-                  ? 'bg-primary text-white shadow-2xs'
-                  : 'bg-transparent text-transparent hover:text-primary border border-black/20 hover:border-primary'
+                  ? 'bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] shadow-2xs'
+                  : 'bg-transparent text-transparent hover:text-[#0F52BA] border border-black/25 dark:border-white/30 hover:border-[#0F52BA]'
               }`}
               title={task.completed ? 'Mark incomplete' : 'Mark complete'}
             >
-              <Check className="w-3.5 h-3.5 stroke-[3]" />
+              <Check className="w-3 h-3 stroke-[3]" />
             </button>
             <div className="flex flex-col min-w-0 flex-1">
               <span
-                className={`font-semibold text-[14px] sm:text-[15px] leading-snug text-on-surface tracking-tight group-hover:text-primary transition-colors ${
-                  task.completed ? 'line-through text-on-surface-variant' : ''
+                className={`font-medium text-[13.5px] sm:text-[14px] leading-snug text-[#161618] dark:text-[#F7F6F2] tracking-tight group-hover:text-[#0F52BA] dark:group-hover:text-[#6495ED] transition-colors ${
+                  task.completed ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : ''
                 }`}
               >
                 {task.title}
@@ -151,12 +151,12 @@ const TaskCard = React.memo(function TaskCard({
           {/* Priority Badge & Delete */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span
-              className={`px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
+              className={`px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider ${
                 impact === 'high'
-                  ? 'bg-rose-50 text-rose-700 border-rose-200/60 font-bold'
+                  ? 'bg-[#C84B31]/10 text-[#C84B31] border border-[#C84B31]/20 font-bold'
                   : impact === 'medium'
-                  ? 'bg-amber-50/80 text-amber-800 border-amber-200/50'
-                  : 'hidden sm:inline-block bg-surface-container-high/60 text-on-surface-variant border-transparent'
+                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                  : 'hidden sm:inline-block bg-black/[0.04] dark:bg-white/[0.05] text-[#6B6A72] dark:text-[#8E8E93]'
               }`}
             >
               {IMPACT_LABELS[impact]}

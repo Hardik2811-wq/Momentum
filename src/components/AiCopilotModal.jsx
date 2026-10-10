@@ -733,35 +733,35 @@ export default function AiCopilotModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full sm:max-w-xl h-[88vh] sm:h-[80vh] sm:max-h-[720px] bg-white sm:rounded-2xl border-t sm:border border-black/[0.08] shadow-xl flex flex-col overflow-hidden text-[#1A1B1F]">
+      <div className="w-full sm:max-w-xl h-[88vh] sm:h-[80vh] sm:max-h-[720px] bg-surface-bone dark:bg-[#1A1A1E] sm:rounded-2xl border-t sm:border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden text-ink-primary dark:text-[#F7F6F2]">
         
         {/* Mobile Drag Notch */}
-        <div className="sm:hidden pt-2.5 pb-1 flex justify-center bg-white shrink-0">
-          <div className="w-9 h-1 bg-black/15 rounded-full" />
+        <div className="sm:hidden pt-2.5 pb-1 flex justify-center bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
+          <div className="w-9 h-1 bg-black/15 dark:bg-white/20 rounded-full" />
         </div>
 
-        {/* Minimal Header (Linear / Raycast Style) */}
-        <header className="px-4 sm:px-5 py-2.5 border-b border-black/[0.06] flex items-center justify-between shrink-0 bg-white select-none">
+        {/* Minimal Header */}
+        <header className="px-4 sm:px-5 py-2.5 border-b border-black/[0.07] dark:border-white/[0.08] flex items-center justify-between shrink-0 bg-[#F7F6F2] dark:bg-[#151518] select-none">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <h3 className="font-semibold text-[13px] text-[#1A1B1F] tracking-tight">Copilot</h3>
-            <span className="text-[#8E8E93] text-[12px] hidden sm:inline">• Plan &amp; Schedule</span>
+            <h3 className="font-editorial text-[17px] font-normal text-ink-primary dark:text-[#F7F6F2] tracking-tight">Copilot</h3>
+            <span className="font-mono text-[11px] uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93] hidden sm:inline">• Plan &amp; Schedule</span>
           </div>
 
           <div className="flex items-center gap-2">
             {/* View Mode Toggle: Chat vs Graphify Life Graph */}
-            <div className="flex items-center p-0.5 bg-black/[0.04] rounded-lg border border-black/[0.06]">
+            <div className="flex items-center p-0.5 bg-black/[0.05] dark:bg-white/[0.07] rounded-lg border border-black/[0.06] dark:border-white/[0.08]">
               <button
                 type="button"
                 onClick={() => setCopilotView('chat')}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
                   copilotView === 'chat'
-                    ? 'bg-white text-[#1A1B1F] shadow-2xs'
-                    : 'text-[#8E8E93] hover:text-[#1A1B1F]'
+                    ? 'bg-white dark:bg-[#252529] text-ink-primary dark:text-[#F7F6F2] shadow-2xs'
+                    : 'text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2]'
                 }`}
                 title="Copilot Chat Assistant"
               >
@@ -773,8 +773,8 @@ export default function AiCopilotModal({
                 onClick={() => setCopilotView('graph')}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
                   copilotView === 'graph'
-                    ? 'bg-[#0A84FF] text-white shadow-2xs'
-                    : 'text-[#8E8E93] hover:text-[#1A1B1F]'
+                    ? 'bg-accent-cobalt text-white shadow-2xs'
+                    : 'text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2]'
                 }`}
                 title="Graphify Life Graph DAG"
               >
@@ -786,7 +786,7 @@ export default function AiCopilotModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-7 h-7 rounded-lg text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-black/[0.04] flex items-center justify-center transition cursor-pointer"
+              className="w-7 h-7 rounded-lg text-ink-secondary hover:text-ink-primary dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center transition cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>

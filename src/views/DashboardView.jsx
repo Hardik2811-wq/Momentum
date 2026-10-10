@@ -326,29 +326,29 @@ const DashboardView = React.memo(function DashboardView({
   };
 
   return (
-    <main className="w-full min-h-screen bg-surface pt-[calc(4rem+env(safe-area-inset-top))] md:pt-14 px-4 sm:px-6 md:px-8 py-4 sm:py-8">
+    <main className="w-full min-h-screen bg-canvas dark:bg-canvas-dark pt-[calc(4rem+env(safe-area-inset-top))] md:pt-14 px-4 sm:px-6 md:px-8 py-4 sm:py-8 transition-colors duration-200">
       <div className="mx-auto w-full max-w-[1440px] space-y-6 sm:space-y-8">
         <header data-block-id="dashboard-header" className="flex items-center justify-between gap-3 pt-1">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-3 py-1 text-[11px] font-semibold text-on-surface-variant border border-black/[0.04] mb-2">
-              <Calendar className="w-3.5 h-3.5 text-primary" />
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white dark:bg-[#1A1A1E] px-3 py-1 text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93] border border-black/[0.07] dark:border-white/[0.08] mb-2 shadow-2xs">
+              <Calendar className="w-3.5 h-3.5 text-[#0F52BA]" />
               <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight text-on-surface truncate">
+            <h1 className="text-3xl sm:text-4xl font-editorial tracking-tight text-[#161618] dark:text-[#F7F6F2] truncate">
               {greeting}, {userName} {progressEmotion.emoji}
             </h1>
-            <p className="hidden sm:block font-editorial text-sm sm:text-base italic text-on-surface-variant mt-0.5">
+            <p className="hidden sm:block font-editorial text-sm sm:text-base italic text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
               Plan today. Do next task. Review week.
             </p>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
             {/* Live Progress Ring Widget */}
-            <div className="flex items-center gap-2.5 bg-surface-container-lowest border border-black/[0.04] rounded-2xl p-2 sm:px-3.5 sm:py-2 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center gap-2.5 bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] rounded-2xl p-2 sm:px-3.5 sm:py-2 shadow-double-bezel">
               <div className="relative w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center shrink-0">
                 <svg className="w-8 h-8 sm:w-9 sm:h-9 -rotate-90" viewBox="0 0 36 36">
                   <path
-                    className="text-surface-container-high"
+                    className="text-black/[0.06] dark:text-white/[0.08]"
                     strokeWidth="3.5"
                     stroke="currentColor"
                     fill="none"
@@ -364,20 +364,20 @@ const DashboardView = React.memo(function DashboardView({
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
                 </svg>
-                <span className="absolute font-mono tabular-nums text-[9px] sm:text-[10px] font-extrabold text-on-surface">
+                <span className="absolute font-mono tabular-nums text-[9px] sm:text-[10px] font-bold text-[#161618] dark:text-[#F7F6F2]">
                   {todayTasks.length ? Math.round((completedTodayTasksCount / todayTasks.length) * 100) : 0}%
                 </span>
               </div>
               <div className="hidden sm:flex flex-col text-left pr-1">
-                <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Today</span>
-                <span className="text-xs font-mono font-bold tabular-nums text-primary">{completedTodayTasksCount}/{todayTasks.length} Done</span>
+                <span className="text-[9px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Today</span>
+                <span className="text-xs font-mono font-bold tabular-nums text-[#0F52BA] dark:text-[#6495ED]">{completedTodayTasksCount}/{todayTasks.length} Done</span>
               </div>
             </div>
 
             {/* Desktop Add Task Button */}
             <button
               onClick={onOpenQuickAdd}
-              className="hidden md:inline-flex items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+              className="hidden md:inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white px-4 py-2 text-xs font-semibold shadow-double-bezel active:scale-95 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Add task</span>
@@ -388,51 +388,51 @@ const DashboardView = React.memo(function DashboardView({
         
         {/* 🔥 EXPERT BENTO DASHBOARD: Values over Labels, Fluid Odometers, Tinted Ambient Shadows */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-surface-container-lowest rounded-[24px] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_16px_32px_rgba(10,132,255,0.04)] border border-black/[0.04] flex flex-col justify-between transition-all hover:scale-[1.02]">
-             <div className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider flex items-center gap-1.5"><ListChecks className="w-3.5 h-3.5 text-primary"/> FOCUS LEFT</div>
-             <div className="text-4xl sm:text-5xl font-display font-extrabold text-on-surface mt-2 tracking-tighter">
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] border border-black/[0.07] dark:border-white/[0.08] flex flex-col justify-between transition-all hover:border-black/[0.12]">
+             <div className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93] flex items-center gap-1.5"><ListChecks className="w-3.5 h-3.5 text-[#0F52BA]"/> FOCUS LEFT</div>
+             <div className="text-4xl sm:text-5xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2] mt-2 tracking-tight">
                 <AnimatedNumber value={activeUpcomingTasks.length} />
              </div>
           </div>
-          <div className="bg-surface-container-lowest rounded-[24px] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_16px_32px_rgba(245,158,11,0.04)] border border-black/[0.04] flex flex-col justify-between transition-all hover:scale-[1.02]">
-             <div className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-amber-500"/> COMPLETED</div>
-             <div className="text-4xl sm:text-5xl font-display font-extrabold text-on-surface mt-2 tracking-tighter flex items-baseline gap-2">
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] border border-black/[0.07] dark:border-white/[0.08] flex flex-col justify-between transition-all hover:border-black/[0.12]">
+             <div className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93] flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-[#C84B31]"/> COMPLETED</div>
+             <div className="text-4xl sm:text-5xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2] mt-2 tracking-tight flex items-baseline gap-2">
                 <AnimatedNumber value={completedTodayTasksCount} />
-                <span className="text-sm font-semibold text-on-surface-variant/50 tracking-normal">/ <AnimatedNumber value={todayTasks.length} /></span>
+                <span className="text-sm font-mono text-[#6B6A72]/50 tracking-normal">/ <AnimatedNumber value={todayTasks.length} /></span>
              </div>
           </div>
-          <div className="bg-surface-container-lowest rounded-[24px] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_16px_32px_rgba(16,185,129,0.04)] border border-black/[0.04] flex flex-col justify-between transition-all hover:scale-[1.02]">
-             <div className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider flex items-center gap-1.5"><Repeat className="w-3.5 h-3.5 text-emerald-500"/> HABITS DONE</div>
-             <div className="text-4xl sm:text-5xl font-display font-extrabold text-on-surface mt-2 tracking-tighter flex items-baseline gap-2">
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] border border-black/[0.07] dark:border-white/[0.08] flex flex-col justify-between transition-all hover:border-black/[0.12]">
+             <div className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93] flex items-center gap-1.5"><Repeat className="w-3.5 h-3.5 text-[#2E6F40]"/> HABITS DONE</div>
+             <div className="text-4xl sm:text-5xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2] mt-2 tracking-tight flex items-baseline gap-2">
                 <AnimatedNumber value={checkedHabits} />
-                <span className="text-sm font-semibold text-on-surface-variant/50 tracking-normal">/ <AnimatedNumber value={habits.length} /></span>
+                <span className="text-sm font-mono text-[#6B6A72]/50 tracking-normal">/ <AnimatedNumber value={habits.length} /></span>
              </div>
           </div>
-          <div className="bg-surface-container-lowest rounded-[24px] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_16px_32px_rgba(139,92,246,0.04)] border border-black/[0.04] flex flex-col justify-between transition-all hover:scale-[1.02]">
-             <div className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-purple-500"/> MOMENTUM</div>
-             <div className="text-4xl sm:text-5xl font-display font-extrabold text-on-surface mt-2 tracking-tighter flex items-baseline gap-0.5">
-                <AnimatedNumber value={progressPercent} /><span className="text-2xl text-on-surface-variant/50 font-medium">%</span>
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] border border-black/[0.07] dark:border-white/[0.08] flex flex-col justify-between transition-all hover:border-black/[0.12]">
+             <div className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93] flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-[#6C4AB6]"/> MOMENTUM</div>
+             <div className="text-4xl sm:text-5xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2] mt-2 tracking-tight flex items-baseline gap-0.5">
+                <AnimatedNumber value={progressPercent} /><span className="text-2xl text-[#6B6A72]/50 font-medium">%</span>
              </div>
           </div>
         </section>
 
         {/* NOW FOCUS HERO CARD (Spacious Negative-Spacing Architecture) */}
-        <section data-block-id="dashboard-now-hero" className="rounded-3xl border border-black/[0.04] bg-surface-container-lowest p-6 sm:p-7 md:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_16px_32px_rgba(10,132,255,0.08)] relative overflow-hidden">
-          <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-primary/[0.04] blur-3xl pointer-events-none" />
+        <section data-block-id="dashboard-now-hero" className="rounded-2xl border border-black/[0.07] dark:border-white/[0.08] bg-white dark:bg-[#1A1A1E] p-6 sm:p-7 md:p-8 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_32px_rgba(0,0,0,0.04)] relative overflow-hidden">
+          <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-[#0F52BA]/[0.03] blur-3xl pointer-events-none" />
 
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between relative z-10">
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0F52BA] opacity-60"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0F52BA]"></span>
                 </span>
-                <span className="text-[11px] font-display font-extrabold uppercase tracking-wider text-primary">Now Focus Target</span>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-semibold">Now Focus Target</span>
                 {nextTask && (
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                     taskImpact(nextTask) === 'high'
-                      ? 'bg-rose-50 text-rose-700 border-rose-200/60'
-                      : 'bg-amber-50 text-amber-800 border-amber-200/50'
+                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/40'
+                      : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40'
                   }`}>
                     {IMPACT_LABELS[taskImpact(nextTask)]} Impact
                   </span>
@@ -441,9 +441,9 @@ const DashboardView = React.memo(function DashboardView({
 
               {nextTask ? (
                 <>
-                  <h2 className="text-xl sm:text-2xl font-display font-bold tracking-tight text-on-surface truncate">{nextTask.title}</h2>
-                  <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-on-surface-variant">
-                    <span className="inline-flex items-center gap-1 font-mono tabular-nums font-medium text-primary">
+                  <h2 className="text-xl sm:text-2xl font-editorial font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2] truncate">{nextTask.title}</h2>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#6B6A72] dark:text-[#8E8E93]">
+                    <span className="inline-flex items-center gap-1 font-mono tabular-nums font-medium text-[#0F52BA] dark:text-[#6495ED]">
                       <Clock className="w-3.5 h-3.5" />
                       {nextTask.startTime ? formatTime(nextTask.startTime) : 'Planned today'}
                     </span>
@@ -478,19 +478,19 @@ const DashboardView = React.memo(function DashboardView({
             </div>
 
             {nextTask ? (
-              <div className="flex items-center gap-3 shrink-0 pt-2 sm:pt-0">
+              <div className="flex items-center gap-2.5 shrink-0 pt-2 sm:pt-0">
                 <button
                   onClick={() => setEditingTask(nextTask)}
-                  className="px-4 py-2 rounded-full text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-all cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white hover:bg-black/[0.03] transition-all cursor-pointer"
                 >
-                  View task
+                  View details
                 </button>
                 <button
                   onClick={() => handleToggleTask(nextTask.id)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/90 text-on-primary text-sm font-semibold shadow-xs hover:shadow-sm active:scale-95 transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white text-xs font-semibold shadow-double-bezel active:scale-95 transition-all cursor-pointer"
                 >
-                  <Check className="w-4 h-4 stroke-[2.5]" />
-                  <span>Complete task</span>
+                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Complete</span>
                 </button>
               </div>
             ) : missedTasksList.length > 0 ? (
@@ -499,12 +499,12 @@ const DashboardView = React.memo(function DashboardView({
                   const el = document.getElementById('missed-window-section');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="rounded-full bg-amber-500 hover:bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:shadow-sm transition-all cursor-pointer"
+                className="rounded-xl bg-[#C84B31] hover:bg-[#B33E26] px-4 py-2 text-xs font-semibold text-white shadow-xs active:scale-95 transition-all cursor-pointer"
               >
                 Review Missed Tasks ({missedTasksList.length})
               </button>
             ) : (
-              <button onClick={onOpenQuickAdd} className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary shadow-xs hover:shadow-sm transition-all cursor-pointer">
+              <button onClick={onOpenQuickAdd} className="rounded-xl bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] px-4 py-2 text-xs font-semibold shadow-double-bezel active:scale-95 transition-all cursor-pointer">
                 Add first task
               </button>
             )}
@@ -518,20 +518,20 @@ const DashboardView = React.memo(function DashboardView({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-1">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-display font-bold tracking-tight text-on-surface">
+                  <h2 className="text-xl font-editorial font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2]">
                     {nextTask ? 'Upcoming Queue' : 'Today'}
                   </h2>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-mono font-bold tabular-nums bg-primary/10 text-primary">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full font-mono font-bold tabular-nums bg-black/[0.05] dark:bg-white/[0.08] text-[#161618] dark:text-[#F7F6F2]">
                     {activeQueueTasks.length} {activeQueueTasks.length === 1 ? 'task' : 'tasks'}
                   </span>
                 </div>
-                <p className="text-xs text-on-surface-variant mt-0.5">
+                <p className="text-xs text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
                   {completedTodayTasksCount} of {todayTasks.length} tasks complete · {checkedHabits}/{habits.length} habits checked in
                 </p>
               </div>
 
               {/* Filter Pills with Live Count Badges */}
-              <div className="inline-flex rounded-full bg-surface-container/60 p-1 gap-1 self-start sm:self-auto">
+              <div className="inline-flex rounded-xl bg-black/[0.04] dark:bg-white/[0.06] p-0.5 gap-1 self-start sm:self-auto border border-black/[0.04] dark:border-white/[0.06]">
                 {[
                   ['all', 'All', filterCounts.all],
                   ['high', 'High impact', filterCounts.high],
@@ -540,15 +540,15 @@ const DashboardView = React.memo(function DashboardView({
                   <button
                     key={id}
                     onClick={() => setFilter(id)}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-all ${
                       filter === id
-                        ? 'bg-surface-container-lowest text-primary shadow-xs font-bold'
-                        : 'text-on-surface-variant hover:text-on-surface'
+                        ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs font-semibold'
+                        : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white font-medium'
                     }`}
                   >
                     <span>{label}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono tabular-nums ${
-                      filter === id ? 'bg-primary/10 text-primary' : 'bg-surface-container-high text-on-surface-variant'
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono tabular-nums ${
+                      filter === id ? 'bg-black/[0.06] dark:bg-white/[0.1] text-[#161618] dark:text-[#F7F6F2]' : 'bg-black/[0.03] dark:bg-white/[0.04] text-[#6B6A72] dark:text-[#8E8E93]'
                     }`}>
                       {count}
                     </span>
@@ -751,37 +751,37 @@ const DashboardView = React.memo(function DashboardView({
           {/* Right Column: Habits (4 cols) */}
           <aside data-block-id="dashboard-sidebar-column" className="space-y-6 lg:col-span-4">
             {/* Habits Widget (Spacious Negative-Spacing Architecture) */}
-            <div data-block-id="dashboard-habits-card" className="rounded-3xl bg-surface-container-lowest p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_24px_rgba(0,0,0,0.05)] border border-black/[0.04]">
+            <div data-block-id="dashboard-habits-card" className="rounded-2xl bg-white dark:bg-[#1A1A1E] p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] border border-black/[0.07] dark:border-white/[0.08]">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
-                    <Repeat className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-lg bg-[#2E6F40]/10 text-[#2E6F40] flex items-center justify-center">
+                    <Repeat className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-display font-bold text-on-surface">Daily Habits</h2>
-                    <p className="text-[11px] text-on-surface-variant">
-                      <span className="font-mono tabular-nums font-semibold">{checkedHabits}</span> of <span className="font-mono tabular-nums font-semibold">{habits.length}</span> locked today
+                    <h2 className="text-base font-editorial font-medium text-[#161618] dark:text-[#F7F6F2]">Daily Habits</h2>
+                    <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93]">
+                      <span className="font-mono tabular-nums font-semibold text-[#161618] dark:text-[#F7F6F2]">{checkedHabits}</span> of <span className="font-mono tabular-nums font-semibold text-[#161618] dark:text-[#F7F6F2]">{habits.length}</span> locked today
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setActiveTab('habits')}
-                  className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                  className="text-xs font-mono font-medium text-[#0F52BA] dark:text-[#6495ED] hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <span>All habits</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>All</span>
+                  <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
 
               {/* Habit Completion Progress Bar */}
-              <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden my-3.5">
+              <div className="w-full h-1 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden my-3">
                 <div
-                  className="h-full bg-secondary rounded-full transition-all duration-500"
+                  className="h-full bg-[#2E6F40] rounded-full transition-all duration-500"
                   style={{ width: `${habits.length > 0 ? Math.round((checkedHabits / habits.length) * 100) : 0}%` }}
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {habits.slice(0, 4).map(habit => {
                   const done = habit.completedDays?.includes(today);
                   const streak = (habit.completedDays || []).length;
@@ -789,27 +789,27 @@ const DashboardView = React.memo(function DashboardView({
                     <button
                       key={habit.id}
                       onClick={() => handleHabitCheck(habit.id)}
-                      className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-3 text-left transition-all active:scale-[0.99] ${
+                      className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition-all active:scale-[0.99] border cursor-pointer ${
                         done
-                          ? 'bg-emerald-500/[0.05] text-on-surface-variant'
-                          : 'bg-surface-container-low/50 hover:bg-surface-container-low text-on-surface'
+                          ? 'bg-[#2E6F40]/[0.05] border-[#2E6F40]/20 text-[#6B6A72] dark:text-[#8E8E93]'
+                          : 'bg-black/[0.02] dark:bg-white/[0.03] hover:bg-black/[0.04] dark:hover:bg-white/[0.05] border-black/[0.04] dark:border-white/[0.06] text-[#161618] dark:text-[#F7F6F2]'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span className={`flex h-5 w-5 items-center justify-center rounded-full border transition-all ${
-                          done ? 'border-primary bg-primary text-white shadow-2xs' : 'border-outline/40 bg-surface'
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span className={`flex h-4.5 w-4.5 items-center justify-center rounded-full border transition-all ${
+                          done ? 'border-[#2E6F40] bg-[#2E6F40] text-white shadow-2xs' : 'border-black/20 dark:border-white/20 bg-transparent'
                         }`}>
                           <Check className="w-3 h-3 stroke-[3]" />
                         </span>
                         <span className={`text-xs font-medium truncate ${
-                          done ? 'text-on-surface-variant/70 line-through' : 'text-on-surface'
+                          done ? 'line-through text-[#6B6A72]/70 dark:text-[#8E8E93]/70' : ''
                         }`}>
                           {habit.title}
                         </span>
                       </div>
                       {streak > 0 && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold tabular-nums text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200/50 shrink-0">
-                          <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold tabular-nums text-[#C84B31] bg-[#C84B31]/10 px-1.5 py-0.2 rounded-md border border-[#C84B31]/20 shrink-0">
+                          <Flame className="w-3 h-3 text-[#C84B31] fill-[#C84B31]" />
                           <span>{streak}d</span>
                         </span>
                       )}
@@ -817,31 +817,31 @@ const DashboardView = React.memo(function DashboardView({
                   );
                 })}
                 {!habits.length && (
-                  <p className="text-xs text-on-surface-variant text-center py-4">No habits configured yet.</p>
+                  <p className="text-xs text-[#6B6A72] dark:text-[#8E8E93] text-center py-4">No habits configured yet.</p>
                 )}
               </div>
             </div>
 
             {/* Today's Timetable & Schedule Card */}
-            <div data-block-id="dashboard-today-schedules-card" className="rounded-3xl bg-surface-container-lowest p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_24px_rgba(0,0,0,0.05)] border border-black/[0.04]">
+            <div data-block-id="dashboard-today-schedules-card" className="rounded-2xl bg-white dark:bg-[#1A1A1E] p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] border border-black/[0.07] dark:border-white/[0.08]">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
-                    <Calendar className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-lg bg-[#0F52BA]/10 text-[#0F52BA] flex items-center justify-center">
+                    <Calendar className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-display font-bold text-on-surface">Today's Schedule</h2>
-                    <p className="text-[11px] text-on-surface-variant">
-                      <span className="font-mono tabular-nums font-semibold">{todaySchedules.length}</span> {todaySchedules.length === 1 ? 'block' : 'blocks'} scheduled today
+                    <h2 className="text-base font-editorial font-medium text-[#161618] dark:text-[#F7F6F2]">Today's Schedule</h2>
+                    <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93]">
+                      <span className="font-mono tabular-nums font-semibold text-[#161618] dark:text-[#F7F6F2]">{todaySchedules.length}</span> {todaySchedules.length === 1 ? 'block' : 'blocks'} scheduled today
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
-                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:underline cursor-pointer"
+                  className="text-xs font-mono font-medium text-[#0F52BA] dark:text-[#6495ED] hover:underline flex items-center gap-1 cursor-pointer"
                   title="Add timetable class block"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-3 h-3" />
                   <span>Add</span>
                 </button>
               </div>
