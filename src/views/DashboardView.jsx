@@ -443,6 +443,91 @@ const DashboardView = React.memo(function DashboardView({
     } : null;
   }, [todaySchedules, currentMinutes, todayPlan]);
 
+  const timelineBranches = useMemo(() => {
+    const parseToMin = (t) => {
+      if (!t) return 0;
+      const [h, m] = t.split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    if (!todaySchedules.length) {
+      return [];
+    }
+
+    const items = [];
+    const firstSched = todaySchedules[0];
+    const firstMin = parseToMin(firstSched?.startTime);
+
+    // 1. Synthetic branch ABOVE if the first event starts after 8:30 AM
+    if (firstMin > 510) {
+      items.push({
+        id: 'synthetic-morning',
+        isSynthetic: true,
+        time: '08:00 AM',
+        title: 'Morning Kickoff',
+        category: 'Routine',
+        isDone: currentMinutes >= 510,
+        status: 'passed'
+      });
+    }
+
+    // 2. Real schedules
+    todaySchedules.forEach((s) => {
+      const isDone = Boolean(
+        s.completed ||
+        (Array.isArray(s.completedDates) && s.completedDates.includes(todayPlan))
+      );
+      items.push({
+        id: s.id,
+        isSynthetic: false,
+        sched: s,
+        time: formatTime(s.startTime),
+        title: s.title,
+        category: s.category || 'Class',
+        isDone,
+        rawStartTime: s.startTime
+      });
+    });
+
+    const lastSched = todaySchedules[todaySchedules.length - 1];
+    const lastMin = parseToMin(lastSched?.endTime || calculateEndTime(lastSched?.startTime, lastSched?.durationMinutes || 60));
+
+    // 3. Synthetic branches BELOW
+    if (todaySchedules.length === 1) {
+      const focusStart = lastSched.endTime || calculateEndTime(lastSched.startTime, lastSched.durationMinutes || 60);
+      items.push({
+        id: 'synthetic-focus',
+        isSynthetic: true,
+        time: formatTime(focusStart),
+        title: 'Open Focus Runway',
+        category: 'Deep Work',
+        isDone: currentMinutes > parseToMin(focusStart) + 120,
+        status: 'open'
+      });
+      items.push({
+        id: 'synthetic-evening',
+        isSynthetic: true,
+        time: '08:00 PM',
+        title: 'Evening Wrap-up',
+        category: 'Routine',
+        isDone: false,
+        status: 'upcoming'
+      });
+    } else if (lastMin < 1140) {
+      items.push({
+        id: 'synthetic-evening',
+        isSynthetic: true,
+        time: '08:00 PM',
+        title: 'Evening Review',
+        category: 'Routine',
+        isDone: currentMinutes > 1200,
+        status: 'upcoming'
+      });
+    }
+
+    return items;
+  }, [todaySchedules, currentMinutes, todayPlan]);
+
   const last7Days = useMemo(() => {
     const days = [];
     const now = new Date();
@@ -521,155 +606,118 @@ const DashboardView = React.memo(function DashboardView({
             </div>
 
             {/* Dynamic Active-Node Rail Canvas */}
-            {todaySchedules.length > 0 ? (
-              <div className="relative pl-7 py-1 space-y-4 max-h-[calc(100vh-210px)] overflow-y-auto pr-1 scrollbar-thin">
+            {timelineBranches.length > 0 ? (
+              <div className="relative py-2 space-y-3.5 max-h-[calc(100vh-210px)] overflow-y-auto pr-1 scrollbar-thin">
                 {/* Continuous Vertical Rail Track */}
-                <div className="absolute left-[11px] top-3 bottom-3 w-[2px] bg-black/[0.07] dark:bg-white/[0.08]" />
+                <div className="absolute left-[17px] top-4 bottom-4 w-[2px] bg-indigo-500/30 dark:bg-indigo-400/30" />
 
-                {todaySchedules.map((sched, index) => {
-                  const isDone = Boolean(
-                    sched.completed ||
-                    (Array.isArray(sched.completedDates) && sched.completedDates.includes(todayPlan))
-                  );
-                  const isExpanded = activeScheduleInfo?.id === sched.id;
-                  const color = getScheduleColor(sched.category);
-                  
-                  const parseToMin = (t) => {
-                    if (!t) return 0;
-                    const [h, m] = t.split(':').map(Number);
-                    return (h || 0) * 60 + (m || 0);
-                  };
-                  const sMin = parseToMin(sched.startTime);
-                  const prevSched = todaySchedules[index - 1];
-                  const prevMin = prevSched ? parseToMin(prevSched.startTime) : -1;
-                  const showCurrentTimeBefore = currentMinutes > prevMin && currentMinutes <= sMin && index > 0;
+                {timelineBranches.map((item) => {
+                  const isExpanded = activeScheduleInfo?.id === item.id;
+                  const isDone = item.isDone;
 
                   return (
-                    <React.Fragment key={sched.id}>
-                      {/* Live Current Time Marker between items */}
-                      {showCurrentTimeBefore && (
-                        <div className="relative -left-7 flex items-center gap-2 py-1 my-1 z-10">
-                          <span className="relative flex h-2 w-2 ml-[8px]">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-                          </span>
-                          <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 tabular-nums">
-                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} Now
-                          </span>
-                          <div className="flex-1 h-[1.5px] bg-rose-500/50" />
-                        </div>
-                      )}
+                    <div key={item.id} className="relative flex items-center pl-9 group min-h-[44px]">
+                      {/* Circle Node on the Vertical Rail */}
+                      <div className={`absolute left-[10px] z-10 flex items-center justify-center transition-all ${
+                        isExpanded
+                          ? 'w-4 h-4 rounded-full bg-[#0F52BA] text-white ring-4 ring-[#0F52BA]/25 -translate-x-[1px]'
+                          : isDone
+                            ? 'w-3.5 h-3.5 rounded-full bg-emerald-600 text-white shadow-2xs'
+                            : 'w-3.5 h-3.5 rounded-full border-2 border-indigo-500 bg-white dark:bg-[#1A1A1E]'
+                      }`}>
+                        {isDone && <Check className="w-2 h-2 stroke-[3]" />}
+                      </div>
 
-                      <div className="relative group">
-                        {/* Node ring on vertical rail */}
-                        <div className="absolute -left-[24px] top-2.5 z-10 flex items-center justify-center">
-                          {isDone ? (
-                            <div className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-2xs">
-                              <Check className="w-2.5 h-2.5 stroke-[3]" />
-                            </div>
-                          ) : isExpanded ? (
-                            <div className="relative flex h-4 w-4">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0F52BA] opacity-60"></span>
-                              <span className="relative inline-flex rounded-full h-4 w-4 bg-[#0F52BA] ring-2 ring-white dark:ring-[#1A1A1E]" />
-                            </div>
-                          ) : (
-                            <div className={`w-3.5 h-3.5 rounded-full border-2 ${color.ringBorder} bg-white dark:bg-[#1A1A1E] group-hover:scale-110 transition-transform`} />
+                      {/* Horizontal Branch Arm */}
+                      <div className="absolute left-[18px] w-5 h-[2px] bg-indigo-500/30 dark:bg-indigo-400/30" />
+
+                      {/* Content: Capsule or Expanded Active Card */}
+                      {isExpanded && item.sched ? (
+                        /* ── EXPANDED ACTIVE CARD (Option 3 Hero Card) ── */
+                        <div
+                          onClick={() => setEditingSchedule(item.sched)}
+                          className="w-full rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-[#1E40AF] via-[#2563EB] to-[#3B82F6] text-white shadow-[0_12px_28px_rgba(37,99,235,0.30)] relative overflow-hidden space-y-2 cursor-pointer hover:shadow-[0_16px_36px_rgba(37,99,235,0.40)] transition-all"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono uppercase tracking-wider font-bold px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
+                              {activeScheduleInfo?.statusLabel || 'Active Event'}: {item.sched.category || 'Class'}
+                            </span>
+                            <span className="text-xs font-mono text-white/85">
+                              {formatTime(item.sched.startTime)} – {formatTime(item.sched.endTime)}
+                            </span>
+                          </div>
+
+                          <h3 className="text-base sm:text-lg font-bold tracking-tight text-white truncate">
+                            {item.sched.title}
+                          </h3>
+
+                          <div className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight text-white py-0.5">
+                            {activeScheduleInfo?.countdownText || 'Now'}
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2 border-t border-white/20">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleScheduleDone(item.sched, todayPlan, e);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#161618] hover:bg-black text-white text-xs font-bold shadow-tactile active:scale-95 transition cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              <span>{isDone ? 'Attended ✓' : 'Mark Attended'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingSchedule(item.sched);
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white/85 hover:text-white transition cursor-pointer ml-auto"
+                            >
+                              Details
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* ── COMPACT CAPSULE (Option 3 Past/Future Capsule) ── */
+                        <div
+                          onClick={() => {
+                            if (!item.isSynthetic && item.sched) setEditingSchedule(item.sched);
+                            else onOpenQuickAdd?.({ initialMode: 'schedule' });
+                          }}
+                          className={`inline-flex items-center rounded-full border transition-all cursor-pointer shadow-2xs hover:scale-[1.02] active:scale-[0.99] ${
+                            item.isDone
+                              ? 'bg-black/[0.03] dark:bg-white/[0.04] border-black/[0.07] dark:border-white/[0.08] opacity-65'
+                              : item.isSynthetic
+                                ? 'bg-indigo-500/5 dark:bg-indigo-500/10 border-dashed border-indigo-400/40 hover:border-indigo-500'
+                                : 'bg-indigo-500/10 dark:bg-indigo-500/20 border-indigo-500/25 dark:border-indigo-400/30'
+                          }`}
+                        >
+                          <span className={`px-2.5 py-1 font-mono text-[11px] font-bold rounded-full shrink-0 ${
+                            item.isDone
+                              ? 'bg-black/10 dark:bg-white/10 text-[#6B6A72] dark:text-[#8E8E93]'
+                              : item.isSynthetic
+                                ? 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
+                                : 'bg-indigo-600 dark:bg-indigo-500 text-white'
+                          }`}>
+                            {item.time}
+                          </span>
+                          <span className={`px-3 py-1 text-xs font-semibold truncate ${
+                            item.isDone
+                              ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]'
+                              : 'text-indigo-950 dark:text-indigo-100'
+                          }`}>
+                            {item.title}
+                          </span>
+                          {item.category && (
+                            <span className="pr-3 text-[10px] font-mono uppercase font-bold text-indigo-600 dark:text-indigo-300 opacity-75 shrink-0">
+                              {item.category}
+                            </span>
                           )}
                         </div>
-
-                        {/* Event Content: Expanded Card vs Compact Capsule */}
-                        {isExpanded ? (
-                          /* ── EXPANDED ACTIVE / NEXT UP CARD ── */
-                          <div
-                            onClick={() => setEditingSchedule(sched)}
-                            className={`p-4 rounded-2xl bg-gradient-to-br ${color.glow} text-white shadow-tactile transition-all cursor-pointer relative overflow-hidden`}
-                          >
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs">
-                                {activeScheduleInfo.statusLabel}
-                              </span>
-                              {sched.category && (
-                                <span className="text-[10px] font-mono uppercase font-bold tracking-wider opacity-85">
-                                  {sched.category}
-                                </span>
-                              )}
-                            </div>
-
-                            <h3 className="text-base sm:text-lg font-semibold tracking-tight text-white mb-1 truncate">
-                              {sched.title}
-                            </h3>
-
-                            <div className="flex items-center gap-2 text-xs font-mono text-white/90 mb-3">
-                              <Clock className="w-3.5 h-3.5 shrink-0" />
-                              <span>{formatTime(sched.startTime)} {sched.endTime ? `– ${formatTime(sched.endTime)}` : ''}</span>
-                              <span>•</span>
-                              <span>{sched.durationMinutes || 60}m</span>
-                            </div>
-
-                            <div className="text-2xl font-bold font-mono tracking-tight text-white mb-3">
-                              {activeScheduleInfo.countdownText}
-                            </div>
-
-                            <div className="flex items-center gap-2 pt-1 border-t border-white/15">
-                              <button
-                                type="button"
-                                onClick={(e) => handleToggleScheduleDone(sched, todayPlan, e)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-[#161618] hover:bg-white/90 text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
-                              >
-                                <Check className="w-3 h-3 stroke-[3]" />
-                                <span>{isDone ? 'Attended ✓' : 'Mark Attended'}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingSchedule(sched);
-                                }}
-                                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white transition cursor-pointer ml-auto"
-                              >
-                                Details
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          /* ── COMPACT CAPSULE (Matches User Reference Image) ── */
-                          <div
-                            onClick={() => setEditingSchedule(sched)}
-                            className={`flex items-center justify-between gap-3 px-3.5 py-2 rounded-full border transition-all cursor-pointer shadow-2xs hover:scale-[1.01] active:scale-[0.99] ${color.pillBg} ${isDone ? 'opacity-55' : ''}`}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="font-mono text-xs font-semibold tabular-nums shrink-0">
-                                {formatTime(sched.startTime)}
-                              </span>
-                              <span className="opacity-40 text-xs">•</span>
-                              <span className={`text-xs font-medium truncate ${isDone ? 'line-through opacity-75' : ''}`}>
-                                {sched.title}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2 shrink-0">
-                              {sched.category && (
-                                <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${color.badgeBg}`}>
-                                  {sched.category}
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                onClick={(e) => handleToggleScheduleDone(sched, todayPlan, e)}
-                                className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
-                                  isDone
-                                    ? 'bg-emerald-600 border-emerald-600 text-white'
-                                    : 'border-black/30 dark:border-white/35 hover:border-[#0F52BA]'
-                                }`}
-                                title={isDone ? 'Mark uncompleted' : 'Mark attended'}
-                              >
-                                {isDone && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </React.Fragment>
+                      )}
+                    </div>
                   );
                 })}
               </div>
