@@ -111,6 +111,22 @@ export function isTaskScheduledForDate(task = {}, dateStr = '') {
   return false;
 }
 
+export function isTaskCompletedForDate(task = {}, dateStr = todayPlanDate()) {
+  if (!task) return false;
+  const isRecurring = Boolean(task.recurrence && task.recurrence !== 'none');
+  if (isRecurring) {
+    if (Array.isArray(task.completedDates)) {
+      return task.completedDates.includes(dateStr);
+    }
+    if (task.completed && task.completedAt) {
+      const completedDate = new Date(task.completedAt).toISOString().slice(0, 10);
+      return completedDate === dateStr;
+    }
+    return false;
+  }
+  return Boolean(task.completed);
+}
+
 export function planDateLabel(date = '') {
   if (!date) return 'Not scheduled';
   if (date === todayPlanDate()) return 'Today';

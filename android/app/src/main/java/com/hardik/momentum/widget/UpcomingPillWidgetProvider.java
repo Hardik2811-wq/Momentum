@@ -45,9 +45,8 @@ public class UpcomingPillWidgetProvider extends AppWidgetProvider {
     SharedPreferences prefs = context.getSharedPreferences(WidgetBridgePlugin.PREFERENCES, Context.MODE_PRIVATE);
     String raw = prefs.getString(WidgetBridgePlugin.SNAPSHOT, null);
 
-    String title = "All caught up!";
-    String time = "Tap to view today's schedule";
-    String duration = "✓";
+    String title = "Keynote Rehearsal";
+    String chip = "14:00 • 45m left";
 
     if (raw != null && !raw.trim().isEmpty()) {
       try {
@@ -57,15 +56,10 @@ public class UpcomingPillWidgetProvider extends AppWidgetProvider {
           for (int i = 0; i < tasks.length(); i++) {
             JSONObject t = tasks.optJSONObject(i);
             if (t != null && !t.optBoolean("completed", false)) {
-              title = t.optString("title", "Next Task");
+              title = t.optString("title", "Keynote Rehearsal");
               String st = t.optString("startTime", "").trim();
               int dur = t.optInt("durationMinutes", 45);
-              duration = dur + "m";
-              if (!st.isEmpty()) {
-                time = "At " + st + " • " + dur + "m block";
-              } else {
-                time = "Top pending • " + dur + "m";
-              }
+              chip = !st.isEmpty() ? (st + " • " + dur + "m left") : (dur + "m • Flexible");
               break;
             }
           }
@@ -74,8 +68,7 @@ public class UpcomingPillWidgetProvider extends AppWidgetProvider {
     }
 
     views.setTextViewText(R.id.widget_pill_title, title);
-    views.setTextViewText(R.id.widget_pill_time, time);
-    views.setTextViewText(R.id.widget_pill_duration, duration);
+    views.setTextViewText(R.id.widget_pill_duration, chip);
 
     // Open app on click
     Intent intent = new Intent(context, MainActivity.class);

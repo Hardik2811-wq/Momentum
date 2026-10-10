@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="13dp">
 
     <!-- Header -->
     <RelativeLayout
@@ -18,19 +18,19 @@
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
-            android:text="MOMENTUM • CAPTURE"
+            android:text="QUICK CAPTURE"
             android:fontFamily="sans-serif-condensed"
-            android:textColor="#38BDF8"
-            android:textSize="9.5sp"
-            android:letterSpacing="0.14"
+            android:textColor="#8B95A5"
+            android:textSize="10sp"
+            android:letterSpacing="0.12"
             android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="7dp"
-            android:layout_height="7dp"
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:background="@drawable/widget_circle_task" />
+            android:src="@drawable/ic_bolt" />
     </RelativeLayout>
 
     <!-- Row 1: Task -->
@@ -47,11 +47,11 @@
         android:paddingEnd="10dp">
 
         <ImageView
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:background="@drawable/widget_circle_task"
             android:padding="6dp"
-            android:src="@drawable/ic_add" />
+            android:src="@drawable/ic_task_check" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -62,7 +62,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="NEW TASK"
+                android:text="TASK"
                 android:textColor="#FFFFFF"
                 android:textSize="11.5sp"
                 android:fontFamily="sans-serif-medium"
@@ -71,9 +71,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Todo &amp; sprint blocks"
-                android:textColor="#94A3B8"
-                android:textSize="9sp" />
+                android:text="+ new item"
+                android:textColor="#8B95A5"
+                android:textSize="9.5sp" />
         </LinearLayout>
     </LinearLayout>
 
@@ -91,11 +91,11 @@
         android:paddingEnd="10dp">
 
         <ImageView
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:background="@drawable/widget_circle_goal"
             android:padding="6dp"
-            android:src="@drawable/ic_add" />
+            android:src="@drawable/ic_goal_target" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -106,7 +106,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="NEW GOAL"
+                android:text="GOAL"
                 android:textColor="#FFFFFF"
                 android:textSize="11.5sp"
                 android:fontFamily="sans-serif-medium"
@@ -115,9 +115,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Target milestone"
-                android:textColor="#94A3B8"
-                android:textSize="9sp" />
+                android:text="milestone"
+                android:textColor="#8B95A5"
+                android:textSize="9.5sp" />
         </LinearLayout>
     </LinearLayout>
 
@@ -134,11 +134,11 @@
         android:paddingEnd="10dp">
 
         <ImageView
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:background="@drawable/widget_circle_habit"
             android:padding="6dp"
-            android:src="@drawable/ic_add" />
+            android:src="@drawable/ic_habit_repeat" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -149,7 +149,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="NEW HABIT"
+                android:text="HABIT"
                 android:textColor="#FFFFFF"
                 android:textSize="11.5sp"
                 android:fontFamily="sans-serif-medium"
@@ -158,9 +158,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Daily routine streak"
-                android:textColor="#94A3B8"
-                android:textSize="9sp" />
+                android:text="daily streak"
+                android:textColor="#8B95A5"
+                android:textSize="9.5sp" />
         </LinearLayout>
     </LinearLayout>
 

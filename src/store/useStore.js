@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase.js';
 import { purgeLegacyGroqKey } from '../lib/groqClient.js';
 import { resetNlpMemory, learnFromTaskSave, learnFromGoalSave, learnFromHabitSave } from '../lib/nlpMemory.js';
-import { planDateLabel, taskPlanDate, todayPlanDate } from '../lib/taskMetadata.js';
+import { planDateLabel, taskPlanDate, todayPlanDate, isTaskCompletedForDate } from '../lib/taskMetadata.js';
 import { detectScheduleCollisions, findOptimalTimeGap } from '../lib/scheduleCollisionGuard.js';
 import { computeHabitDecayMetrics, getHabitsAtRisk } from '../lib/habitDecayGuard.js';
 import { evaluateCapacityLoad } from '../lib/capacityOverloadGuard.js';
@@ -627,8 +627,10 @@ export default function useStore() {
     // 1. Group tasks by goalId and goalTitle in single O(T) pass
     const tasksByGoal = new Map();
     const tasksByGoalTitle = new Map();
+    const todayStr = todayKey();
     for (let i = 0; i < tasks.length; i++) {
       const t = tasks[i];
+      const isDone = isTaskCompletedForDate(t, todayStr);
       if (t.goalId !== undefined && t.goalId !== null && t.goalId !== '') {
         const gIdStr = String(t.goalId);
         let entry = tasksByGoal.get(gIdStr);
@@ -637,7 +639,7 @@ export default function useStore() {
           tasksByGoal.set(gIdStr, entry);
         }
         entry.totalCount++;
-        if (t.completed) {
+        if (isDone) {
           entry.completedCount++;
         } else {
           entry.activeCount++;
@@ -652,7 +654,7 @@ export default function useStore() {
           tasksByGoalTitle.set(titleKey, entry);
         }
         entry.totalCount++;
-        if (t.completed) {
+        if (isDone) {
           entry.completedCount++;
         } else {
           entry.activeCount++;
@@ -827,19 +829,46 @@ export default function useStore() {
     return newId;
   }, [setTasks, showToast]);
 
-  const toggleTask = useCallback((id) => {
+  const toggleTask = useCallback((id, targetDateKey = null, forceCompleted = null) => {
     const target = tasks.find(t => String(t.id) === String(id));
     if (!target) return;
-    const isNowCompleted = !target.completed;
+    const isRecurring = Boolean(target.recurrence && target.recurrence !== 'none');
+    const today = targetDateKey || todayKey();
+
+    let isNowCompleted;
+    if (isRecurring) {
+      const dates = Array.isArray(target.completedDates) ? target.completedDates : [];
+      const alreadyChecked = dates.includes(today);
+      isNowCompleted = forceCompleted !== null ? Boolean(forceCompleted) : !alreadyChecked;
+      if (isNowCompleted === alreadyChecked) return;
+    } else {
+      isNowCompleted = forceCompleted !== null ? Boolean(forceCompleted) : !target.completed;
+      if (isNowCompleted === target.completed) return;
+    }
+
     const linkedHabit = target.linkedHabitId ? habits.find(h => String(h.id) === String(target.linkedHabitId)) : null;
-    const today = todayKey();
 
     if (isNowCompleted && settings.soundEffects) playChime('complete');
-    setTasks(prev => prev.map(t => String(t.id) === String(id) ? {
-      ...t,
-      completed: isNowCompleted,
-      completedAt: isNowCompleted ? Date.now() : null
-    } : t));
+    setTasks(prev => prev.map(t => {
+      if (String(t.id) !== String(id)) return t;
+      if (isRecurring) {
+        const dates = Array.isArray(t.completedDates) ? t.completedDates : [];
+        const nextDates = isNowCompleted
+          ? (dates.includes(today) ? dates : [...dates, today])
+          : dates.filter(d => d !== today);
+        return {
+          ...t,
+          completedDates: nextDates,
+          completed: today === todayKey() ? isNowCompleted : t.completed,
+          completedAt: isNowCompleted ? Date.now() : t.completedAt
+        };
+      }
+      return {
+        ...t,
+        completed: isNowCompleted,
+        completedAt: isNowCompleted ? Date.now() : null
+      };
+    }));
 
     if (linkedHabit) {
       setHabits(prev => prev.map(h => {
@@ -1163,38 +1192,55 @@ export default function useStore() {
   }, [goals, tasks, habits, setGoals, setTasks, setHabits, showToast]);
 
   /* Habits Actions */
-  const checkInHabit = useCallback((id, targetDateKey = null) => {
+  const checkInHabit = useCallback((id, targetDateKey = null, forceDone = null) => {
     const targetDay = targetDateKey || todayKey();
-    let isCheckingIn = false;
+    const target = habits.find(h => String(h.id) === String(id));
+    if (!target) return;
+
+    const days = target.completedDays || [];
+    const alreadyChecked = days.includes(targetDay);
+    const isCheckingIn = forceDone !== null ? Boolean(forceDone) : !alreadyChecked;
+    if (isCheckingIn === alreadyChecked) return;
+
+    if (isCheckingIn && settings.soundEffects) {
+      playChime('complete');
+    }
 
     setHabits(prev => prev.map(h => {
       if (String(h.id) !== String(id)) return h;
-      const days = h.completedDays || [];
-      const alreadyChecked = days.includes(targetDay);
-      isCheckingIn = !alreadyChecked;
-      if (!alreadyChecked && settings.soundEffects) {
-        playChime('complete');
+      const hDays = h.completedDays || [];
+      if (!isCheckingIn) {
+        return { ...h, completedDays: hDays.filter(d => d !== targetDay) };
       }
-      if (alreadyChecked) {
-        return { ...h, completedDays: days.filter(d => d !== targetDay) };
-      }
-      return { ...h, completedDays: [...days, targetDay] };
+      return { ...h, completedDays: hDays.includes(targetDay) ? hDays : [...hDays, targetDay] };
     }));
 
-    // Auto sync today's scheduled tasks linked to this habit
-    if (targetDay === todayKey()) {
-      setTasks(prev => prev.map(t => {
-        if (String(t.linkedHabitId) === String(id)) {
+    // Auto sync scheduled tasks linked to this habit
+    setTasks(prev => prev.map(t => {
+      if (String(t.linkedHabitId) === String(id)) {
+        const isRecurring = Boolean(t.recurrence && t.recurrence !== 'none');
+        if (isRecurring) {
+          const tDates = Array.isArray(t.completedDates) ? t.completedDates : [];
+          const nextDates = isCheckingIn
+            ? (tDates.includes(targetDay) ? tDates : [...tDates, targetDay])
+            : tDates.filter(d => d !== targetDay);
+          return {
+            ...t,
+            completedDates: nextDates,
+            completed: targetDay === todayKey() ? isCheckingIn : t.completed,
+            completedAt: isCheckingIn ? Date.now() : t.completedAt
+          };
+        } else if (targetDay === todayKey() || t.plannedDate === targetDay) {
           return {
             ...t,
             completed: isCheckingIn,
             completedAt: isCheckingIn ? Date.now() : null
           };
         }
-        return t;
-      }));
-    }
-  }, [setHabits, setTasks, settings.soundEffects]);
+      }
+      return t;
+    }));
+  }, [habits, setHabits, setTasks, settings.soundEffects]);
 
   const addHabit = useCallback((habit) => {
     const newId = habit.id || ('h' + Date.now() + Math.random().toString(36).slice(2, 7));
@@ -1299,6 +1345,7 @@ export default function useStore() {
       tasks,
       goals,
       habits,
+      schedules,
       reflections,
       settings,
       focusSessions
@@ -1311,7 +1358,7 @@ export default function useStore() {
     a.click();
     URL.revokeObjectURL(url);
     showToast('Full backup exported successfully');
-  }, [tasks, goals, habits, reflections, settings, focusSessions, showToast]);
+  }, [tasks, goals, habits, schedules, reflections, settings, focusSessions, showToast]);
 
   const importFullBackup = useCallback((jsonString) => {
     try {
@@ -1329,19 +1376,25 @@ export default function useStore() {
       if (data.focusSessions !== undefined && !Array.isArray(data.focusSessions)) {
         throw new Error('Backup focusSessions must be an array');
       }
+      if (data.schedules !== undefined && !Array.isArray(data.schedules)) {
+        throw new Error('Backup schedules must be an array');
+      }
       setTasks(data.tasks);
       setGoals(data.goals);
       setHabits(data.habits);
       setReflections(data.reflections);
       setSettings(data.settings);
       setFocusSessions(data.focusSessions || []);
+      if (Array.isArray(data.schedules)) {
+        setSchedules(data.schedules);
+      }
       showToast('Backup restored successfully');
       return true;
     } catch (err) {
       showToast('Failed to parse backup file', { type: 'error' });
       return false;
     }
-  }, [setTasks, setGoals, setHabits, setReflections, setSettings, showToast]);
+  }, [setTasks, setGoals, setHabits, setSchedules, setReflections, setSettings, setFocusSessions, showToast]);
 
   /* Reset & Clean Slate */
   const resetAllData = useCallback(() => {
@@ -1508,7 +1561,7 @@ export default function useStore() {
 
     for (let i = 0; i < total; i++) {
       const t = tasks[i];
-      if (t.completed) {
+      if (isTaskCompletedForDate(t, todayKey())) {
         completed++;
       } else {
         if (t.priority === 'high') highPriority++;

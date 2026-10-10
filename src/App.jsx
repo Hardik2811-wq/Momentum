@@ -335,6 +335,7 @@ export default function App() {
         initialDate={quickAddProps.initialDate ?? ''}
         initialGoalId={quickAddProps.initialGoalId || ''}
         initialHabitId={quickAddProps.initialHabitId || ''}
+        initialMode={quickAddProps.initialMode || 'task'}
       />
 
       {/* Onboarding Modal for First User without Profile Name */}

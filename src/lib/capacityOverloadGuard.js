@@ -4,7 +4,7 @@
  * circadian resonance curves, and Kingman's queuing saturation model.
  */
 
-import { isTaskScheduledForDate, calculateDuration } from './taskMetadata.js';
+import { isTaskScheduledForDate, isTaskCompletedForDate, calculateDuration } from './taskMetadata.js';
 import { isScheduleActiveForDate } from './missedScheduleEngine.js';
 
 function parseTimeToHour(timeStr) {
@@ -53,7 +53,7 @@ export function evaluateCapacityLoad({
   if (!date) return { status: 'optimal', utilization: 0, effectiveHours: 0, rawHours: 0, isOverloaded: false };
 
   // Filter items on target date (exclude completed deliverables & completed schedules)
-  const dayTasks = (tasks || []).filter(t => !t.completed && isTaskScheduledForDate(t, date));
+  const dayTasks = (tasks || []).filter(t => !isTaskCompletedForDate(t, date) && isTaskScheduledForDate(t, date));
   const daySchedules = (schedules || []).filter(s => {
     const isDone = Boolean(s.completed || (Array.isArray(s.completedDates) && s.completedDates.includes(date)));
     if (isDone) return false;

@@ -469,13 +469,14 @@ export default function QuickAddModal({
 
     const initTitle = initialTitle || '';
     setTitle(initTitle);
+    setMode(initialMode || 'task');
     if (initTitle.trim()) {
       const initParsed = parseNaturalTask(initTitle, goals, habits);
       if (initParsed.hasDetected) {
         applyExtractedDetails(initParsed.extracted, false);
       }
     }
-  }, [isOpen, initialDate, initialGoalId, initialHabitId, initialTime, initialTitle]);
+  }, [isOpen, initialDate, initialGoalId, initialHabitId, initialTime, initialTitle, initialMode]);
 
   // Click outside to close popovers
   useEffect(() => {

@@ -45,7 +45,8 @@ import {
   formatTimeString,
   parseCompoundDuration,
   legacyDueDateForPlan,
-  isTaskScheduledForDate
+  isTaskScheduledForDate,
+  isTaskCompletedForDate
 } from '../lib/taskMetadata';
 import { isScheduleActiveForDate } from '../lib/missedScheduleEngine';
 import { parseNaturalTask } from '../lib/nlpParser';
@@ -796,7 +797,7 @@ const TodayView = React.memo(function TodayView({
       for (let i = 0; i < tasks.length; i++) {
         const t = tasks[i];
         if (isTaskScheduledForDate(t, colDate) && t.startTime) {
-          if (!t.completed) {
+          if (!isTaskCompletedForDate(t, colDate)) {
             colTasks.push(t);
             let dur = Number(t.durationMinutes);
             if (!dur || isNaN(dur)) {
@@ -932,7 +933,7 @@ const TodayView = React.memo(function TodayView({
   /* ── Next Task Arriving on Calendar (for compact Header badge) ── */
   const upNextTask = useMemo(() => {
     const todayBlocks = tasks
-      .filter(t => !t.completed && isTaskScheduledForDate(t, viewDate) && t.startTime)
+      .filter(t => !isTaskCompletedForDate(t, viewDate) && isTaskScheduledForDate(t, viewDate) && t.startTime)
       .map(t => {
         const sm = minutesFromStartOfDay(t.startTime) || 0;
         const dur = Number(t.durationMinutes) || 45;
@@ -1804,7 +1805,7 @@ const TodayView = React.memo(function TodayView({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onToggleTask?.(task.id);
+                                onToggleTask?.(task.id, viewDate);
                               }}
                               className="mt-0.5 text-[#94A3B8] hover:text-[#0A84FF] transition shrink-0"
                             >
@@ -2415,6 +2416,7 @@ const TodayView = React.memo(function TodayView({
 
                           const timeStr = isFlexible && !isBeingTransformed ? format12Hour(displayStartMin) : `${format12Hour(displayStartMin)} – ${format12Hour(displayEndMin % 1440)}`;
                           const matchedGoal = goals.find(g => g.id === task.goalId);
+                          const isTaskDone = isTaskCompletedForDate(task, colDate);
 
                           // Card size tiers
                           const isSpacious = heightPx >= 110;
@@ -2500,7 +2502,7 @@ const TodayView = React.memo(function TodayView({
                                   : 'hover:shadow-lg hover:scale-[1.002] hover:z-35'
                               } group border ${cardAccent} ${
                                 isCompact ? 'p-2 px-3 flex flex-col justify-center' : 'p-3 flex flex-col justify-between'
-                              } ${task.completed ? 'opacity-55 grayscale' : ''}`}
+                              } ${isTaskDone ? 'opacity-55 grayscale' : ''}`}
                             >
                               {/* Parent block track guide when it contains nested sub-blocks */}
                               {hasNestedChildren && (
@@ -2517,25 +2519,25 @@ const TodayView = React.memo(function TodayView({
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          onToggleTask?.(task.id);
+                                          onToggleTask?.(task.id, colDate);
                                         }}
                                         className="text-inherit opacity-75 hover:opacity-100 transition shrink-0"
                                       >
-                                        {task.completed ? (
+                                        {isTaskDone ? (
                                           <CheckSquare className="w-4 h-4 text-emerald-600" />
                                         ) : (
                                           <Square className="w-4 h-4 text-slate-400 hover:text-[#0A84FF]" />
                                         )}
                                       </button>
 
-                                      {isLiveNow && !task.completed && (
+                                      {isLiveNow && !isTaskDone && (
                                         <span className="px-1 py-0.2 rounded bg-red-500 text-white text-[8px] font-black uppercase tracking-wider shrink-0">
                                           NOW
                                         </span>
                                       )}
 
                                       {/* Main Task Title - bold & high contrast */}
-                                      <span className={`text-[12.5px] font-bold tracking-tight truncate text-slate-900 ${task.completed ? 'line-through opacity-60' : ''}`}>
+                                      <span className={`text-[12.5px] font-bold tracking-tight truncate text-slate-900 ${isTaskDone ? 'line-through opacity-60' : ''}`}>
                                         {task.title}
                                       </span>
 
@@ -2555,7 +2557,7 @@ const TodayView = React.memo(function TodayView({
 
                                     {/* Action buttons on hover */}
                                     <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      {!task.completed && onStartFocus && (
+                                      {!isTaskDone && onStartFocus && (
                                         <button
                                           type="button"
                                           title="Start Focus"
@@ -2623,24 +2625,24 @@ const TodayView = React.memo(function TodayView({
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            onToggleTask?.(task.id);
+                                            onToggleTask?.(task.id, colDate);
                                           }}
                                           className="text-inherit opacity-75 hover:opacity-100 transition shrink-0"
                                         >
-                                          {task.completed ? (
+                                          {isTaskDone ? (
                                             <CheckSquare className="w-4 h-4 text-emerald-600" />
                                           ) : (
                                             <Square className="w-4 h-4 text-slate-400 hover:text-[#0A84FF]" />
                                           )}
                                         </button>
 
-                                        {isLiveNow && !task.completed && (
+                                        {isLiveNow && !isTaskDone && (
                                           <span className="px-1.5 py-0.5 rounded bg-red-500 text-white text-[8px] font-black uppercase tracking-wider animate-pulse shrink-0">
                                             NOW
                                           </span>
                                         )}
 
-                                        <span className={`text-[13px] font-bold tracking-tight truncate text-slate-900 ${task.completed ? 'line-through opacity-70' : ''}`}>
+                                        <span className={`text-[13px] font-bold tracking-tight truncate text-slate-900 ${isTaskDone ? 'line-through opacity-70' : ''}`}>
                                           {task.title}
                                         </span>
 
@@ -2652,7 +2654,7 @@ const TodayView = React.memo(function TodayView({
                                       </div>
 
                                       <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {!task.completed && onStartFocus && (
+                                        {!isTaskDone && onStartFocus && (
                                           <button
                                             type="button"
                                             title="Start 25m Focus Block"

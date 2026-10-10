@@ -4,75 +4,85 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_pill_bg"
-    android:paddingStart="16dp"
+    android:gravity="center_vertical"
+    android:paddingStart="14dp"
     android:paddingTop="6dp"
     android:paddingEnd="14dp"
     android:paddingBottom="6dp">
 
-    <!-- Prefix Tag Left -->
-    <TextView
-        android:id="@+id/widget_pill_prefix"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <!-- Left Google G Icon -->
+    <ImageView
+        android:id="@+id/widget_pill_g"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
         android:layout_alignParentStart="true"
         android:layout_centerVertical="true"
-        android:text="NEXT"
-        android:fontFamily="sans-serif-condensed"
-        android:textColor="#38BDF8"
-        android:textSize="10sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.12" />
+        android:src="@drawable/ic_google_g" />
 
-    <!-- Title & Time in Center -->
-    <LinearLayout
+    <!-- Clock Icon -->
+    <ImageView
+        android:id="@+id/widget_pill_prefix_icon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="10dp"
+        android:layout_toEndOf="@id/widget_pill_g"
+        android:src="@drawable/ic_clock_cyan" />
+
+    <!-- Title in Center -->
+    <TextView
+        android:id="@+id/widget_pill_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="8dp"
-        android:layout_toEndOf="@id/widget_pill_prefix"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="6dp"
+        android:layout_toEndOf="@id/widget_pill_prefix_icon"
         android:layout_toStartOf="@+id/widget_pill_duration"
-        android:orientation="vertical">
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Keynote Rehearsal"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-medium"
+        android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/widget_pill_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="No upcoming tasks"
-            android:textColor="#FFFFFF"
-            android:textSize="12.5sp"
-            android:fontFamily="sans-serif-medium"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_pill_time"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="Tap to plan today"
-            android:textColor="#94A3B8"
-            android:textSize="9.5sp" />
-    </LinearLayout>
-
-    <!-- Duration / Status Chip on Right -->
+    <!-- Cyan Pill Chip (e.g. "14:00 • 45m left") -->
     <TextView
         android:id="@+id/widget_pill_duration"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
         android:layout_centerVertical="true"
-        android:background="@drawable/widget_item_bg"
-        android:paddingStart="9dp"
+        android:layout_toStartOf="@+id/widget_pill_mic"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/widget_pill_cyan_chip_bg"
+        android:paddingStart="8dp"
         android:paddingTop="3dp"
-        android:paddingEnd="9dp"
+        android:paddingEnd="8dp"
         android:paddingBottom="3dp"
-        android:text="45m"
-        android:textColor="#38BDF8"
-        android:textSize="10.5sp"
+        android:text="14:00 • 45m left"
+        android:textColor="#00F2FE"
+        android:textSize="9.5sp"
         android:fontFamily="sans-serif-medium"
         android:textStyle="bold" />
+
+    <!-- Mic Icon -->
+    <ImageView
+        android:id="@+id/widget_pill_mic"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_centerVertical="true"
+        android:layout_toStartOf="@+id/widget_pill_lens"
+        android:layout_marginEnd="8dp"
+        android:src="@drawable/ic_mic_gray" />
+
+    <!-- Lens Icon -->
+    <ImageView
+        android:id="@+id/widget_pill_lens"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:src="@drawable/ic_camera_gray" />
 
 </RelativeLayout>

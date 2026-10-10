@@ -36,3 +36,14 @@ export async function getPendingWidgetAction() {
     return null;
   }
 }
+
+export async function pinAndroidWidget(type = 'today') {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return false;
+  try {
+    await WidgetBridge.pinWidget({ type });
+    return true;
+  } catch {
+    return false;
+  }
+}
+

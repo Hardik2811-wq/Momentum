@@ -10,6 +10,7 @@ import {
   tomorrowPlanDate,
   taskPlanDate,
   isTaskScheduledForDate,
+  isTaskCompletedForDate,
   calculateDuration,
   formatTimeString,
   parseTimeString
@@ -150,7 +151,8 @@ export function classifyDayItems({
   // 1. Process tasks for targetDate
   for (const t of tasks) {
     if (t.isBacklog || t.dueDate === 'Someday') continue;
-    if (t.completed) {
+    const isDone = isTaskCompletedForDate(t, targetDate);
+    if (isDone) {
       if (isTaskScheduledForDate(t, targetDate)) {
         completed.push({ ...t, itemType: 'task' });
       }

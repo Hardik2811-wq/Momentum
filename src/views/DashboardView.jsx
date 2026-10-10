@@ -40,7 +40,7 @@ import AnimatedNumber from '../components/ui/AnimatedNumber';
 import TaskCard from '../components/TaskCard';
 import TaskDetailModal from '../components/TaskDetailModal';
 import ScheduleDetailModal from '../components/ScheduleDetailModal';
-import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanDate, todayPlanDate, isTaskScheduledForDate, calculateEndTime } from '../lib/taskMetadata';
+import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanDate, todayPlanDate, isTaskScheduledForDate, isTaskCompletedForDate, calculateEndTime } from '../lib/taskMetadata';
 import {
   classifyDayItems,
   findIntelligentRecoverySlot,
@@ -150,7 +150,7 @@ const DashboardView = React.memo(function DashboardView({
       const deadline = deadlineStatus(t);
       decorated[i] = {
         task: t,
-        completed: t.completed ? 1 : 0,
+        completed: isTaskCompletedForDate(t, todayPlan) ? 1 : 0,
         deadlineTs: deadline ? deadline.timestamp : Number.MAX_SAFE_INTEGER,
         impactRank: IMPACT_ORDER[taskImpact(t)] || 9,
         startTime: t.startTime || '99:99',
@@ -188,8 +188,8 @@ const DashboardView = React.memo(function DashboardView({
     const missedIds = new Set(missedTasksList.map(m => String(m.id)));
     const focusId = nextTask ? String(nextTask.id) : null;
 
-    return todayTasks.filter(t => !t.completed && !missedIds.has(String(t.id)) && String(t.id) !== focusId);
-  }, [todayTasks, missedTasksList, nextTask]);
+    return todayTasks.filter(t => !isTaskCompletedForDate(t, todayPlan) && !missedIds.has(String(t.id)) && String(t.id) !== focusId);
+  }, [todayTasks, missedTasksList, nextTask, todayPlan]);
 
   // Single-pass counters for queue filters
   const { filterCounts, completedTodayTasksCount } = useMemo(() => {
@@ -203,13 +203,13 @@ const DashboardView = React.memo(function DashboardView({
       if ((t.durationMinutes || 60) <= quickWinMinutes) quick++;
     }
     for (let i = 0; i < todayTasks.length; i++) {
-      if (todayTasks[i].completed) completed++;
+      if (isTaskCompletedForDate(todayTasks[i], todayPlan)) completed++;
     }
     return {
       filterCounts: { all: len, high, quick },
       completedTodayTasksCount: completed
     };
-  }, [activeUpcomingTasks, todayTasks, quickWinMinutes]);
+  }, [activeUpcomingTasks, todayTasks, quickWinMinutes, todayPlan]);
 
   const visibleTasks = useMemo(() => {
     if (filter === 'all') return activeUpcomingTasks;
@@ -218,7 +218,7 @@ const DashboardView = React.memo(function DashboardView({
   }, [activeUpcomingTasks, filter, quickWinMinutes]);
 
   const activeQueueTasks = visibleTasks;
-  const completedQueueTasks = useMemo(() => todayTasks.filter(t => t.completed), [todayTasks]);
+  const completedQueueTasks = useMemo(() => todayTasks.filter(t => isTaskCompletedForDate(t, todayPlan)), [todayTasks, todayPlan]);
 
   // Live Reactive Morphing & Emotion
   const progressPercent = todayTasks.length ? Math.round((completedTodayTasksCount / todayTasks.length) * 100) : 0;
@@ -266,13 +266,13 @@ const DashboardView = React.memo(function DashboardView({
   // Micro-reward Celebration triggers
   const handleToggleTask = (taskId) => {
     const task = todayTasks.find(t => t.id === taskId);
-    if (task && !task.completed) {
-      const remainingUncompleted = todayTasks.filter(t => !t.completed && t.id !== taskId).length;
+    if (task && !isTaskCompletedForDate(task, todayPlan)) {
+      const remainingUncompleted = todayTasks.filter(t => !isTaskCompletedForDate(t, todayPlan) && t.id !== taskId).length;
       if (remainingUncompleted === 0) {
         triggerCelebration({ count: 90, spread: 80 });
       }
     }
-    onToggleTask?.(taskId);
+    onToggleTask?.(taskId, todayPlan);
   };
 
   const handleHabitCheck = (habitId) => {

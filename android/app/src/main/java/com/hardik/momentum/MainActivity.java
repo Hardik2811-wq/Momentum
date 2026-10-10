@@ -37,5 +37,27 @@ public class MainActivity extends BridgeActivity {
     } else if ("com.hardik.momentum.ACTION_QUICK_ADD".equals(intentAction)) {
       WidgetBridgePlugin.setPendingAction(this, "quick_add");
     }
+
+    String pinWidget = intent.getStringExtra("pin_widget");
+    if (pinWidget != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+      android.appwidget.AppWidgetManager manager = getSystemService(android.appwidget.AppWidgetManager.class);
+      if (manager != null && manager.isRequestPinAppWidgetSupported()) {
+        android.content.ComponentName provider = null;
+        if ("today".equalsIgnoreCase(pinWidget)) {
+          provider = new android.content.ComponentName(this, com.hardik.momentum.widget.TodayWidgetProvider.class);
+        } else if ("velocity".equalsIgnoreCase(pinWidget) || "bento".equalsIgnoreCase(pinWidget)) {
+          provider = new android.content.ComponentName(this, com.hardik.momentum.widget.BentoStatsWidgetProvider.class);
+        } else if ("quick".equalsIgnoreCase(pinWidget) || "capture".equalsIgnoreCase(pinWidget)) {
+          provider = new android.content.ComponentName(this, com.hardik.momentum.widget.QuickActionsWidgetProvider.class);
+        } else if ("routine".equalsIgnoreCase(pinWidget) || "habits".equalsIgnoreCase(pinWidget)) {
+          provider = new android.content.ComponentName(this, com.hardik.momentum.widget.HabitWidgetProvider.class);
+        } else if ("pill".equalsIgnoreCase(pinWidget) || "upcoming".equalsIgnoreCase(pinWidget)) {
+          provider = new android.content.ComponentName(this, com.hardik.momentum.widget.UpcomingPillWidgetProvider.class);
+        }
+        if (provider != null) {
+          manager.requestPinAppWidget(provider, null, null);
+        }
+      }
+    }
   }
 }

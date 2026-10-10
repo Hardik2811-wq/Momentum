@@ -5,7 +5,7 @@ import {
   getPendingWidgetCompletedHabits,
   getPendingWidgetAction,
 } from '../lib/androidWidget';
-import { isTaskScheduledForDate, todayPlanDate } from '../lib/taskMetadata';
+import { isTaskScheduledForDate, isTaskCompletedForDate, todayPlanDate } from '../lib/taskMetadata';
 
 function calculatePriorityScore(task, currentMinutes) {
   let score = 0;
@@ -80,15 +80,16 @@ export default function AndroidWidgetSync({
   // Sync snapshot to Android widgets (Today Hub, Bento Dial, Pill, Quick Add)
   useEffect(() => {
     const today = todayPlanDate();
+    const isDone = (task) => isTaskCompletedForDate(task, today);
     let todayTasks = (tasks || []).filter(
       (task) =>
         isTaskScheduledForDate(task, today) ||
-        (!task.completed && task.plannedDate && task.plannedDate < today) ||
+        (!isDone(task) && task.plannedDate && task.plannedDate < today) ||
         (!task.plannedDate && (task.dueDate === 'Today' || !task.dueDate))
     );
 
     if (todayTasks.length === 0 && Array.isArray(tasks) && tasks.length > 0) {
-      const pending = tasks.filter((t) => !t.completed);
+      const pending = tasks.filter((t) => !isDone(t));
       todayTasks = pending.length > 0 ? pending.slice(0, 6) : tasks.slice(0, 6);
     }
 
@@ -97,10 +98,12 @@ export default function AndroidWidgetSync({
 
     // Sort: pending first by priority score descending, then completed
     const sorted = [...todayTasks].sort((a, b) => {
-      if (Boolean(a.completed) !== Boolean(b.completed)) {
-        return a.completed ? 1 : -1;
+      const doneA = isDone(a);
+      const doneB = isDone(b);
+      if (doneA !== doneB) {
+        return doneA ? 1 : -1;
       }
-      if (!a.completed) {
+      if (!doneA) {
         const scoreA = calculatePriorityScore(a, currentMinutes);
         const scoreB = calculatePriorityScore(b, currentMinutes);
         return scoreB - scoreA;
@@ -108,8 +111,8 @@ export default function AndroidWidgetSync({
       return 0;
     });
 
-    const pendingCount = todayTasks.filter((t) => !t.completed).length;
-    const completedCount = todayTasks.filter((t) => t.completed).length;
+    const pendingCount = todayTasks.filter((t) => !isDone(t)).length;
+    const completedCount = todayTasks.filter((t) => isDone(t)).length;
     const totalCount = todayTasks.length;
     const completionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
@@ -130,7 +133,7 @@ export default function AndroidWidgetSync({
       tasks: sorted.slice(0, 10).map((task) => ({
         id: String(task.id),
         title: String(task.title || '').slice(0, 100),
-        completed: Boolean(task.completed),
+        completed: isDone(task),
         startTime: task.startTime || '',
         durationMinutes: task.durationMinutes || 45,
         impact: String(task.impact || task.energy || task.priority || 'medium').toLowerCase(),
@@ -155,10 +158,21 @@ export default function AndroidWidgetSync({
         const completedIds = await getPendingWidgetCompletedTasks();
         if (!isCancelled && completedIds && completedIds.length > 0) {
           const currentTasks = tasksRef.current || [];
-          completedIds.forEach((id) => {
+          const today = todayPlanDate();
+          completedIds.forEach((entry) => {
+            let id = entry;
+            let targetState = null;
+            if (typeof entry === 'string' && entry.includes(':')) {
+              const parts = entry.split(':');
+              id = parts[0];
+              targetState = parts[1] === '1';
+            }
             const match = currentTasks.find((t) => String(t.id) === String(id));
-            if (match && !match.completed && onToggleRef.current) {
-              onToggleRef.current(id);
+            if (match && onToggleRef.current) {
+              const currentDone = isTaskCompletedForDate(match, today);
+              if (targetState === null || targetState !== currentDone) {
+                onToggleRef.current(id, today, targetState);
+              }
             }
           });
         }
@@ -167,11 +181,20 @@ export default function AndroidWidgetSync({
         if (!isCancelled && completedHabitIds && completedHabitIds.length > 0) {
           const currentHabits = habitsRef.current || [];
           const today = todayPlanDate();
-          completedHabitIds.forEach((id) => {
+          completedHabitIds.forEach((entry) => {
+            let id = entry;
+            let targetState = null;
+            if (typeof entry === 'string' && entry.includes(':')) {
+              const parts = entry.split(':');
+              id = parts[0];
+              targetState = parts[1] === '1';
+            }
             const match = currentHabits.find((h) => String(h.id) === String(id));
-            const isDone = match && Array.isArray(match.completedDays) && match.completedDays.includes(today);
-            if (match && !isDone && onCheckInHabitRef.current) {
-              onCheckInHabitRef.current(id);
+            if (match && onCheckInHabitRef.current) {
+              const currentDone = Array.isArray(match.completedDays) && match.completedDays.includes(today);
+              if (targetState === null || targetState !== currentDone) {
+                onCheckInHabitRef.current(id, today, targetState);
+              }
             }
           });
         }

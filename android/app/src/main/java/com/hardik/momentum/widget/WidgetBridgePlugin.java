@@ -93,4 +93,32 @@ public class WidgetBridgePlugin extends Plugin {
     result.put("action", action);
     call.resolve(result);
   }
+
+  @PluginMethod
+  public void pinWidget(PluginCall call) {
+    String type = call.getString("type", "today");
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+      android.appwidget.AppWidgetManager manager = getContext().getSystemService(android.appwidget.AppWidgetManager.class);
+      if (manager != null && manager.isRequestPinAppWidgetSupported()) {
+        android.content.ComponentName provider = null;
+        if ("today".equalsIgnoreCase(type)) {
+          provider = new android.content.ComponentName(getContext(), TodayWidgetProvider.class);
+        } else if ("velocity".equalsIgnoreCase(type) || "bento".equalsIgnoreCase(type)) {
+          provider = new android.content.ComponentName(getContext(), BentoStatsWidgetProvider.class);
+        } else if ("quick".equalsIgnoreCase(type) || "capture".equalsIgnoreCase(type)) {
+          provider = new android.content.ComponentName(getContext(), QuickActionsWidgetProvider.class);
+        } else if ("routine".equalsIgnoreCase(type) || "habits".equalsIgnoreCase(type)) {
+          provider = new android.content.ComponentName(getContext(), HabitWidgetProvider.class);
+        } else if ("pill".equalsIgnoreCase(type) || "upcoming".equalsIgnoreCase(type)) {
+          provider = new android.content.ComponentName(getContext(), UpcomingPillWidgetProvider.class);
+        }
+        if (provider != null) {
+          manager.requestPinAppWidget(provider, null, null);
+          call.resolve();
+          return;
+        }
+      }
+    }
+    call.reject("Widget pinning not supported or unavailable.");
+  }
 }

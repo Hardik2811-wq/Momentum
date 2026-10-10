@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
-    android:padding="16dp">
+    android:padding="14dp">
 
     <!-- Top Label Header -->
     <RelativeLayout
@@ -19,20 +19,19 @@
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
-            android:text="MOMENTUM_INDEX"
+            android:text="VELOCITY"
             android:fontFamily="sans-serif-condensed"
-            android:textColor="#38BDF8"
-            android:textSize="9.5sp"
-            android:letterSpacing="0.15"
+            android:textColor="#8B95A5"
+            android:textSize="10sp"
+            android:letterSpacing="0.12"
             android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="8dp"
-            android:layout_height="8dp"
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:background="@drawable/widget_circle_habit"
-            android:backgroundTint="#10B981" />
+            android:src="@drawable/ic_speedometer" />
     </RelativeLayout>
 
     <!-- Circular Progress Gauge in Center -->
@@ -41,8 +40,8 @@
         android:layout_height="match_parent"
         android:layout_below="@id/bento_header"
         android:layout_above="@+id/bento_status_pill"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="6dp">
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp">
 
         <ImageView
             android:id="@+id/bento_ring"
@@ -61,20 +60,21 @@
                 android:id="@+id/bento_stats_percent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0%"
+                android:text="84%"
                 android:fontFamily="sans-serif-black"
                 android:textColor="#FFFFFF"
-                android:textSize="28sp"
+                android:textSize="26sp"
                 android:includeFontPadding="false" />
 
             <TextView
+                android:id="@+id/bento_velocity_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="VELOCITY"
+                android:text="OPTIMAL"
                 android:fontFamily="sans-serif-condensed"
-                android:textColor="#94A3B8"
-                android:textSize="8sp"
-                android:letterSpacing="0.12"
+                android:textColor="#34D399"
+                android:textSize="9sp"
+                android:letterSpacing="0.14"
                 android:textStyle="bold" />
         </LinearLayout>
     </FrameLayout>
@@ -82,15 +82,22 @@
     <!-- Bottom Status Pill Footer -->
     <LinearLayout
         android:id="@+id/bento_status_pill"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:background="@drawable/widget_item_bg"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/widget_streak_badge_bg"
         android:gravity="center"
-        android:paddingTop="5dp"
-        android:paddingBottom="5dp"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp">
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
+
+        <ImageView
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:layout_marginEnd="6dp"
+            android:src="@drawable/widget_dot_green" />
 
         <TextView
             android:id="@+id/bento_subtext"
@@ -98,7 +105,7 @@
             android:layout_height="wrap_content"
             android:text="STATUS: NOMINAL"
             android:fontFamily="sans-serif-medium"
-            android:textColor="#E2E8F0"
+            android:textColor="#CBD5E1"
             android:letterSpacing="0.05"
             android:textSize="9.5sp"
             android:textStyle="bold" />

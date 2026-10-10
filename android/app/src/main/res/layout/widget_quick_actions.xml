@@ -20,23 +20,23 @@
         android:orientation="vertical"
         android:padding="6dp">
 
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@drawable/widget_circle_task"
+            android:padding="5dp"
+            android:src="@drawable/ic_task_check" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
+            android:layout_marginTop="3dp"
             android:text="TASK"
-            android:textColor="#38BDF8"
+            android:textColor="#FFFFFF"
             android:textSize="9.5sp"
             android:fontFamily="sans-serif-condensed"
             android:textStyle="bold"
-            android:letterSpacing="0.12" />
-
-        <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="@drawable/widget_circle_task"
-            android:padding="7dp"
-            android:src="@drawable/ic_add" />
+            android:letterSpacing="0.08" />
     </LinearLayout>
 
     <!-- Goal Column -->
@@ -52,23 +52,23 @@
         android:orientation="vertical"
         android:padding="6dp">
 
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@drawable/widget_circle_goal"
+            android:padding="5dp"
+            android:src="@drawable/ic_goal_target" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
+            android:layout_marginTop="3dp"
             android:text="GOAL"
-            android:textColor="#C084FC"
+            android:textColor="#FFFFFF"
             android:textSize="9.5sp"
             android:fontFamily="sans-serif-condensed"
             android:textStyle="bold"
-            android:letterSpacing="0.12" />
-
-        <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="@drawable/widget_circle_goal"
-            android:padding="7dp"
-            android:src="@drawable/ic_add" />
+            android:letterSpacing="0.08" />
     </LinearLayout>
 
     <!-- Habit Column -->
@@ -83,23 +83,23 @@
         android:orientation="vertical"
         android:padding="6dp">
 
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@drawable/widget_circle_habit"
+            android:padding="5dp"
+            android:src="@drawable/ic_habit_repeat" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
+            android:layout_marginTop="3dp"
             android:text="HABIT"
-            android:textColor="#FBBF24"
+            android:textColor="#FFFFFF"
             android:textSize="9.5sp"
             android:fontFamily="sans-serif-condensed"
             android:textStyle="bold"
-            android:letterSpacing="0.12" />
-
-        <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="@drawable/widget_circle_habit"
-            android:padding="7dp"
-            android:src="@drawable/ic_add" />
+            android:letterSpacing="0.08" />
     </LinearLayout>
 
 </LinearLayout>

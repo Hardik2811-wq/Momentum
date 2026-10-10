@@ -5,43 +5,47 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="14dp">
 
-    <!-- Header: Momentum brand, Date, Count, Quick Add Button -->
+    <!-- Header: TODAY FOCUS, Streak Badge, Plus Button -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="10dp">
 
         <LinearLayout
+            android:id="@+id/header_left_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
+            android:layout_toStartOf="@+id/header_right_container"
+            android:layout_marginEnd="4dp"
             android:layout_centerVertical="true"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:layout_marginEnd="5dp"
+                android:src="@drawable/widget_dot_cyan" />
 
             <TextView
                 android:id="@+id/widget_header_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="MOMENTUM • TODAY'S FOCUS"
                 android:fontFamily="sans-serif-condensed"
-                android:textColor="#38BDF8"
-                android:textSize="9.5sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.14" />
-
-            <TextView
-                android:id="@+id/widget_header_date"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-black" />
+                android:letterSpacing="0.08"
+                android:text="TODAY FOCUS"
+                android:textColor="#CBD5E1"
+                android:textSize="9sp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/header_right_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
@@ -53,32 +57,33 @@
                 android:id="@+id/widget_count_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:background="@drawable/widget_item_bg"
-                android:paddingStart="8dp"
-                android:paddingTop="3dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="3dp"
-                android:textColor="#E2E8F0"
-                android:textSize="10.5sp"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/widget_streak_badge_bg"
+                android:paddingStart="7dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="7dp"
+                android:paddingBottom="2dp"
+                android:text="🔥 14d"
+                android:textColor="#38BDF8"
+                android:textSize="9sp"
                 android:fontFamily="sans-serif-medium"
                 android:textStyle="bold" />
 
             <!-- 1-Tap Quick Add Shortcut Button -->
             <TextView
                 android:id="@+id/widget_btn_add"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
                 android:background="@drawable/widget_add_btn_bg"
                 android:gravity="center"
                 android:text="+"
                 android:textColor="#FFFFFF"
-                android:textSize="18sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </RelativeLayout>
 
-    <!-- Empty / All Done View -->
+    <!-- Empty View -->
     <LinearLayout
         android:id="@+id/widget_empty_view"
         android:layout_width="match_parent"
@@ -93,7 +98,7 @@
             android:layout_height="wrap_content"
             android:text="✨ All blocks clear!"
             android:textColor="#34D399"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
 
         <TextView
@@ -103,104 +108,136 @@
             android:layout_marginTop="2dp"
             android:text="Tap + to schedule next task"
             android:textColor="#94A3B8"
-            android:textSize="11sp" />
+            android:textSize="10sp" />
     </LinearLayout>
 
-    <!-- Section Label: TASKS -->
-    <TextView
-        android:id="@+id/label_section_tasks"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:layout_marginBottom="4dp"
-        android:text="TASKS"
-        android:fontFamily="sans-serif-condensed"
-        android:textColor="#94A3B8"
-        android:textSize="9sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.14" />
-
-    <!-- Task Row 1 (NOW / Top Priority) -->
-    <RelativeLayout
+    <!-- Task Row 1: Active Focus Block (NOW Block with Progress Bar) -->
+    <LinearLayout
         android:id="@+id/widget_row_1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/widget_now_bg"
-        android:padding="8dp"
-        android:visibility="gone">
+        android:orientation="vertical"
+        android:padding="10dp"
+        android:layout_marginBottom="6dp"
+        android:visibility="visible">
 
-        <TextView
-            android:id="@+id/widget_check_1"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:background="@drawable/widget_checkbox_bg"
-            android:gravity="center"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
+        <RelativeLayout
             android:id="@+id/widget_content_1"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="10dp"
-            android:layout_toEndOf="@id/widget_check_1"
-            android:orientation="vertical">
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/widget_check_1"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:padding="8dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:src="@drawable/widget_dot_cyan" />
 
             <TextView
                 android:id="@+id/widget_title_1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="6dp"
+                android:layout_toEndOf="@id/widget_check_1"
+                android:layout_toStartOf="@+id/widget_time_pill_1"
                 android:ellipsize="end"
                 android:maxLines="1"
+                android:text="DEEP WORK • SPRINT 03"
                 android:textColor="#FFFFFF"
-                android:textSize="12.5sp"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/widget_meta_1"
-                android:layout_width="match_parent"
+                android:id="@+id/widget_time_pill_1"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/widget_streak_badge_bg"
+                android:paddingStart="7dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="7dp"
+                android:paddingBottom="2dp"
+                android:text="09:00 - 11:30"
+                android:textColor="#94A3B8"
+                android:textSize="9.5sp" />
+        </RelativeLayout>
+
+        <!-- Subtitle Row: Block Allocation & Remaining -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@+id/widget_meta_1"
+                android:layout_marginEnd="6dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#7DD3FC"
-                android:textSize="10sp" />
-        </LinearLayout>
-    </RelativeLayout>
+                android:text="Block Allocation"
+                android:textColor="#64748B"
+                android:textSize="9.5sp" />
 
-    <!-- Task Row 2 -->
+            <TextView
+                android:id="@+id/widget_meta_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:text="42m remaining"
+                android:textColor="#00F2FE"
+                android:textSize="9.5sp"
+                android:textStyle="bold" />
+        </RelativeLayout>
+
+        <!-- Cyan Progress Bar -->
+        <ProgressBar
+            android:id="@+id/widget_progress_bar_1"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="6dp"
+            android:max="100"
+            android:progress="65"
+            android:progressDrawable="@drawable/widget_progress_bar_cyan" />
+    </LinearLayout>
+
+    <!-- Task Row 2: Secondary Task (Green Dot) -->
     <RelativeLayout
         android:id="@+id/widget_row_2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
         android:background="@drawable/widget_item_bg"
         android:padding="8dp"
-        android:visibility="gone">
+        android:layout_marginBottom="5dp"
+        android:visibility="visible">
 
-        <TextView
+        <ImageView
             android:id="@+id/widget_check_2"
             android:layout_width="22dp"
             android:layout_height="22dp"
+            android:padding="8dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
-            android:background="@drawable/widget_checkbox_bg"
-            android:gravity="center"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:src="@drawable/widget_dot_green" />
 
         <LinearLayout
             android:id="@+id/widget_content_2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="6dp"
             android:layout_toEndOf="@id/widget_check_2"
+            android:layout_toStartOf="@+id/widget_meta_2"
             android:orientation="vertical">
 
             <TextView
@@ -209,51 +246,56 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#F1F5F9"
-                android:textSize="12.5sp"
+                android:text="Q3 Design System Review"
+                android:textColor="#E2E8F0"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
                 android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/widget_meta_2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#94A3B8"
-                android:textSize="10sp" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_meta_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/widget_streak_badge_bg"
+            android:paddingStart="7dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="7dp"
+            android:paddingBottom="2dp"
+            android:text="30m"
+            android:textColor="#94A3B8"
+            android:textSize="9.5sp" />
     </RelativeLayout>
 
-    <!-- Task Row 3 -->
+    <!-- Task Row 3: Secondary Task (Violet Dot) -->
     <RelativeLayout
         android:id="@+id/widget_row_3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
         android:background="@drawable/widget_item_bg"
         android:padding="8dp"
-        android:visibility="gone">
+        android:visibility="visible">
 
-        <TextView
+        <ImageView
             android:id="@+id/widget_check_3"
             android:layout_width="22dp"
             android:layout_height="22dp"
+            android:padding="8dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
-            android:background="@drawable/widget_checkbox_bg"
-            android:gravity="center"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:src="@drawable/widget_dot_violet" />
 
         <LinearLayout
             android:id="@+id/widget_content_3"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="6dp"
             android:layout_toEndOf="@id/widget_check_3"
+            android:layout_toStartOf="@+id/widget_meta_3"
             android:orientation="vertical">
 
             <TextView
@@ -262,139 +304,27 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#F1F5F9"
-                android:textSize="12.5sp"
+                android:text="Sync w/ Engineering"
+                android:textColor="#E2E8F0"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
                 android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/widget_meta_3"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#94A3B8"
-                android:textSize="10sp" />
         </LinearLayout>
-    </RelativeLayout>
-
-    <!-- Section Label: TODAY'S HABITS -->
-    <TextView
-        android:id="@+id/label_section_habits"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="4dp"
-        android:text="TODAY'S HABITS"
-        android:fontFamily="sans-serif-condensed"
-        android:textColor="#F59E0B"
-        android:textSize="9sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.14" />
-
-    <!-- Habit Row 1 -->
-    <RelativeLayout
-        android:id="@+id/widget_habit_row_1"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/widget_item_bg"
-        android:padding="8dp"
-        android:visibility="gone">
 
         <TextView
-            android:id="@+id/widget_habit_check_1"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:background="@drawable/widget_checkbox_bg"
-            android:gravity="center"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_habit_title_1"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="10dp"
-            android:layout_toEndOf="@id/widget_habit_check_1"
-            android:layout_toStartOf="@+id/widget_habit_streak_1"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="#F1F5F9"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_habit_streak_1"
+            android:id="@+id/widget_meta_3"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:textColor="#FBBF24"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:background="@drawable/widget_streak_badge_bg"
+            android:paddingStart="7dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="7dp"
+            android:paddingBottom="2dp"
+            android:text="15m"
+            android:textColor="#94A3B8"
+            android:textSize="9.5sp" />
     </RelativeLayout>
-
-    <!-- Habit Row 2 -->
-    <RelativeLayout
-        android:id="@+id/widget_habit_row_2"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:background="@drawable/widget_item_bg"
-        android:padding="8dp"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/widget_habit_check_2"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:background="@drawable/widget_checkbox_bg"
-            android:gravity="center"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_habit_title_2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="10dp"
-            android:layout_toEndOf="@id/widget_habit_check_2"
-            android:layout_toStartOf="@+id/widget_habit_streak_2"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="#F1F5F9"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_habit_streak_2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:textColor="#FBBF24"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-    </RelativeLayout>
-
-    <!-- Overflow notice footer -->
-    <TextView
-        android:id="@+id/widget_overflow_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:gravity="end"
-        android:text=""
-        android:textColor="#94A3B8"
-        android:textSize="10sp"
-        android:visibility="gone" />
 
 </LinearLayout>

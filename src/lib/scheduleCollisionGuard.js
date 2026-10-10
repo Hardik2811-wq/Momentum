@@ -4,7 +4,7 @@
  * and stochastic duration collision modeling.
  */
 
-import { parseTimeString, calculateDuration, calculateEndTime, isTaskScheduledForDate, taskPlanDate } from './taskMetadata.js';
+import { parseTimeString, calculateDuration, calculateEndTime, isTaskScheduledForDate, isTaskCompletedForDate, taskPlanDate } from './taskMetadata.js';
 
 /**
  * Effort level to numeric rank [1, 5]
@@ -185,7 +185,7 @@ export function detectScheduleCollisions({
 
   // 2. Check against scheduled tasks
   for (const t of tasks || []) {
-    if (t.id === candidate.id || t.completed) continue;
+    if (t.id === candidate.id || isTaskCompletedForDate(t, date)) continue;
     if (!t.startTime) continue;
     if (!isTaskScheduledForDate(t, date)) continue;
 
