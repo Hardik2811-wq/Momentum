@@ -3,6 +3,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import DeleteGoalModal from '../components/DeleteGoalModal';
 import GoalDetailDrawer, { InlineGoalCalendar } from '../components/GoalDetailDrawer';
 import GoalModal from '../components/GoalModal';
+import HabitModal from '../components/HabitModal';
 
 const CATEGORY_MAP = {
   career:   { label: 'Career & Craft', color: 'primary', icon: 'terminal' },
@@ -64,6 +65,9 @@ const GoalsView = React.memo(function GoalsView({
   settings = {},
   tasks = [],
   habits = [],
+  onAddHabit,
+  onUpdateHabit,
+  onDeleteHabit,
   addTask,
   onToggleTask,
   onStartFocus,
@@ -76,6 +80,8 @@ const GoalsView = React.memo(function GoalsView({
   const [showNewGoal, setShowNewGoal] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState(null);
   const [detailGoalId, setDetailGoalId] = useState(null);
+  const [editingHabit, setEditingHabit] = useState(null);
+  const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
 
   const activeGoalForDetail = useMemo(() => {
     return goals.find(g => g.id === detailGoalId) || null;
@@ -216,11 +222,11 @@ const GoalsView = React.memo(function GoalsView({
         key={goal.id}
         data-block-id={`goal-card-${goal.id}`}
         onClick={() => setDetailGoalId(goal.id)}
-        className="group relative flex flex-col justify-between rounded-2xl bg-white border border-black/[0.06] p-5 shadow-2xs hover:shadow-md hover:border-black/[0.12] transition-all duration-200 cursor-pointer"
+        className="group relative flex flex-col justify-between rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.06] dark:border-white/[0.08] p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-black/[0.12] dark:hover:border-white/[0.14] transition-all duration-200 cursor-pointer"
       >
         <div>
           {/* Top Row: Categories & Velocity */}
-          <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
             <div className="flex items-center gap-1.5 flex-wrap">
               {goalCats.map(catKey => {
                 const info = CATEGORY_MAP[catKey] || { label: catKey, color: 'primary' };
@@ -228,7 +234,7 @@ const GoalsView = React.memo(function GoalsView({
                 return (
                   <span
                     key={catKey}
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${c.badge}`}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold ${c.badge}`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
                     <span>{info.label}</span>
@@ -237,26 +243,26 @@ const GoalsView = React.memo(function GoalsView({
               })}
             </div>
 
-            <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${velClass}`}>
+            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold ${velClass}`}>
               <span className="material-symbols-outlined text-[13px]">{velIcon}</span>
               <span>{velText}</span>
             </div>
           </div>
 
           {/* Goal Main Content: Circular Progress Gauge + Title/Why/Horizon */}
-          <div className="flex items-start gap-4 mt-2">
+          <div className="flex items-start gap-3.5 sm:gap-4 mt-1.5">
             {/* Circular Radial Completion % Gauge */}
             <div
               onClick={(e) => {
                 e.stopPropagation();
                 updateGoalProgress?.(goal.id, 10);
               }}
-              className="relative w-20 h-20 shrink-0 group/circle cursor-pointer active:scale-95 transition-transform"
+              className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 group/circle cursor-pointer active:scale-95 transition-transform"
               title="Click to boost progress +10%"
             >
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                 <circle
-                  className="text-black/[0.06] fill-none stroke-current"
+                  className="text-black/[0.06] dark:text-white/[0.08] fill-none stroke-current"
                   cx="50"
                   cy="50"
                   r="40"
@@ -275,10 +281,10 @@ const GoalsView = React.memo(function GoalsView({
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
-                <span className="text-[17px] font-black text-[#1A1B1F] tracking-tight leading-none">
-                  {workProgress}<span className="text-[11px] font-bold text-[#8E8E93]">%</span>
+                <span className="text-[15px] sm:text-[17px] font-black text-[#1A1B1F] dark:text-[#F7F6F2] tracking-tight leading-none">
+                  {workProgress}<span className="text-[10px] sm:text-[11px] font-bold text-[#8E8E93]">%</span>
                 </span>
-                <span className="text-[10px] font-bold text-[#8E8E93] tracking-wider uppercase mt-0.5">
+                <span className="text-[9px] sm:text-[10px] font-bold text-[#8E8E93] tracking-wider uppercase mt-0.5">
                   done
                 </span>
               </div>
@@ -286,18 +292,18 @@ const GoalsView = React.memo(function GoalsView({
 
             {/* Title, Why, Horizon */}
             <div className="flex-1 min-w-0">
-              <h2 className="text-[16px] font-bold text-[#1A1B1F] tracking-tight leading-snug group-hover:text-[#0A84FF] transition-colors">
+              <h2 className="text-[15px] sm:text-[16px] font-bold text-[#1A1B1F] dark:text-[#F7F6F2] tracking-tight leading-snug group-hover:text-[#0A84FF] transition-colors">
                 {goal.title}
               </h2>
 
               {goal.why && (
-                <p className="mt-1 text-[12px] text-[#64748B] italic leading-relaxed line-clamp-2">
+                <p className="mt-0.5 text-[11.5px] sm:text-[12px] text-[#64748B] dark:text-[#A0A0AB] italic leading-snug line-clamp-2">
                   "{goal.why}"
                 </p>
               )}
 
-              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#64748B]">
-                <span className="material-symbols-outlined text-[14px]">
+              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-[#64748B] dark:text-[#8E8E93]">
+                <span className="material-symbols-outlined text-[13.5px]">
                   {isFlexible ? 'all_inclusive' : 'calendar_today'}
                 </span>
                 <span>
@@ -308,41 +314,51 @@ const GoalsView = React.memo(function GoalsView({
           </div>
 
           {/* Execution Engine: Next Action & Linked Status */}
-          <div className="mt-4 rounded-xl bg-[#F8F8FC] border border-black/[0.04] p-3">
-            <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-wider text-[#8E8E93]">
+          <div className="mt-3 sm:mt-4 rounded-xl bg-[#F8F8FC] dark:bg-[#141418] border border-black/[0.04] dark:border-white/[0.06] p-2.5 sm:p-3">
+            <div className="flex items-center justify-between text-[9.5px] sm:text-[10px] uppercase font-bold tracking-wider text-[#8E8E93]">
               <span>Next Execution Step</span>
               <span>{goal.completedTaskCount || 0}/{goal.linkedTaskCount || 0} tasks done</span>
             </div>
 
             {goal.nextTask ? (
-              <div className="mt-1.5 flex items-center justify-between gap-2">
+              <div className="mt-1 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className="material-symbols-outlined text-[15px] text-[#0A84FF]">play_circle</span>
-                  <span className="text-[12px] font-semibold text-[#1A1B1F] truncate">
+                  <span className="text-[12px] font-semibold text-[#1A1B1F] dark:text-[#F7F6F2] truncate">
                     {goal.nextTask.title}
                   </span>
                 </div>
                 {goal.nextTask.dueDate && (
-                  <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-white text-[#64748B] border border-black/[0.04]">
+                  <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-white dark:bg-[#1E1E24] text-[#64748B] dark:text-[#A0A0AB] border border-black/[0.04] dark:border-white/[0.06]">
                     {goal.nextTask.dueDate}
                   </span>
                 )}
               </div>
             ) : (
               <p className="mt-1 text-[11px] text-[#8E8E93]">
-                {goal.milestone || 'No pending tasks. Click to inspect or add deliverables.'}
+                {goal.milestone || 'No pending tasks. Tap to inspect or add deliverables.'}
               </p>
             )}
 
             {/* Linked Habits badge if present */}
             {goal.linkedHabits && goal.linkedHabits.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-black/[0.04] flex items-center gap-1.5 flex-wrap">
+              <div className="mt-2 pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] font-bold text-[#8E8E93]">Ritual:</span>
                 {goal.linkedHabits.map(h => (
-                  <span key={h.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white text-[#1A1B1F] border border-black/[0.04]">
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingHabit(h);
+                      setIsHabitModalOpen(true);
+                    }}
+                    title="Click to edit habit sequence"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white dark:bg-[#1E1E24] hover:bg-emerald-50 text-[#1A1B1F] dark:text-[#F7F6F2] border border-black/[0.04] dark:border-white/[0.08] hover:border-emerald-300 transition cursor-pointer"
+                  >
                     <span className="material-symbols-outlined text-[11px] text-emerald-500">repeat</span>
                     <span>{h.title}</span>
-                  </span>
+                  </button>
                 ))}
               </div>
             )}
@@ -350,7 +366,7 @@ const GoalsView = React.memo(function GoalsView({
         </div>
 
         {/* Bottom Actions Toolbar */}
-        <div className="mt-4 pt-3 border-t border-black/[0.04] flex items-center justify-between gap-2">
+        <div className="mt-3 pt-2.5 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -358,7 +374,7 @@ const GoalsView = React.memo(function GoalsView({
                 e.stopPropagation();
                 onOpenQuickAdd?.({ initialGoalId: goal.id });
               }}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#0A84FF] hover:bg-[#0071E3] text-white text-[11px] font-semibold transition active:scale-95 shadow-3xs"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#0A84FF] hover:bg-[#0071E3] text-white text-[11px] font-semibold transition active:scale-95 shadow-3xs cursor-pointer"
             >
               <span className="material-symbols-outlined text-[14px]">add</span>
               <span>Add Task</span>
@@ -370,10 +386,10 @@ const GoalsView = React.memo(function GoalsView({
                 e.stopPropagation();
                 setDetailGoalId(goal.id);
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#F0EFF5] hover:bg-[#E5E5EB] text-[#1A1B1F] text-[11px] font-semibold transition active:scale-95"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#F0EFF5] dark:bg-white/[0.08] hover:bg-[#E5E5EB] text-[#1A1B1F] dark:text-[#F7F6F2] text-[11px] font-semibold transition active:scale-95 cursor-pointer"
               title="Open Goal Details & Execution Workspace"
             >
-              <span className="material-symbols-outlined text-[14px] text-[#64748B]">edit_note</span>
+              <span className="material-symbols-outlined text-[14px] text-[#64748B] dark:text-[#A0A0AB]">edit_note</span>
               <span>Details</span>
             </button>
           </div>
@@ -384,7 +400,7 @@ const GoalsView = React.memo(function GoalsView({
               e.stopPropagation();
               setGoalToDelete(goal);
             }}
-            className="p-1.5 rounded-lg text-[#8E8E93] hover:text-red-500 hover:bg-red-50 transition"
+            className="p-1.5 rounded-lg text-[#8E8E93] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition cursor-pointer"
             title={`Delete ${goal.title}`}
           >
             <span className="material-symbols-outlined text-[17px]">delete</span>
@@ -396,12 +412,12 @@ const GoalsView = React.memo(function GoalsView({
 
   /* ── Eisenhower Priority Matrix Quadrant ── */
   const renderMatrixQuadrant = (title, goalsList, dotColor, badgeBg, badgeText) => (
-    <div className="rounded-2xl bg-white border border-black/[0.06] p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
+    <div className="rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.06] dark:border-white/[0.08] p-4 shadow-2xs flex flex-col justify-between min-h-[200px]">
       <div>
-        <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] mb-3">
+        <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.06] mb-3">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
-            <span className="text-[13px] font-bold text-[#1A1B1F]">{title}</span>
+            <span className="text-[13px] font-bold text-[#1A1B1F] dark:text-[#F7F6F2]">{title}</span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeBg}`}>
             {badgeText} ({goalsList.length})
@@ -414,10 +430,10 @@ const GoalsView = React.memo(function GoalsView({
               <div
                 key={g.id}
                 onClick={() => setDetailGoalId(g.id)}
-                className="p-2.5 rounded-xl bg-[#F8F8FC] border border-black/[0.04] flex items-center justify-between hover:bg-white transition cursor-pointer"
+                className="p-2.5 rounded-xl bg-[#F8F8FC] dark:bg-[#141418] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between hover:bg-white dark:hover:bg-[#1E1E24] transition cursor-pointer"
               >
                 <div className="min-w-0">
-                  <h4 className="text-[12px] font-semibold text-[#1A1B1F] truncate">{g.title}</h4>
+                  <h4 className="text-[12px] font-semibold text-[#1A1B1F] dark:text-[#F7F6F2] truncate">{g.title}</h4>
                   <span className="text-[10px] text-[#8E8E93]">
                     {g.workProgress ?? g.progress ?? 0}% · {g.dateType === 'open' ? 'Flexible' : `${g.daysLeft ?? 0}d left`}
                   </span>
@@ -428,7 +444,7 @@ const GoalsView = React.memo(function GoalsView({
                     e.stopPropagation();
                     onOpenQuickAdd?.({ initialGoalId: g.id });
                   }}
-                  className="px-2 py-1 rounded-lg bg-white text-[10px] font-bold text-[#0A84FF] shadow-3xs hover:bg-blue-50 active:scale-95 transition"
+                  className="px-2 py-1 rounded-lg bg-white dark:bg-[#1E1E24] text-[10px] font-bold text-[#0A84FF] shadow-3xs hover:bg-blue-50 active:scale-95 transition cursor-pointer"
                 >
                   + Task
                 </button>
@@ -443,44 +459,44 @@ const GoalsView = React.memo(function GoalsView({
   );
 
   return (
-    <main className="w-full min-h-screen bg-canvas dark:bg-canvas-dark pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
-      <div className="mx-auto w-full max-w-[1440px] space-y-6">
+    <main className="w-full min-h-screen bg-canvas dark:bg-canvas-dark pt-[calc(3.85rem+env(safe-area-inset-top))] md:pt-15 pb-8 sm:pb-12 px-3.5 sm:px-6 md:px-margin-desktop text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
+      <div className="mx-auto w-full max-w-[1440px] space-y-3.5 sm:space-y-6">
 
         {/* ── Top Header Block ── */}
-        <header data-block-id="goals-header" className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
+        <header data-block-id="goals-header" className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="min-w-0">
+            <div className="hidden sm:flex items-center gap-2">
               <span className="text-[10px] font-mono uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">Strategic Horizons</span>
               <span className="w-1 h-1 rounded-full bg-[#8E8E93]" />
               <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Vision to Daily Execution</span>
             </div>
-            <h1 className="mt-1 text-2xl sm:text-3xl font-editorial font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2]">Goals &amp; Horizons</h1>
-            <p className="mt-0.5 text-xs text-[#6B6A72] dark:text-[#8E8E93]">
+            <h1 className="text-xl sm:text-3xl font-editorial font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2]">Goals &amp; Horizons</h1>
+            <p className="hidden sm:block mt-0.5 text-xs text-[#6B6A72] dark:text-[#8E8E93]">
               Anchor meaningful long-term vectors. Daily tasks and rituals drive real progress.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* View Mode Toggle: Grid vs Matrix */}
             <div className="p-0.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.06] flex items-center">
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
                   viewMode === 'grid' ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs' : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618]'
                 }`}
               >
-                <span className="material-symbols-outlined text-[15px]">grid_view</span>
+                <span className="material-symbols-outlined text-[14px] sm:text-[15px]">grid_view</span>
                 <span>Grid</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('matrix')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
                   viewMode === 'matrix' ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs' : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618]'
                 }`}
               >
-                <span className="material-symbols-outlined text-[15px]">dashboard_customize</span>
+                <span className="material-symbols-outlined text-[14px] sm:text-[15px]">dashboard_customize</span>
                 <span>Matrix</span>
               </button>
             </div>
@@ -488,63 +504,63 @@ const GoalsView = React.memo(function GoalsView({
             <button
               type="button"
               onClick={() => setShowNewGoal(!showNewGoal)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white text-xs font-semibold shadow-double-bezel active:scale-95 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white text-[11.5px] sm:text-xs font-semibold shadow-double-bezel active:scale-95 transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">add</span>
+              <span className="material-symbols-outlined text-[15px] sm:text-[16px]">add</span>
               <span>New Goal</span>
             </button>
           </div>
         </header>
 
-        {/* ── Top Executive Horizon Pulse Ribbon ── */}
-        <section data-block-id="goals-stats-ribbon" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Active Horizons</span>
-            <div className="mt-1.5 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.total}</span>
-              <span className="text-[11px] font-mono font-medium text-[#0F52BA] dark:text-[#6495ED]">Live Projects</span>
+        {/* ── Top Executive Horizon Pulse Ribbon (Compact 4-col bar on mobile, cards on desktop) ── */}
+        <section data-block-id="goals-stats-ribbon" className="grid grid-cols-4 gap-2 sm:gap-3">
+          <div className="p-2.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <span className="block text-[8.5px] sm:text-[10px] font-mono uppercase tracking-wider sm:tracking-widest text-[#6B6A72] dark:text-[#8E8E93] truncate">Horizons</span>
+            <div className="mt-0.5 sm:mt-1.5 flex items-baseline gap-1 sm:gap-2">
+              <span className="text-lg sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.total}</span>
+              <span className="hidden sm:inline text-[11px] font-mono font-medium text-[#0F52BA] dark:text-[#6495ED]">Live</span>
             </div>
           </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Strategic Velocity</span>
-            <div className="mt-1.5 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#2E6F40] dark:text-[#4ADE80]">{horizonStats.onTrackPct}%</span>
-              <span className="text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">{horizonStats.onTrack} On Track</span>
+          <div className="p-2.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <span className="block text-[8.5px] sm:text-[10px] font-mono uppercase tracking-wider sm:tracking-widest text-[#6B6A72] dark:text-[#8E8E93] truncate">Velocity</span>
+            <div className="mt-0.5 sm:mt-1.5 flex items-baseline gap-1 sm:gap-2">
+              <span className="text-lg sm:text-3xl font-mono tabular-nums font-bold text-[#2E6F40] dark:text-[#4ADE80]">{horizonStats.onTrackPct}%</span>
+              <span className="hidden sm:inline text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">{horizonStats.onTrack} On Track</span>
             </div>
           </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Execution Pipeline</span>
-            <div className="mt-1.5 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.activeTasks}</span>
-              <span className="text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">Active Tasks</span>
+          <div className="p-2.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <span className="block text-[8.5px] sm:text-[10px] font-mono uppercase tracking-wider sm:tracking-widest text-[#6B6A72] dark:text-[#8E8E93] truncate">Pipeline</span>
+            <div className="mt-0.5 sm:mt-1.5 flex items-baseline gap-1 sm:gap-2">
+              <span className="text-lg sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.activeTasks}</span>
+              <span className="hidden sm:inline text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">Tasks</span>
             </div>
           </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Driving Rituals</span>
-            <div className="mt-1.5 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#6C4AB6] dark:text-[#A78BFA]">{horizonStats.linkedHabitsCount}</span>
-              <span className="text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">Linked Habits</span>
+          <div className="p-2.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <span className="block text-[8.5px] sm:text-[10px] font-mono uppercase tracking-wider sm:tracking-widest text-[#6B6A72] dark:text-[#8E8E93] truncate">Rituals</span>
+            <div className="mt-0.5 sm:mt-1.5 flex items-baseline gap-1 sm:gap-2">
+              <span className="text-lg sm:text-3xl font-mono tabular-nums font-bold text-[#6C4AB6] dark:text-[#A78BFA]">{horizonStats.linkedHabitsCount}</span>
+              <span className="hidden sm:inline text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">Linked</span>
             </div>
           </div>
         </section>
 
         {/* ── Filter Bar: Category & Search & Status ── */}
-        <section data-block-id="goals-filter-bar" className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <section data-block-id="goals-filter-bar" className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
           {/* Category Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             <button
               type="button"
               onClick={() => setFilter('all')}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition whitespace-nowrap ${
+              className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
                 filter === 'all'
-                  ? 'bg-[#1A1B1F] text-white shadow-xs'
-                  : 'bg-white text-[#64748B] hover:text-[#1A1B1F] border border-black/[0.06]'
+                  ? 'bg-[#1A1B1F] dark:bg-[#F7F6F2] text-white dark:text-[#161618] shadow-xs'
+                  : 'bg-white dark:bg-[#1A1A1E] text-[#64748B] dark:text-[#A0A0AB] hover:text-[#1A1B1F] border border-black/[0.06] dark:border-white/[0.08]'
               }`}
             >
-              All Goals ({goals.length})
+              All ({goals.length})
             </button>
 
             {Object.entries(CATEGORY_MAP).map(([key, info]) => {
@@ -555,15 +571,15 @@ const GoalsView = React.memo(function GoalsView({
                   key={key}
                   type="button"
                   onClick={() => setFilter(key)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition whitespace-nowrap ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition whitespace-nowrap cursor-pointer ${
                     isSelected
-                      ? 'bg-[#1A1B1F] text-white shadow-xs'
-                      : 'bg-white text-[#64748B] hover:text-[#1A1B1F] border border-black/[0.06]'
+                      ? 'bg-[#1A1B1F] dark:bg-[#F7F6F2] text-white dark:text-[#161618] shadow-xs'
+                      : 'bg-white dark:bg-[#1A1A1E] text-[#64748B] dark:text-[#A0A0AB] hover:text-[#1A1B1F] border border-black/[0.06] dark:border-white/[0.08]'
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${CATEGORY_COLORS[info.color]?.dot}`} />
                   <span>{info.label}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20' : 'bg-black/[0.04]'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 dark:bg-black/15' : 'bg-black/[0.04] dark:bg-white/[0.06]'}`}>
                     {count}
                   </span>
                 </button>
@@ -580,14 +596,14 @@ const GoalsView = React.memo(function GoalsView({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search goals..."
-                className="w-full pl-8 pr-3 py-1 rounded-full text-[11px] bg-white border border-black/[0.06] text-[#1A1B1F] placeholder:text-[#8E8E93] outline-none focus:border-[#0A84FF]"
+                className="w-full pl-8 pr-3 py-1.5 rounded-full text-[11px] bg-white dark:bg-[#1A1A1E] border border-black/[0.06] dark:border-white/[0.08] text-[#1A1B1F] dark:text-[#F7F6F2] placeholder:text-[#8E8E93] outline-none focus:border-[#0A84FF]"
               />
             </div>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-1 rounded-full text-[11px] font-semibold bg-white border border-black/[0.06] text-[#64748B] outline-none"
+              className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-white dark:bg-[#1A1A1E] border border-black/[0.06] dark:border-white/[0.08] text-[#64748B] dark:text-[#A0A0AB] outline-none"
             >
               <option value="all">All Status</option>
               <option value="on-track">On Track</option>
@@ -763,10 +779,39 @@ const GoalsView = React.memo(function GoalsView({
         }}
         tasks={tasks}
         habits={habits}
+        onEditHabit={(h) => {
+          setEditingHabit(h);
+          setIsHabitModalOpen(true);
+        }}
         addTask={addTask}
         onToggleTask={onToggleTask}
         onStartFocus={onStartFocus}
         focusSessions={focusSessions}
+      />
+
+      {/* Habit Edit / Create Modal */}
+      <HabitModal
+        isOpen={isHabitModalOpen}
+        onClose={() => {
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        }}
+        habit={editingHabit}
+        onSave={(data) => {
+          if (editingHabit && editingHabit.id) {
+            onUpdateHabit?.(editingHabit.id, data);
+          } else {
+            onAddHabit?.(data);
+          }
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        }}
+        onDelete={editingHabit ? (id) => {
+          onDeleteHabit?.(id);
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        } : undefined}
+        goals={goals}
       />
     </main>
   );

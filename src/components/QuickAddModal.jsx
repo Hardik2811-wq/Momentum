@@ -727,20 +727,25 @@ export default function QuickAddModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm"
       role="presentation"
       onMouseDown={onClose}
     >
       <div
-        className="w-full max-w-[680px] min-h-0 max-h-[calc(100dvh-1.5rem)] sm:min-h-[470px] sm:max-h-none overflow-visible rounded-2xl bg-surface-bone dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_96px_rgba(0,0,0,0.25)] flex flex-col justify-between transition-all text-ink-primary dark:text-[#F7F6F2]"
+        className="w-full max-w-[680px] min-h-0 max-h-[92dvh] sm:min-h-[470px] sm:max-h-none overflow-hidden sm:overflow-visible rounded-t-[28px] sm:rounded-2xl bg-surface-bone dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_96px_rgba(0,0,0,0.28)] flex flex-col justify-between transition-all text-ink-primary dark:text-[#F7F6F2] animate-androidSheet"
         role="dialog"
         aria-modal="true"
         aria-labelledby="quick-add-title"
         onMouseDown={(e) => e.stopPropagation()}
         ref={menuRef}
       >
+        {/* Android Bottom Sheet Drag Handle (Mobile Only) */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-0.5 bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
+          <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/20" />
+        </div>
+
         {/* ── Bauhaus Editorial Header ── */}
-        <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518]">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518]">
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs transition-all ${
               mode === 'schedule'
@@ -1990,7 +1995,7 @@ export default function QuickAddModal({
         )}
 
         {/* ── Footer ── */}
-        <div className="pt-3 flex items-center justify-between border-t border-black/[0.07] dark:border-white/[0.08] mt-auto">
+        <div className="pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-0 flex items-center justify-between border-t border-black/[0.07] dark:border-white/[0.08] mt-auto">
             <span className="text-[11px] text-ink-secondary dark:text-[#8E8E93] font-medium hidden sm:inline">
               Press <kbd className="px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 border border-black/[0.08] dark:border-white/[0.1] font-mono text-[10px] text-ink-primary dark:text-[#F7F6F2]">↵</kbd> to {mode === 'schedule' ? 'add schedule' : 'add task'}
             </span>

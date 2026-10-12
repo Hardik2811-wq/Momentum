@@ -31,6 +31,7 @@ import {
 import { triggerCelebration } from '../lib/celebrate';
 import TaskDetailModal from '../components/TaskDetailModal';
 import ScheduleDetailModal from '../components/ScheduleDetailModal';
+import HabitModal from '../components/HabitModal';
 import DeleteRecurringModal from '../components/DeleteRecurringModal';
 import ConfirmModal from '../components/ConfirmModal';
 import {
@@ -107,8 +108,9 @@ function formatHourAxis(hourNum) {
 const START_HOUR = 0; // 12:00 AM midnight
 const END_HOUR = 24;  // 11:59 PM night
 const TOTAL_HOURS = END_HOUR - START_HOUR; // Full 24-hour day
-const HOUR_HEIGHT = 64; // 64px per hour: sleek density & pixel-perfect 16px/15min snapping
-const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT; // 1536px full day height
+const HOUR_HEIGHT = 80; // 80px per hour: 20px/15min snapping, zero card compression
+const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT; // 1920px full day height
+const startDayMinutes = START_HOUR * 60;
 
 
 
@@ -129,11 +131,13 @@ const TodayView = React.memo(function TodayView({
   onDeleteSchedules,
   onStartFocus,
   onCheckInHabit,
-  onUpdateHabit
+  onAddHabit,
+  onUpdateHabit,
+  onDeleteHabit
 }) {
   const [viewDate, setViewDate] = useState(() => todayPlanDate());
   const [scope, setScope] = useState('day'); // 'day' | '3day' | 'week'
-  const [mobileTab, setMobileTab] = useState('tray'); // 'tray' | 'timeline'
+  const [mobileTab, setMobileTab] = useState('timeline'); // 'tray' | 'timeline' — default to timeline red line
   const [trayFilterMode, setTrayFilterMode] = useState('unscheduled'); // Default to unscheduled to eliminate duplicates
   const [trayAreaFilter, setTrayAreaFilter] = useState('all');
   const [traySearch, setTraySearch] = useState('');
@@ -150,6 +154,8 @@ const TodayView = React.memo(function TodayView({
   const [dragOverSlot, setDragOverSlot] = useState(null); // { date, hour }
   const [editingTask, setEditingTask] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
+  const [editingHabit, setEditingHabit] = useState(null);
+  const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
   const [recurringDeleteTarget, setRecurringDeleteTarget] = useState(null); // { task, date }
   const [singleDeleteTarget, setSingleDeleteTarget] = useState(null); // { type, id, title }
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -192,14 +198,17 @@ const TodayView = React.memo(function TodayView({
   const transformRef = useRef(null);
   const calendarScrollRef = useRef(null);
 
-  // Smart auto-scroll: centers around current time or 8 AM waking window
+  // Smart auto-scroll: always centers around the live current time red line by default
   const scrollToNow = useCallback((smooth = true) => {
     if (!calendarScrollRef.current) return;
     const now = new Date();
     const currentMinutesToday = now.getHours() * 60 + now.getMinutes();
+
     const timeTop = (currentMinutesToday / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT;
-    // Position current time ~70px from top so current and upcoming tasks are in prime view
-    const targetScroll = Math.max(0, Math.round(timeTop - 70));
+    const viewHeight = calendarScrollRef.current.clientHeight || 480;
+    const isEarlyHour = now.getHours() < 7;
+    const topOffset = isEarlyHour ? 28 : Math.min(96, viewHeight * 0.22);
+    const targetScroll = Math.max(0, Math.round(timeTop - topOffset));
 
     if (smooth) {
       calendarScrollRef.current.scrollTo({
@@ -531,7 +540,7 @@ const TodayView = React.memo(function TodayView({
     } else if (type === 'habit') {
       const targetHabit = habits.find(h => String(h.id) === String(id));
       if (onUpdateHabit) {
-        onUpdateHabit(id, { startTime: hourLabel });
+        onUpdateHabit(id, { startTime: hourLabel, isTimeBlocked: true });
       }
       toast.success(`Scheduled ritual "${targetHabit?.title || 'Habit'}" at ${formatTimeString(hourLabel)}`);
     } else {
@@ -782,118 +791,293 @@ const TodayView = React.memo(function TodayView({
     setIsMultiSelectMode(false);
   }, [trayFilterMode, selectedScheduleIds, selectedTaskIds, onDeleteSchedules, onDeleteSchedule, onDeleteTasks, onDeleteTask]);
 
-  /* ── Multi-Column Memoized Layout Generator (O(C * N^2) isolated to data changes) ── */
+  /* ── Multi-Column Memoized Layout Generator (Unified Scratch C-Block & Multi-Lane Engine) ── */
   const columnsData = useMemo(() => {
     const today = todayPlanDate();
     return columnDates.map(colDate => {
       const isToday = colDate === today;
       const headerInfo = formatDateHeader(colDate);
 
-      // Separate raw scheduled tasks in single pass
-      const colTasks = [];
-      const rawScheduled = [];
+      const allEvents = [];
       let colMins = 0;
 
-      for (let i = 0; i < tasks.length; i++) {
-        const t = tasks[i];
-        if (isTaskScheduledForDate(t, colDate) && t.startTime) {
-          if (!isTaskCompletedForDate(t, colDate)) {
-            colTasks.push(t);
-            let dur = Number(t.durationMinutes);
+      // 1. Schedules
+      (schedules || []).forEach(sched => {
+        if (isScheduleActiveForDate(sched, colDate) && sched.startTime) {
+          const sm = minutesFromStartOfDay(sched.startTime);
+          if (sm !== null) {
+            let dur = Number(sched.durationMinutes);
             if (!dur || isNaN(dur)) {
-              if (t.startTime && t.endTime) {
-                const diff = calculateDuration(t.startTime, t.endTime);
+              if (sched.startTime && sched.endTime) {
+                const diff = calculateDuration(sched.startTime, sched.endTime);
                 if (diff > 0) dur = diff;
               }
             }
-            if (!dur || isNaN(dur)) dur = 45;
+            if (!dur || isNaN(dur)) dur = 60;
+            allEvents.push({
+              id: `sched-${sched.id}`,
+              type: 'schedule',
+              sched,
+              title: sched.title,
+              startMin: sm,
+              duration: dur,
+              endMin: sm + dur
+            });
+          }
+        }
+      });
+
+      // 2. Habits
+      (habits || []).forEach(habit => {
+        if (!habit.startTime || habit.isTimeBlocked === false) return;
+        const targetFreq = habit.targetFrequency || 'Every Day';
+        let isActive = true;
+        const d = new Date(`${colDate}T12:00:00`).getDay();
+        if (targetFreq === 'Weekdays') {
+          isActive = d >= 1 && d <= 5;
+        } else if (targetFreq === '3 Days / Wk') {
+          isActive = d === 1 || d === 3 || d === 5;
+        } else if (targetFreq === 'Custom' && Array.isArray(habit.customDays)) {
+          const dayShorts = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          isActive = habit.customDays.includes(dayShorts[d]);
+        }
+        if (isActive) {
+          const sm = minutesFromStartOfDay(habit.startTime);
+          if (sm !== null) {
+            const dur = Number(habit.durationMinutes) || parseCompoundDuration(habit.duration) || 30;
+            allEvents.push({
+              id: `habit-${habit.id}`,
+              type: 'habit',
+              habit,
+              title: habit.title,
+              startMin: sm,
+              duration: dur,
+              endMin: sm + dur
+            });
+          }
+        }
+      });
+
+      // 3. Tasks
+      for (let i = 0; i < tasks.length; i++) {
+        const t = tasks[i];
+        if (isTaskScheduledForDate(t, colDate) && t.startTime) {
+          let dur = Number(t.durationMinutes);
+          if (!dur || isNaN(dur)) {
+            if (t.startTime && t.endTime) {
+              const diff = calculateDuration(t.startTime, t.endTime);
+              if (diff > 0) dur = diff;
+            }
+          }
+          if (!dur || isNaN(dur)) dur = 45;
+          if (!isTaskCompletedForDate(t, colDate)) {
             colMins += dur;
           }
           const sm = minutesFromStartOfDay(t.startTime);
           if (sm !== null) {
-            let dur = Number(t.durationMinutes);
-            if (!dur || isNaN(dur)) {
-              if (t.startTime && t.endTime) {
-                const diff = calculateDuration(t.startTime, t.endTime);
-                if (diff > 0) dur = diff;
-              }
-            }
-            if (!dur || isNaN(dur)) dur = 45;
-            rawScheduled.push({ task: t, startMin: sm, endMin: sm + dur, duration: dur });
+            allEvents.push({
+              id: `task-${t.id}`,
+              type: 'task',
+              task: t,
+              title: t.title,
+              startMin: sm,
+              duration: dur,
+              endMin: sm + dur
+            });
           }
         }
       }
 
-      rawScheduled.sort((a, b) => a.startMin - b.startMin || b.duration - a.duration);
+      // Sort by startMin ASC, then duration DESC so container blocks evaluate first
+      allEvents.sort((a, b) => a.startMin - b.startMin || b.duration - a.duration);
 
-      // Detect nested containment
-      const scheduledWithNesting = rawScheduled.map(item => {
-        const containers = rawScheduled.filter(other =>
-          other.task.id !== item.task.id &&
-          other.duration >= item.duration + 20 &&
-          item.startMin >= other.startMin - 2 &&
-          item.endMin <= other.endMin + 5
-        );
+      // 1. Detect Scratch C-Block Containment:
+      // Only Habit or Focus Session containers can wrap tasks, and only when the child task starts
+      // >= 15m after container start (leaving vertical room for the 32px C-Block top header)
+      // and ends within container bounds, with container at least 25m longer than child.
+      const eventsWithNesting = allEvents.map(item => {
+        if (item.type !== 'task') {
+          return { ...item, containerId: null, containerItem: null, isNested: false };
+        }
+        const containers = allEvents.filter(other => {
+          if (other.id === item.id) return false;
+          const isFocusContainer =
+            other.type === 'habit' ||
+            (other.type === 'task' && /focus|deep work|sprint|session/i.test(other.title || ''));
+          if (!isFocusContainer) return false;
+          const hasHeaderClearance = item.startMin >= other.startMin + 15;
+          const fitsInsideEnd = item.endMin <= other.endMin + 5;
+          const isSignificantlyLarger = other.duration >= item.duration + 25;
+          return hasHeaderClearance && fitsInsideEnd && isSignificantlyLarger;
+        });
         containers.sort((a, b) => a.duration - b.duration);
         const container = containers[0] || null;
         return {
           ...item,
-          containerId: container ? container.task.id : null,
-          containerTask: container ? container.task : null,
+          containerId: container ? container.id : null,
+          containerItem: container || null,
           isNested: Boolean(container)
         };
       });
 
       const parentContainerIds = new Set(
-        scheduledWithNesting.filter(it => it.isNested).map(it => it.containerId)
+        eventsWithNesting.filter(it => it.isNested).map(it => it.containerId)
       );
 
-      const topLevel = scheduledWithNesting
+      // 2. Partition top-level (non-nested) events into overlap clusters and assign parallel lanes
+      const topLevel = eventsWithNesting
         .filter(it => !it.isNested)
-        .map(it => ({ ...it, hasNestedChildren: parentContainerIds.has(it.task.id) }));
+        .map(it => ({
+          ...it,
+          isCBlock: parentContainerIds.has(it.id),
+          hasNestedChildren: parentContainerIds.has(it.id)
+        }));
 
-      const topLevelWithLanes = topLevel.map(item => ({ ...item, lane: 0, totalLanes: 1 }));
-      for (let i = 0; i < topLevelWithLanes.length; i++) {
-        for (let j = 0; j < i; j++) {
-          if (topLevelWithLanes[i].startMin < topLevelWithLanes[j].endMin && topLevelWithLanes[i].endMin > topLevelWithLanes[j].startMin) {
-            if (topLevelWithLanes[i].lane === topLevelWithLanes[j].lane) {
-              topLevelWithLanes[i].lane = topLevelWithLanes[j].lane + 1;
-            }
-            const lanes = Math.max(topLevelWithLanes[i].lane, topLevelWithLanes[j].lane) + 1;
-            topLevelWithLanes[i].totalLanes = Math.max(topLevelWithLanes[i].totalLanes, lanes);
-            topLevelWithLanes[j].totalLanes = Math.max(topLevelWithLanes[j].totalLanes, lanes);
+      const assignLanes = (eventList, laneKey = 'lane', totalKey = 'totalLanes') => {
+        if (!eventList.length) return [];
+        const sorted = [...eventList].sort((a, b) => a.startMin - b.startMin || b.duration - a.duration);
+        const clusters = [];
+        let curCluster = [];
+        let clusterMaxEnd = -1;
+
+        for (const ev of sorted) {
+          if (curCluster.length === 0 || ev.startMin < clusterMaxEnd) {
+            curCluster.push(ev);
+            clusterMaxEnd = Math.max(clusterMaxEnd, ev.endMin);
+          } else {
+            clusters.push(curCluster);
+            curCluster = [ev];
+            clusterMaxEnd = ev.endMin;
           }
         }
-      }
+        if (curCluster.length > 0) clusters.push(curCluster);
 
-      const nested = scheduledWithNesting.filter(it => it.isNested);
-      const nestedWithLanes = nested.map(item => ({ ...item, nestedLane: 0, nestedTotalLanes: 1 }));
-      for (let i = 0; i < nestedWithLanes.length; i++) {
-        for (let j = 0; j < i; j++) {
-          if (nestedWithLanes[i].containerId === nestedWithLanes[j].containerId) {
-            if (nestedWithLanes[i].startMin < nestedWithLanes[j].endMin && nestedWithLanes[i].endMin > nestedWithLanes[j].startMin) {
-              if (nestedWithLanes[i].nestedLane === nestedWithLanes[j].nestedLane) {
-                nestedWithLanes[i].nestedLane = nestedWithLanes[j].nestedLane + 1;
+        const out = [];
+        for (const cluster of clusters) {
+          const laneEndTimes = [];
+          const placed = [];
+          for (const ev of cluster) {
+            let assigned = -1;
+            for (let l = 0; l < laneEndTimes.length; l++) {
+              if (laneEndTimes[l] <= ev.startMin) {
+                assigned = l;
+                laneEndTimes[l] = ev.endMin;
+                break;
               }
-              const lanes = Math.max(nestedWithLanes[i].nestedLane, nestedWithLanes[j].nestedLane) + 1;
-              nestedWithLanes[i].nestedTotalLanes = Math.max(nestedWithLanes[i].nestedTotalLanes, lanes);
-              nestedWithLanes[j].nestedTotalLanes = Math.max(nestedWithLanes[j].nestedTotalLanes, lanes);
+            }
+            if (assigned === -1) {
+              assigned = laneEndTimes.length;
+              laneEndTimes.push(ev.endMin);
+            }
+            placed.push({ ...ev, [laneKey]: assigned });
+          }
+          const total = laneEndTimes.length;
+          for (const p of placed) {
+            out.push({ ...p, [totalKey]: total });
+          }
+        }
+        return out;
+      };
+
+      const topLevelWithLanes = assignLanes(topLevel, 'lane', 'totalLanes');
+      const topLevelIdToLane = new Map(topLevelWithLanes.map(it => [it.id, it]));
+
+      // 3. Assign lanes to nested children within each C-Block container
+      const nestedRaw = eventsWithNesting
+        .filter(it => it.isNested)
+        .map(it => ({
+          ...it,
+          lane: 0,
+          totalLanes: 1,
+          isCBlock: false,
+          hasNestedChildren: false
+        }));
+
+      const nestedByContainer = new Map();
+      for (const n of nestedRaw) {
+        if (!nestedByContainer.has(n.containerId)) nestedByContainer.set(n.containerId, []);
+        nestedByContainer.get(n.containerId).push(n);
+      }
+      const nestedWithLanes = [];
+      for (const [, group] of nestedByContainer.entries()) {
+        nestedWithLanes.push(...assignLanes(group, 'nestedLane', 'nestedTotalLanes'));
+      }
+
+      // 4. Compute safe anti-collision heights and sequential snap indicators
+      const allUnified = [...topLevelWithLanes, ...nestedWithLanes].map(item => {
+        let hasSnapToPrev = false;
+        let hasSnapToNext = false;
+        let nextBlockingStartMin = null;
+
+        if (!item.isNested) {
+          for (const other of topLevelWithLanes) {
+            if (other.id === item.id) continue;
+            if (other.lane === item.lane || other.totalLanes === 1 || item.totalLanes === 1) {
+              if (Math.abs(item.startMin - other.endMin) <= 3) hasSnapToPrev = true;
+              if (Math.abs(other.startMin - item.endMin) <= 3) hasSnapToNext = true;
+            }
+            if (other.startMin >= item.endMin) {
+              if (nextBlockingStartMin === null || other.startMin < nextBlockingStartMin) {
+                nextBlockingStartMin = other.startMin;
+              }
+            }
+          }
+        } else {
+          const siblings = nestedByContainer.get(item.containerId) || [];
+          for (const other of siblings) {
+            if (other.id === item.id) continue;
+            if (Math.abs(item.startMin - other.endMin) <= 3) hasSnapToPrev = true;
+            if (Math.abs(other.startMin - item.endMin) <= 3) hasSnapToNext = true;
+            if (other.startMin >= item.endMin) {
+              if (nextBlockingStartMin === null || other.startMin < nextBlockingStartMin) {
+                nextBlockingStartMin = other.startMin;
+              }
             }
           }
         }
-      }
 
-      const colScheduled = [...topLevelWithLanes, ...nestedWithLanes];
+        const parentInfo = item.isNested ? topLevelIdToLane.get(item.containerId) : null;
+
+        const rawTopPx = Math.max(0, ((item.startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+        const rawHeightPx = ((item.duration / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT) - 2;
+
+        const maxMinsBeforeNext = nextBlockingStartMin !== null
+          ? Math.max(item.duration, nextBlockingStartMin - item.startMin)
+          : Math.max(item.duration, 30);
+        const maxPxBeforeNext = ((maxMinsBeforeNext / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT) - 2;
+
+        let computedTopPx = rawTopPx;
+        let computedHeightPx = Math.min(Math.max(34, rawHeightPx), Math.max(28, maxPxBeforeNext));
+
+        if (item.isNested && parentInfo) {
+          const parentTopPx = Math.max(0, ((parentInfo.startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+          const parentHeightPx = Math.max(64, ((parentInfo.duration / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT) - 2);
+          const cavityTopPx = parentTopPx + 34; // Below C-Block header
+          const cavityBottomPx = parentTopPx + parentHeightPx - 14; // Above C-Block bottom jaw
+          computedTopPx = Math.max(rawTopPx, cavityTopPx);
+          const maxCavityHeight = Math.max(30, cavityBottomPx - computedTopPx);
+          computedHeightPx = Math.min(computedHeightPx, maxCavityHeight);
+        }
+
+        return {
+          ...item,
+          hasSnapToPrev,
+          hasSnapToNext,
+          parentLaneInfo: parentInfo,
+          computedTopPx,
+          computedHeightPx
+        };
+      });
 
       return {
         colDate,
         isToday,
         headerInfo,
         colMins,
-        colScheduled
+        colScheduled: allUnified
       };
     });
-  }, [tasks, columnDates]);
+  }, [tasks, schedules, habits, columnDates]);
 
   /* ── Workload Capacity Metrics (O(C) time, O(1) space) ── */
   const totalScheduledMinutesInView = useMemo(() => {
@@ -923,7 +1107,6 @@ const TodayView = React.memo(function TodayView({
   }, [habits, viewDate]);
 
   /* ── Live Laser Ruler Coordinates ── */
-  const startDayMinutes = START_HOUR * 60;
   const currentMinutesToday = currentTime.getHours() * 60 + currentTime.getMinutes();
   const isTimeInView = currentMinutesToday >= startDayMinutes && currentMinutesToday <= END_HOUR * 60;
   const currentTimeTop = isTimeInView
@@ -998,11 +1181,11 @@ const TodayView = React.memo(function TodayView({
   }, [onUpdateSchedule, viewDate]);
 
   return (
-    <main className="w-full min-h-screen bg-canvas dark:bg-canvas-dark pt-16 md:pt-12 px-3 sm:px-6 md:px-margin-desktop py-3 sm:py-6 text-[#161618] dark:text-[#F7F6F2] select-none transition-colors duration-200">
-      <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-3 sm:gap-4 min-w-0">
+    <main className="w-full h-dvh lg:h-[calc(100dvh-3.5rem)] pt-[calc(3.85rem+env(safe-area-inset-top))] md:pt-14 px-2.5 sm:px-5 lg:px-6 pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-2.5 bg-[#F7F6F2] dark:bg-[#121214] text-[#161618] dark:text-[#F7F6F2] select-none transition-colors duration-200 flex flex-col overflow-hidden">
+      <div className="w-full max-w-[1520px] mx-auto flex-1 flex flex-col min-h-0 gap-1.5 sm:gap-2.5">
 
         {/* ── TOP HERO CONTROL BAR ── */}
-        <div className="w-full min-w-0 flex flex-col gap-2.5 p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-double-bezel">
+        <div className="w-full min-w-0 shrink-0 flex flex-col gap-2 p-2.5 sm:p-4 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-double-bezel">
           {/* Top Row: Navigation, Date, Capacity, Actions */}
           <div className="flex items-center justify-between gap-2 flex-wrap min-w-0 w-full">
             {/* Left: Navigation & Date Range */}
@@ -1089,7 +1272,7 @@ const TodayView = React.memo(function TodayView({
               {/* Jump to Current Time Button (Desktop) */}
               <button
                 type="button"
-                onClick={() => scrollToNow(true)}
+                onClick={() => scrollToNow(true, true)}
                 className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-black/[0.03] dark:bg-white/[0.05] hover:bg-white dark:hover:bg-[#1E1E22] text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#C84B31] border border-black/[0.06] dark:border-white/[0.07] transition active:scale-95 cursor-pointer"
                 title="Center view vertically around current time red line"
               >
@@ -1156,119 +1339,193 @@ const TodayView = React.memo(function TodayView({
             </div>
           </div>
 
-          {/* Mobile Scope Row (only when viewing Calendar Timeline: lg:hidden) */}
-          {mobileTab === 'timeline' && (
-            <div className="flex lg:hidden items-center justify-between gap-2 pt-2 border-t border-black/[0.04] w-full min-w-0">
-              <div className="flex items-center gap-1.5 text-[12px] font-bold text-[#1A1B1F]">
-                <Calendar className="w-3.5 h-3.5 text-[#0A84FF]" />
-                <span>Calendar Timeline</span>
-                <span className="text-[10px] text-[#8E8E93] font-normal">• {(totalScheduledMinutesInView / 60).toFixed(1)}h slotted</span>
-              </div>
-              <div className="flex items-center p-0.5 rounded-xl bg-[#F5F4FA] border border-black/[0.04]">
-                {[
-                  { id: 'day', label: 'Day' },
-                  { id: '3day', label: '3D' },
-                  { id: 'week', label: 'Wk' }
-                ].map(s => {
-                  const isSelected = scope === s.id;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setScope(s.id)}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
-                        isSelected
-                          ? 'bg-white text-[#0A84FF] shadow-xs'
-                          : 'text-[#64748B]'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Habit Decay Warning Alert ── */}
-        {habitsAtRiskList.length > 0 && (
-          <div className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 text-[12px] shadow-2xs animate-fadeIn">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[15px]">trending_down</span>
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-amber-950">Habit Decay Warning:</span>
-                  <span className="font-semibold text-amber-900">"{habitsAtRiskList[0].title}"</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200/80 text-amber-900 font-mono">
-                    {Math.round(habitsAtRiskList[0].survivalProb * 100)}% survival
-                  </span>
-                </div>
-                <div className="text-[11px] text-amber-800/90 truncate">
-                  <span className="font-medium">Minimum Viable Recovery: </span>
-                  <span>{habitsAtRiskList[0].mvrSuggestion}</span>
-                </div>
-              </div>
-            </div>
-            {onCheckInHabit && (
+          {/* Mobile View & Scope Switcher Row (lg:hidden) */}
+          <div className="flex lg:hidden items-center justify-between gap-2 pt-1.5 border-t border-black/[0.05] dark:border-white/[0.06] w-full min-w-0">
+            <div className="flex items-center p-0.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06]">
               <button
                 type="button"
-                onClick={() => onCheckInHabit(habitsAtRiskList[0].id, viewDate)}
-                className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-amber-600 text-white hover:bg-amber-700 transition active:scale-95 shrink-0 shadow-xs cursor-pointer"
+                onClick={() => setMobileTab('timeline')}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                  mobileTab === 'timeline'
+                    ? 'bg-white dark:bg-[#1E1E24] text-[#0F52BA] dark:text-[#6495ED] shadow-xs'
+                    : 'text-[#6B6A72] dark:text-[#8E8E93]'
+                }`}
               >
-                Log 2m Micro-rep
+                <Calendar className="w-3 h-3" />
+                <span>Timeline</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('tray')}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                  mobileTab === 'tray'
+                    ? 'bg-white dark:bg-[#1E1E24] text-[#0F52BA] dark:text-[#6495ED] shadow-xs'
+                    : 'text-[#6B6A72] dark:text-[#8E8E93]'
+                }`}
+              >
+                <Inbox className="w-3 h-3" />
+                <span>Tray ({trayTasks.length})</span>
+              </button>
+            </div>
+
+            {mobileTab === 'timeline' && (
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center p-0.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06]">
+                  {[
+                    { id: 'day', label: 'Day' },
+                    { id: '3day', label: '3D' },
+                    { id: 'week', label: 'Wk' }
+                  ].map(s => {
+                    const isSelected = scope === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setScope(s.id)}
+                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-white dark:bg-[#1E1E24] text-[#0F52BA] dark:text-[#6495ED] shadow-xs'
+                            : 'text-[#6B6A72] dark:text-[#8E8E93]'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
-        )}
+        </div>
 
-        {/* ── Capacity Overload Guard Alert ── */}
-        {capacityAnalytics.isOverloaded && dismissedCapacityAlertDate !== viewDate && (
-          <div className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-rose-50/90 border border-rose-200/80 text-[12px] text-rose-950 shadow-2xs animate-fadeIn">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[15px]">speed</span>
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-rose-900">Capacity Saturation Alert:</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-200/80 text-rose-900 font-mono">
-                    {capacityAnalytics.utilizationPct}% Cognitive Load
+        {/* ── Sleek Executive Telemetry Alerts (Compact 1-row strip on mobile, cards on desktop) ── */}
+        {(habitsAtRiskList.length > 0 || (capacityAnalytics.isOverloaded && dismissedCapacityAlertDate !== viewDate)) && (
+          <div className="w-full shrink-0 grid grid-cols-1 md:grid-cols-2 gap-1.5 sm:gap-2.5 animate-fadeIn">
+            {/* 1. Habit Decay Warning Card */}
+            {habitsAtRiskList.length > 0 && (
+              <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] dark:bg-amber-500/[0.08] px-2.5 py-1.5 sm:p-3 flex items-center justify-between gap-2 sm:gap-3 shadow-2xs">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  {/* Circular Lindy Survival Ring (desktop) / Compact Badge (mobile) */}
+                  <div className="hidden sm:flex relative w-10 h-10 shrink-0 items-center justify-center">
+                    <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="text-amber-500/20"
+                        strokeWidth="3.5"
+                        stroke="currentColor"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="text-amber-500"
+                        strokeDasharray={`${Math.round(habitsAtRiskList[0].survivalProb * 100)}, 100`}
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        stroke="currentColor"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <span className="absolute font-mono text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                      {Math.round(habitsAtRiskList[0].survivalProb * 100)}%
+                    </span>
+                  </div>
+                  <span className="sm:hidden px-1.5 py-0.5 rounded-md bg-amber-500/15 font-mono text-[10px] font-bold text-amber-800 dark:text-amber-300 shrink-0">
+                    {Math.round(habitsAtRiskList[0].survivalProb * 100)}% Lindy
                   </span>
-                  <span className="text-[11px] text-rose-800 font-medium">
-                    ({capacityAnalytics.effectiveHours}h load • {capacityAnalytics.switchCount} context switches)
-                  </span>
+
+                  <div
+                    onClick={() => {
+                      const target = habits.find(h => String(h.id) === String(habitsAtRiskList[0].id)) || habitsAtRiskList[0];
+                      setEditingHabit(target);
+                      setIsHabitModalOpen(true);
+                    }}
+                    className="min-w-0 cursor-pointer group/decay"
+                    title="Click to edit habit sequence"
+                  >
+                    <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                        Habit Decay Risk
+                      </span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold">
+                        Lindy Decay
+                      </span>
+                    </div>
+                    <p className="text-[11.5px] sm:text-xs font-semibold text-[#161618] dark:text-[#F7F6F2] group-hover/decay:text-[#0A84FF] transition-colors truncate">
+                      {habitsAtRiskList[0].title}
+                    </p>
+                    <p className="hidden sm:block text-[11px] text-[#6B6A72] dark:text-[#8E8E93] truncate">
+                      {habitsAtRiskList[0].mvrSuggestion}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-[11px] text-rose-800/90 truncate">
-                  {capacityAnalytics.message}
-                </div>
+
+                {onCheckInHabit && (
+                  <button
+                    type="button"
+                    onClick={() => onCheckInHabit(habitsAtRiskList[0].id, viewDate)}
+                    className="shrink-0 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[10.5px] sm:text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white transition active:scale-95 shadow-2xs cursor-pointer"
+                  >
+                    Log 2m Rep
+                  </button>
+                )}
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setDismissedCapacityAlertDate(viewDate)}
-              className="p-1 rounded-lg text-rose-800/70 hover:text-rose-950 hover:bg-rose-100 transition shrink-0 cursor-pointer"
-              title="Dismiss for today"
-              aria-label="Dismiss capacity saturation alert"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            )}
+
+            {/* 2. Capacity Saturation Alert Card */}
+            {capacityAnalytics.isOverloaded && dismissedCapacityAlertDate !== viewDate && (
+              <div className={`rounded-xl border border-rose-500/25 bg-rose-500/[0.06] dark:bg-rose-500/[0.08] px-2.5 py-1.5 sm:p-3 flex items-center justify-between gap-2 sm:gap-3 shadow-2xs ${habitsAtRiskList.length === 0 ? 'md:col-span-2' : ''}`}>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="hidden sm:flex w-10 h-10 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[20px]">speed</span>
+                  </div>
+                  <span className="sm:hidden px-1.5 py-0.5 rounded-md bg-rose-500/15 font-mono text-[10px] font-bold text-rose-700 dark:text-rose-300 shrink-0">
+                    {capacityAnalytics.utilizationPct}% Load
+                  </span>
+
+                  <div className="min-w-0">
+                    <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">
+                        Capacity Saturation
+                      </span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 font-bold">
+                        {capacityAnalytics.utilizationPct}% Load
+                      </span>
+                      <span className="text-[10.5px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+                        {capacityAnalytics.effectiveHours}h • {capacityAnalytics.switchCount} switches
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93] truncate">
+                      <span className="sm:hidden font-semibold text-rose-700 dark:text-rose-400 mr-1">{capacityAnalytics.effectiveHours}h ({capacityAnalytics.switchCount} switches):</span>
+                      {capacityAnalytics.message}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setDismissedCapacityAlertDate(viewDate)}
+                  className="p-1 rounded-lg text-rose-700 dark:text-rose-400 hover:bg-rose-500/15 transition shrink-0 cursor-pointer"
+                  title="Dismiss capacity alert for today"
+                  aria-label="Dismiss capacity saturation alert"
+                >
+                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
         {/* ── Editor Mode Instruction & Save Bar ── */}
         {isEditorMode && (
-          <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-950 text-[12px] shadow-2xs animate-fadeIn">
+          <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-700/40 text-amber-950 dark:text-amber-200 text-[12px] shadow-2xs animate-fadeIn">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
                 <Layers className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0 leading-tight">
-                <span className="font-bold text-amber-900">Interactive Editor Mode: </span>
-                <span className="text-amber-800">
-                  Hold <kbd className="px-1.5 py-0.5 rounded bg-white font-mono text-[10px] font-bold border border-amber-300/80 shadow-3xs">Ctrl</kbd> + Left Click on any calendar block to select. Drag top/bottom edge handles to adjust duration, or drag the body to slide times. Changes save permanently.
+                <span className="font-bold text-amber-900 dark:text-amber-300">Interactive Editor Mode: </span>
+                <span className="text-amber-800 dark:text-amber-200/80">
+                  Hold <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-[#1E1E22] font-mono text-[10px] font-bold border border-amber-300/80 shadow-3xs">Ctrl</kbd> + Left Click on any calendar block to select. Drag top/bottom edge handles to adjust duration, or drag the body to slide times. Changes save permanently.
                 </span>
               </div>
             </div>
@@ -1279,7 +1536,7 @@ const TodayView = React.memo(function TodayView({
                 setSelectedTransformTaskId(null);
                 setTransformState(null);
               }}
-              className="shrink-0 px-3.5 py-1.5 rounded-xl bg-amber-600 text-white font-semibold text-[11px] hover:bg-amber-700 shadow-xs transition"
+              className="shrink-0 px-3.5 py-1.5 rounded-xl bg-amber-600 text-white font-semibold text-[11px] hover:bg-amber-700 shadow-xs transition cursor-pointer"
             >
               Save & Exit Editor
             </button>
@@ -1287,21 +1544,19 @@ const TodayView = React.memo(function TodayView({
         )}
 
         {/* ── 2-COLUMN TIME-BLOCKING WORKSPACE ── */}
-        <div className="w-full min-w-0 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
-
-
+        <div className="w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-stretch overflow-hidden">
 
           {/* ══════════════════════════════════════════════════════
               LEFT COLUMN: UNIFIED TASK TRAY (3.5 cols)
              ══════════════════════════════════════════════════════ */}
-          <div className={`w-full min-w-0 lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3 ${
+          <div className={`w-full min-w-0 lg:col-span-4 xl:col-span-3.5 h-full min-h-0 flex flex-col ${
             mobileTab === 'tray'
               ? 'flex'
               : (activeTouchDrag || draggedItem || draggedTaskId)
               ? 'fixed -left-[9999px] top-0 opacity-0 pointer-events-none'
               : 'hidden lg:flex'
           }`}>
-            <div className="w-full min-w-0 flex flex-col gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs h-[calc(100vh-210px)] min-h-[580px] overflow-hidden">
+            <div className="w-full min-w-0 flex-1 min-h-0 flex flex-col gap-2.5 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
@@ -1675,10 +1930,21 @@ const TodayView = React.memo(function TodayView({
                   )
                 ) : trayFilterMode === 'rituals' ? (
                   habits.length === 0 ? (
-                    <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-1.5 my-4">
+                    <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-2 my-4">
                       <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
                       <p className="text-[12px] font-semibold text-[#1A1B1F]">No habits created</p>
                       <p className="text-[10px] text-[#64748B]">Create daily rituals to establish baseline consistency.</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingHabit(null);
+                          setIsHabitModalOpen(true);
+                        }}
+                        className="mt-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#161618] text-white text-[11px] font-semibold hover:opacity-90 transition cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        New Ritual
+                      </button>
                     </div>
                   ) : (
                     habits.map(h => {
@@ -1695,9 +1961,12 @@ const TodayView = React.memo(function TodayView({
                           onTouchCancel={handleTouchEndCard}
                           onClick={() => {
                             if (didJustDragRef.current) return;
+                            setEditingHabit(h);
+                            setIsHabitModalOpen(true);
                           }}
                           style={{ touchAction: 'none', userSelect: 'none' }}
-                          className={`p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing select-none touch-none ${
+                          title="Click to edit ritual, or drag onto calendar timeline"
+                          className={`group p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-pointer select-none touch-none ${
                             isChecked
                               ? 'bg-emerald-50/70 border-emerald-200 opacity-80'
                               : 'bg-white hover:bg-emerald-50/30 border-black/[0.06]'
@@ -1706,7 +1975,10 @@ const TodayView = React.memo(function TodayView({
                           <div className="flex items-center gap-2 min-w-0">
                             <button
                               type="button"
-                              onClick={() => onCheckInHabit?.(h.id, viewDate)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCheckInHabit?.(h.id, viewDate);
+                              }}
                               className={`w-5 h-5 rounded-full flex items-center justify-center transition shrink-0 ${
                                 isChecked
                                   ? 'bg-emerald-600 text-white'
@@ -1721,15 +1993,18 @@ const TodayView = React.memo(function TodayView({
                               </p>
                               <div className="flex items-center gap-1.5 text-[10px] text-[#64748B]">
                                 <span>{h.duration || '30 mins'}</span>
-                                {h.startTime && <span className="text-emerald-600 font-bold">• At {formatTimeString(h.startTime)}</span>}
+                                {h.isTimeBlocked !== false && h.startTime && <span className="text-emerald-600 font-bold">• At {formatTimeString(h.startTime)}</span>}
                               </div>
                             </div>
                           </div>
-                          {h.linkedGoal && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-800 truncate max-w-[80px]">
-                              {h.linkedGoal}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {h.linkedGoal && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-800 truncate max-w-[80px]">
+                                {h.linkedGoal}
+                              </span>
+                            )}
+                            <Pencil className="w-3 h-3 text-[#94A3B8] opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
                         </div>
                       );
                     })
@@ -1897,7 +2172,7 @@ const TodayView = React.memo(function TodayView({
           {/* ══════════════════════════════════════════════════════
               RIGHT COLUMN: FULL-WIDTH CALENDAR CANVAS (8.5 cols)
              ══════════════════════════════════════════════════════ */}
-          <div className={`w-full min-w-0 lg:col-span-8 xl:col-span-8.5 p-2.5 sm:p-4 rounded-2xl bg-white border border-black/[0.06] shadow-2xs overflow-hidden flex flex-col ${
+          <div className={`w-full min-w-0 lg:col-span-8 xl:col-span-8.5 h-full min-h-0 p-2.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121316] border border-black/[0.06] dark:border-white/[0.08] shadow-2xs overflow-hidden flex flex-col ${
             mobileTab === 'timeline' || Boolean(activeTouchDrag || draggedItem || draggedTaskId) ? 'flex' : 'hidden lg:flex'
           }`}>
             {/* Active Drag & Mobile Hold Placement Banner */}
@@ -1923,16 +2198,16 @@ const TodayView = React.memo(function TodayView({
               </div>
             )}
 
-            <div className="flex items-center justify-between mb-2.5 sm:mb-3 gap-2 flex-wrap shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0A84FF] flex items-center justify-center">
-                  <Calendar className="w-4 h-4 text-[#0A84FF]" />
+            <div className="flex items-center justify-between mb-1.5 sm:mb-3 gap-2 flex-wrap shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0A84FF] flex items-center justify-center">
+                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0A84FF]" />
                 </div>
                 <div>
-                  <span className="text-[13px] font-bold text-[#1A1B1F]">
+                  <span className="text-[12px] sm:text-[13px] font-bold text-[#1A1B1F] dark:text-slate-100">
                     {scope === 'day' ? 'Daily Schedule' : scope === '3day' ? '3-Day Rolling Horizon' : '7-Day Weekly Grid'}
                   </span>
-                  <span className="text-[10px] text-[#8E8E93] hidden sm:inline ml-2">• Click or drop tasks across hours</span>
+                  <span className="text-[10px] text-[#8E8E93] dark:text-slate-400 hidden sm:inline ml-2">• Click or drop tasks across hours</span>
                 </div>
               </div>
 
@@ -1940,24 +2215,24 @@ const TodayView = React.memo(function TodayView({
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => scrollToHour(8)}
-                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-[#F5F4FA] text-[#64748B] hover:text-[#0A84FF] transition"
-                  title="Jump to 8:00 AM"
+                  onClick={() => scrollToHour(7)}
+                  className="px-2 py-0.5 sm:py-1 rounded-lg text-[10px] font-semibold bg-[#F5F4FA] dark:bg-[#202227] text-[#64748B] dark:text-slate-300 hover:text-[#0A84FF] transition cursor-pointer"
+                  title="Jump to 7:00 AM"
                 >
-                  8 AM
+                  7 AM
                 </button>
                 <button
                   type="button"
                   onClick={() => scrollToHour(13)}
-                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-[#F5F4FA] text-[#64748B] hover:text-[#0A84FF] transition"
+                  className="px-2 py-0.5 sm:py-1 rounded-lg text-[10px] font-semibold bg-[#F5F4FA] dark:bg-[#202227] text-[#64748B] dark:text-slate-300 hover:text-[#0A84FF] transition cursor-pointer"
                   title="Jump to 1:00 PM"
                 >
                   1 PM
                 </button>
                 <button
                   type="button"
-                  onClick={() => scrollToNow(true)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-[#0A84FF] hover:bg-blue-100 transition active:scale-95"
+                  onClick={() => scrollToNow(true, true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-[#0A84FF] hover:bg-blue-100 dark:hover:bg-blue-900/40 transition active:scale-95 cursor-pointer"
                   title="Jump to Current Time"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -1968,7 +2243,7 @@ const TodayView = React.memo(function TodayView({
 
             <div
               ref={calendarScrollRef}
-              className={`relative ${scope === 'day' ? 'overflow-x-hidden' : 'overflow-x-auto'} overflow-y-auto select-none border border-black/[0.06] rounded-xl bg-[#FAFAFC] h-[calc(100vh-210px)] min-h-[580px] w-full min-w-0 flex-1`}
+              className={`relative ${scope === 'day' ? 'overflow-x-hidden' : 'overflow-x-auto'} overflow-y-auto select-none border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-[#FAFAFC] dark:bg-[#18191D] w-full min-w-0 flex-1 min-h-0`}
             >
               <div
                 className="grid w-full min-w-0"
@@ -1981,25 +2256,25 @@ const TodayView = React.memo(function TodayView({
                 }}
               >
                 {/* Corner Spacer */}
-                <div className="sticky top-0 z-30 h-10 border-b border-r border-black/[0.06] bg-[#F5F4FA] shrink-0" />
+                <div className="sticky top-0 z-30 h-10 border-b border-r border-black/[0.06] dark:border-white/[0.08] bg-[#F5F4FA] dark:bg-[#1A1C20] shrink-0" />
 
                 {/* Column Headers */}
                 {columnsData.map(col => (
                   <div
                     key={col.colDate}
-                    className={`sticky top-0 z-30 h-10 px-2 sm:px-3 flex items-center justify-between border-b border-r border-black/[0.06] backdrop-blur-md min-w-0 overflow-hidden ${
-                      col.isToday ? 'bg-blue-50/95 text-[#0A84FF]' : 'bg-[#F5F4FA]/95 text-[#64748B]'
+                    className={`sticky top-0 z-30 h-10 px-2 sm:px-3 flex items-center justify-between border-b border-r border-black/[0.06] dark:border-white/[0.08] backdrop-blur-md min-w-0 overflow-hidden ${
+                      col.isToday ? 'bg-blue-50/95 dark:bg-blue-950/60 text-[#0A84FF]' : 'bg-[#F5F4FA]/95 dark:bg-[#1A1C20]/95 text-[#64748B] dark:text-slate-300'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 font-bold text-[12px] min-w-0 truncate">
                       <span className="truncate">{col.headerInfo.weekday}</span>
-                      <span className={`px-1.5 py-0.2 rounded-md shrink-0 ${col.isToday ? 'bg-[#0A84FF] text-white shadow-2xs' : 'text-[#1A1B1F]'}`}>
+                      <span className={`px-1.5 py-0.2 rounded-md shrink-0 ${col.isToday ? 'bg-[#0A84FF] text-white shadow-2xs' : 'text-[#1A1B1F] dark:text-slate-100'}`}>
                         {col.headerInfo.dayNum}
                       </span>
                     </div>
 
                     {col.colMins > 0 && (
-                      <span className="text-[10px] font-semibold text-[#8E8E93] shrink-0">
+                      <span className="text-[10px] font-semibold text-[#8E8E93] dark:text-slate-400 shrink-0">
                         {(col.colMins / 60).toFixed(1)}h
                       </span>
                     )}
@@ -2007,7 +2282,7 @@ const TodayView = React.memo(function TodayView({
                 ))}
 
                 {/* Left Hour Axis */}
-                <div className="relative border-r border-black/[0.06] bg-[#F5F4FA] shrink-0" style={{ height: `${TOTAL_HEIGHT}px` }}>
+                <div className="relative border-r border-black/[0.06] dark:border-white/[0.08] bg-[#F5F4FA] dark:bg-[#1A1C20] shrink-0" style={{ height: `${TOTAL_HEIGHT}px` }}>
                   {Array.from({ length: TOTAL_HOURS }).map((_, i) => {
                     const hourNum = START_HOUR + i;
                     const hourLabel = `${String(hourNum).padStart(2, '0')}:00`;
@@ -2017,7 +2292,7 @@ const TodayView = React.memo(function TodayView({
                       <div
                         key={hourLabel}
                         style={{ top: `${topPos}px`, height: `${HOUR_HEIGHT}px` }}
-                        className="absolute left-0 right-0 border-b border-black/[0.04] pr-1.5 pt-1 text-right font-mono text-[10px] text-[#8E8E93]"
+                        className="absolute left-0 right-0 border-b border-black/[0.04] dark:border-white/[0.04] pr-1.5 pt-1 text-right font-mono text-[10px] text-[#8E8E93] dark:text-slate-400"
                         title={hourLabel}
                       >
                         {axisLabel}
@@ -2038,7 +2313,7 @@ const TodayView = React.memo(function TodayView({
                           setSelectedTransformTaskId(null);
                         }
                       }}
-                      className="relative border-r border-black/[0.06] bg-white transition-colors min-w-0 overflow-hidden"
+                      className="relative border-r border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#121316] transition-colors min-w-0 overflow-hidden"
                       style={{ height: `${TOTAL_HEIGHT}px` }}
                     >
                       {/* Hour Slots with Drop Targets & Half-Hour Grid lines */}
@@ -2091,16 +2366,16 @@ const TodayView = React.memo(function TodayView({
                                 onOpenQuickAdd?.({ initialTime: hourLabel, initialDate: colDate });
                               }
                             }}
-                            className={`absolute left-0 right-0 border-b border-black/[0.05] transition-colors cursor-pointer group flex items-start justify-end p-1.5 ${
+                            className={`absolute left-0 right-0 border-b border-black/[0.05] dark:border-white/[0.05] transition-colors cursor-pointer group flex items-start justify-end p-1.5 ${
                               isHovered || isTargetedByTouch
-                                ? 'bg-blue-100/75 ring-2 ring-blue-500 inset-0 z-10'
+                                ? 'bg-blue-100/75 dark:bg-blue-900/50 ring-2 ring-blue-500 inset-0 z-10'
                                 : (hourNum < 6 || hourNum >= 22)
-                                  ? 'bg-[#F8F8FC]/80 hover:bg-blue-50/40'
-                                  : 'bg-white hover:bg-blue-50/40'
+                                  ? 'bg-[#F8F8FC]/80 dark:bg-[#16171B]/80 hover:bg-blue-50/40 dark:hover:bg-blue-950/30'
+                                  : 'bg-white dark:bg-[#121316] hover:bg-blue-50/40 dark:hover:bg-blue-950/30'
                             }`}
                           >
                             {/* Subtle half-hour divider */}
-                            <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-black/[0.03] pointer-events-none" />
+                            <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-black/[0.03] dark:border-white/[0.04] pointer-events-none" />
 
                             <span className="opacity-0 group-hover:opacity-100 text-[10px] font-semibold text-[#0A84FF] transition-opacity z-10">
                               + Block at {hourLabel}
@@ -2166,32 +2441,67 @@ const TodayView = React.memo(function TodayView({
 
                       {/* Blocks & Smart Buffer Gaps Container */}
                       <div className="absolute inset-0 pointer-events-none p-1.5">
-                        {/* Fixed Timetable & Class Blocks Layer (Background containers) */}
-                        {(schedules || [])
-                          .filter(sched => isScheduleActiveForDate(sched, colDate) && sched.startTime)
-                          .map(sched => {
-                            const startMin = minutesFromStartOfDay(sched.startTime);
-                            if (startMin === null) return null;
-                            let dur = Number(sched.durationMinutes);
-                            if (!dur || isNaN(dur)) {
-                              if (sched.startTime && sched.endTime) {
-                                const diff = calculateDuration(sched.startTime, sched.endTime);
-                                if (diff > 0) dur = diff;
-                              }
-                            }
-                            if (!dur || isNaN(dur)) dur = 60;
-                            const endMin = startMin + dur;
-                            const topPx = Math.max(0, ((startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
-                            const heightPx = Math.max(34, (dur / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                        {colScheduled.map(block => {
+                          const {
+                            id,
+                            type,
+                            sched,
+                            habit,
+                            task,
+                            startMin,
+                            endMin,
+                            duration,
+                            lane,
+                            totalLanes,
+                            isNested,
+                            nestedLane,
+                            nestedTotalLanes,
+                            isCBlock,
+                            hasNestedChildren = false,
+                            hasSnapToPrev,
+                            hasSnapToNext,
+                            parentLaneInfo,
+                            computedTopPx,
+                            computedHeightPx
+                          } = block;
 
+                          const hasOverlap = !isNested && totalLanes > 1;
+                          const parentHasOverlap = isNested && parentLaneInfo && parentLaneInfo.totalLanes > 1;
+                          const parentWidthPct = parentHasOverlap ? (100 / parentLaneInfo.totalLanes) : 100;
+                          const parentLeftPct = parentHasOverlap ? (parentLaneInfo.lane * parentWidthPct) : 0;
+
+                          const widthStyle = isNested
+                            ? (nestedTotalLanes > 1
+                                ? `calc(${parentWidthPct / nestedTotalLanes}% - 26px)`
+                                : `calc(${parentWidthPct}% - 26px)`)
+                            : (hasOverlap
+                                ? `calc(${100 / totalLanes}% - 6px)`
+                                : 'calc(100% - 8px)');
+
+                          const leftStyle = isNested
+                            ? (nestedTotalLanes > 1
+                                ? `calc(${parentLeftPct}% + 22px + ${(nestedLane || 0) * (parentWidthPct / nestedTotalLanes)}%)`
+                                : `calc(${parentLeftPct}% + 22px)`)
+                            : (hasOverlap
+                                ? `calc(${lane * (100 / totalLanes)}% + 4px)`
+                                : '4px');
+
+                          const zIndexVal = isNested ? 28 : isCBlock ? 12 : (15 + (lane || 0));
+
+                          // ── Type 1: Fixed Schedule Block (Classes/Timetable) ──
+                          if (type === 'schedule') {
+                            if (!sched) return null;
                             const isDone = Boolean(
                               sched.completed ||
                               (Array.isArray(sched.completedDates) && sched.completedDates.includes(colDate))
                             );
+                            const topPx = computedTopPx ?? Math.max(0, ((startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                            const heightPx = computedHeightPx ?? Math.max(34, (duration / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT - 2);
+                            const isCompactSched = heightPx < 48;
 
                             return (
                               <div
-                                key={sched.id}
+                                key={id}
                                 onClick={(e) => {
                                   if (didJustDragRef.current) return;
                                   e.stopPropagation();
@@ -2207,45 +2517,53 @@ const TodayView = React.memo(function TodayView({
                                 style={{
                                   top: `${topPx}px`,
                                   height: `${heightPx}px`,
-                                  left: '6px',
-                                  right: '6px',
+                                  width: widthStyle,
+                                  left: leftStyle,
+                                  zIndex: zIndexVal,
                                   touchAction: 'none',
                                   userSelect: 'none',
                                   WebkitUserSelect: 'none'
                                 }}
-                                className={`absolute rounded-xl pointer-events-auto border transition-all p-2 flex flex-col justify-between shadow-xs z-10 group cursor-pointer select-none touch-none ${
+                                className={`absolute rounded-xl pointer-events-auto border overflow-hidden transition-all ${
+                                  isCompactSched ? 'px-2.5 py-0.5 flex items-center justify-between gap-2' : 'p-2.5 flex flex-col justify-between'
+                                } shadow-xs select-none touch-none ${
                                   activeTouchDrag?.item?.id === sched.id
                                     ? 'opacity-40 ring-2 ring-[#0A84FF] scale-[0.98]'
                                     : isDone
-                                    ? 'border-emerald-300 bg-emerald-50/90 hover:bg-emerald-100/90 opacity-90'
-                                    : 'border-indigo-200/90 bg-indigo-50/85 hover:bg-indigo-100/90'
-                                }`}
+                                    ? 'border-emerald-300 dark:border-emerald-500/40 border-l-[4px] border-l-emerald-500 bg-emerald-50/95 dark:bg-emerald-950/40 hover:bg-emerald-100/95 dark:hover:bg-emerald-900/50 opacity-90'
+                                    : 'border-indigo-200/90 dark:border-indigo-500/30 border-l-[4px] border-l-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/45 hover:bg-indigo-100/90 dark:hover:bg-indigo-900/55'
+                                } group cursor-pointer`}
                               >
-                                <div className="flex items-center justify-between gap-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="material-symbols-outlined text-[13px] text-indigo-600 shrink-0">{isDone ? 'check' : 'school'}</span>
-                                    <span className={`text-[11px] font-bold truncate tracking-tight ${
-                                      isDone ? 'line-through text-slate-500' : 'text-indigo-950'
+                                <div className="flex items-center justify-between gap-1.5 min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                    <span className="material-symbols-outlined text-[13px] text-indigo-600 dark:text-indigo-400 shrink-0">{isDone ? 'check' : 'school'}</span>
+                                    <span className={`text-[11.5px] font-bold truncate tracking-tight ${
+                                      isDone ? 'line-through text-slate-500 dark:text-slate-400' : 'text-indigo-950 dark:text-indigo-100'
                                     }`}>
                                       {sched.title}
                                     </span>
                                     {isDone ? (
-                                      <span className="px-1.5 py-0.2 rounded-md bg-emerald-100/90 text-emerald-800 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                      <span className="px-1.5 py-0.2 rounded-md bg-emerald-100/90 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8.5px] font-bold uppercase tracking-wider shrink-0">
                                         Done
                                       </span>
                                     ) : (
-                                      <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/90 text-indigo-700 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                      <span className="px-1.5 py-0.2 rounded-md bg-indigo-100/90 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[8.5px] font-bold uppercase tracking-wider shrink-0">
                                         Class
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-1 shrink-0">
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {isCompactSched && (
+                                      <span className="font-mono text-[9.5px] font-semibold text-indigo-700 dark:text-indigo-300">
+                                        {format12Hour(startMin)} – {format12Hour(endMin % 1440)}
+                                      </span>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={(e) => handleToggleScheduleDone(sched, colDate, e)}
                                       title={isDone ? "Mark incomplete" : "Mark attended/completed"}
                                       className={`p-0.5 rounded transition cursor-pointer ${
-                                        isDone ? 'text-emerald-700 hover:text-emerald-800' : 'text-indigo-400 hover:text-emerald-600 opacity-0 group-hover:opacity-100'
+                                        isDone ? 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800' : 'text-indigo-400 hover:text-emerald-600 opacity-0 group-hover:opacity-100'
                                       }`}
                                     >
                                       <Check className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -2258,48 +2576,151 @@ const TodayView = React.memo(function TodayView({
                                           setSingleDeleteTarget({ type: 'schedule', id: sched.id, title: sched.title });
                                         }}
                                         title="Remove schedule block"
-                                        className="p-0.5 rounded text-indigo-400 hover:text-red-500 hover:bg-white/80 transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                                        className="p-0.5 rounded text-indigo-400 hover:text-red-500 hover:bg-white/80 dark:hover:bg-black/40 transition opacity-0 group-hover:opacity-100 cursor-pointer"
                                       >
                                         <span className="material-symbols-outlined text-[14px]">close</span>
                                       </button>
                                     )}
                                   </div>
                                 </div>
+
+                                {!isCompactSched && (
+                                  <div className="flex items-center justify-between text-[10px] font-medium text-indigo-700 dark:text-indigo-300 mt-1">
+                                    <span className="font-mono text-[9.5px] font-semibold">
+                                      {format12Hour(startMin)} – {format12Hour(endMin % 1440)}
+                                    </span>
+                                    <span className="px-1.5 py-0.2 rounded bg-indigo-100/80 dark:bg-indigo-900/60 font-bold text-[9px]">
+                                      {duration}m
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Scratch Puzzle Snap Notch if continuous with next item */}
+                                {hasSnapToNext && (
+                                  <div
+                                    className="absolute -bottom-1 left-8 w-5 h-1 rounded-b bg-indigo-300 dark:bg-indigo-700 pointer-events-none z-30"
+                                    title="Puzzle snap flow"
+                                  />
+                                )}
                               </div>
                             );
-                          })
-                        }
+                          }
 
-                        {/* Scheduled Habits & Ritual Blocks Layer */}
-                        {(habits || [])
-                          .filter(h => {
-                            if (!h.startTime) return false;
-                            const targetFreq = h.targetFrequency || 'Every Day';
-                            if (targetFreq === 'Every Day') return true;
-                            const targetD = new Date(`${colDate}T12:00:00`);
-                            const dayOfWeek = targetD.getDay(); // 0 Sun, 1 Mon..
-                            if (targetFreq === 'Weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5;
-                            if (targetFreq === 'Custom' && Array.isArray(h.customDays)) {
-                              const dayShorts = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                              return h.customDays.includes(dayShorts[dayOfWeek]);
-                            }
-                            return true;
-                          })
-                          .map(habit => {
-                            const startMin = minutesFromStartOfDay(habit.startTime);
-                            if (startMin === null) return null;
-                            const dur = Number(habit.durationMinutes) || parseCompoundDuration(habit.duration) || 30;
-                            const endMin = startMin + dur;
-                            const topPx = Math.max(0, ((startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
-                            const heightPx = Math.max(34, (dur / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                          // ── Type 2: Habit & Ritual Block ──
+                          if (type === 'habit') {
+                            if (!habit) return null;
                             const isChecked = Array.isArray(habit.completedDays) && habit.completedDays.includes(colDate);
+                            const topPx = computedTopPx ?? Math.max(0, ((startMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                            const heightPx = computedHeightPx ?? Math.max(34, (duration / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT - 2);
 
+                            if (isCBlock) {
+                              // Anatomical 3-Part Scratch C-Block Container (Top Header Arm + Left Spine + Open Mouth Cavity + Bottom Jaw)
+                              return (
+                                <div
+                                  key={id}
+                                  style={{
+                                    top: `${topPx}px`,
+                                    height: `${heightPx}px`,
+                                    width: widthStyle,
+                                    left: leftStyle,
+                                    zIndex: zIndexVal,
+                                    touchAction: 'none',
+                                    userSelect: 'none',
+                                    WebkitUserSelect: 'none'
+                                  }}
+                                  className={`absolute pointer-events-none select-none touch-none group ${
+                                    isChecked ? 'opacity-85' : ''
+                                  }`}
+                                >
+                                  {/* Part 1: C-Block Top Header Arm (32px height) */}
+                                  <div
+                                    onClick={(e) => {
+                                      if (didJustDragRef.current) return;
+                                      e.stopPropagation();
+                                      setEditingHabit(habit);
+                                      setIsHabitModalOpen(true);
+                                    }}
+                                    onTouchStart={(e) => {
+                                      if (e.target.closest('button')) return;
+                                      handleTouchStartCard('habit', habit, e);
+                                    }}
+                                    onTouchMove={handleTouchMoveCard}
+                                    onTouchEnd={handleTouchEndCard}
+                                    onTouchCancel={handleTouchEndCard}
+                                    title="Click to edit habit sequence"
+                                    className="absolute top-0 left-0 right-0 h-[32px] pointer-events-auto cursor-pointer rounded-t-xl rounded-br-lg bg-emerald-100/95 dark:bg-emerald-950/90 border border-emerald-400/70 dark:border-emerald-500/45 border-l-[6px] border-l-emerald-500 px-2.5 flex items-center justify-between gap-2 shadow-2xs"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onCheckInHabit?.(habit.id, colDate);
+                                        }}
+                                        className={`w-4 h-4 rounded-full flex items-center justify-center transition shrink-0 ${
+                                          isChecked
+                                            ? 'bg-emerald-600 text-white'
+                                            : 'border-2 border-emerald-500 hover:bg-emerald-200 dark:hover:bg-emerald-800 text-transparent'
+                                        }`}
+                                        title={isChecked ? 'Checked in! Click to uncheck' : 'Click to check in ritual'}
+                                      >
+                                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                      </button>
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="material-symbols-outlined text-[13.5px] text-emerald-700 dark:text-emerald-300 shrink-0">
+                                          {habit.icon || 'terminal'}
+                                        </span>
+                                        <span className={`text-[11.5px] font-extrabold truncate tracking-tight ${isChecked ? 'line-through text-emerald-800 dark:text-emerald-400' : 'text-emerald-950 dark:text-emerald-100'}`}>
+                                          {habit.title}
+                                        </span>
+                                        <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 dark:bg-emerald-500/30 text-emerald-900 dark:text-emerald-200 text-[8px] font-black uppercase tracking-wider shrink-0">
+                                          Focus C-Block
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {habit.linkedGoal && (
+                                        <span className="hidden md:inline text-[9.5px] font-semibold text-emerald-700 dark:text-emerald-300 truncate max-w-[120px]">
+                                          ⚓ {habit.linkedGoal}
+                                        </span>
+                                      )}
+                                      <span className="text-[9.5px] font-mono font-bold text-emerald-800 dark:text-emerald-200 bg-white/60 dark:bg-black/30 px-1.5 py-0.2 rounded border border-emerald-400/30">
+                                        {format12Hour(startMin)} – {format12Hour(endMin % 1440)}
+                                      </span>
+                                    </div>
+
+                                    {/* Scratch Inner Mouth Puzzle Tab */}
+                                    <div className="absolute -bottom-[5px] left-7 w-6 h-[5px] rounded-b bg-emerald-200 dark:bg-emerald-800 border-x border-b border-emerald-400/60 pointer-events-none z-20" />
+                                  </div>
+
+                                  {/* Part 2: C-Block Left Structural Spine + Open Recessed Mouth Cavity */}
+                                  <div className="absolute top-[31px] bottom-[11px] left-0 w-[14px] pointer-events-auto bg-emerald-100/90 dark:bg-emerald-950/85 border-l-[6px] border-l-emerald-500 border-r border-r-emerald-400/60 dark:border-r-emerald-500/40" />
+                                  <div className="absolute top-[32px] bottom-[12px] left-[14px] right-0 bg-emerald-500/[0.025] dark:bg-emerald-500/[0.04] border-r border-dashed border-emerald-400/30 pointer-events-none" />
+
+                                  {/* Part 3: C-Block Bottom Jaw Clamp (12px slim closing arm) */}
+                                  <div className="absolute bottom-0 left-0 right-0 h-[12px] pointer-events-auto rounded-b-xl rounded-tr-md bg-emerald-100/90 dark:bg-emerald-950/85 border border-emerald-400/70 dark:border-emerald-500/45 border-l-[6px] border-l-emerald-500 flex items-center justify-between px-3">
+                                    <div className="w-8 h-[2px] rounded-full bg-emerald-500/40" />
+                                    <span className="text-[8px] font-mono font-bold uppercase tracking-widest text-emerald-700/70 dark:text-emerald-300/70">
+                                      {duration}m Sprint
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // Standard non-container Habit Card (Compact single-line if < 48px, two-line if >= 48px)
+                            const isCompactHabit = heightPx < 48;
                             return (
                               <div
-                                key={`cal-habit-${habit.id}`}
-                                onClick={() => {
+                                key={id}
+                                onClick={(e) => {
                                   if (didJustDragRef.current) return;
+                                  e.stopPropagation();
+                                  setEditingHabit(habit);
+                                  setIsHabitModalOpen(true);
                                 }}
+                                title="Click to edit habit sequence"
                                 onTouchStart={(e) => {
                                   if (e.target.closest('button')) return;
                                   handleTouchStartCard('habit', habit, e);
@@ -2310,66 +2731,91 @@ const TodayView = React.memo(function TodayView({
                                 style={{
                                   top: `${topPx}px`,
                                   height: `${heightPx}px`,
-                                  left: '6px',
-                                  right: '6px',
+                                  width: widthStyle,
+                                  left: leftStyle,
+                                  zIndex: zIndexVal,
                                   touchAction: 'none',
                                   userSelect: 'none',
                                   WebkitUserSelect: 'none'
                                 }}
-                                className={`absolute rounded-xl pointer-events-auto border transition-all p-2 flex items-center justify-between shadow-xs z-15 group select-none touch-none ${
+                                className={`absolute rounded-xl pointer-events-auto border overflow-hidden transition-all ${
+                                  isCompactHabit ? 'px-2.5 py-0.5 flex items-center justify-between gap-2' : 'p-2 px-2.5 flex flex-col justify-between'
+                                } shadow-xs select-none touch-none border-l-[4px] border-l-emerald-500 ${
                                   activeTouchDrag?.item?.id === habit.id
                                     ? 'opacity-40 ring-2 ring-emerald-500 scale-[0.98]'
                                     : isChecked
-                                    ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 opacity-80'
-                                    : 'bg-emerald-50/60 hover:bg-emerald-50/95 border-emerald-200/90 text-emerald-950'
-                                }`}
+                                    ? 'bg-emerald-50/95 dark:bg-emerald-950/45 border-emerald-300 dark:border-emerald-500/40 text-emerald-900 dark:text-emerald-300 opacity-85'
+                                    : 'bg-emerald-50/80 dark:bg-emerald-950/35 hover:bg-emerald-50/95 dark:hover:bg-emerald-900/45 border-emerald-200/90 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-200'
+                                } group`}
                               >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onCheckInHabit?.(habit.id, colDate);
-                                    }}
-                                    className={`w-5 h-5 rounded-full flex items-center justify-center transition shrink-0 ${
-                                      isChecked
-                                        ? 'bg-emerald-600 text-white'
-                                        : 'border-2 border-emerald-500 hover:bg-emerald-100 text-transparent'
-                                    }`}
-                                    title={isChecked ? 'Checked in! Click to uncheck' : 'Click to check in ritual'}
-                                  >
-                                    <Check className="w-3 h-3 stroke-[3]" />
-                                  </button>
-
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="material-symbols-outlined text-[13px] text-emerald-600 shrink-0">
-                                        {habit.icon || 'cached'}
-                                      </span>
-                                      <span className={`text-[11px] font-bold truncate ${isChecked ? 'line-through text-emerald-700' : 'text-emerald-950'}`}>
-                                        {habit.title}
-                                      </span>
-                                      <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-bold uppercase tracking-wider shrink-0">
-                                        Ritual
-                                      </span>
-                                    </div>
-                                    <div className="text-[10px] font-mono text-emerald-700">
-                                      {format12Hour(startMin)} – {format12Hour(endMin % 1440)} ({dur}m)
-                                    </div>
+                                <div className="flex items-center justify-between gap-2 min-w-0 w-full">
+                                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onCheckInHabit?.(habit.id, colDate);
+                                      }}
+                                      className={`w-4 h-4 rounded-full flex items-center justify-center transition shrink-0 ${
+                                        isChecked
+                                          ? 'bg-emerald-600 text-white'
+                                          : 'border-2 border-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-transparent'
+                                      }`}
+                                      title={isChecked ? 'Checked in! Click to uncheck' : 'Click to check in ritual'}
+                                    >
+                                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                    </button>
+                                    <span className="material-symbols-outlined text-[13px] text-emerald-600 dark:text-emerald-400 shrink-0">
+                                      {habit.icon || 'cached'}
+                                    </span>
+                                    <span className={`text-[11.5px] font-bold truncate ${isChecked ? 'line-through text-emerald-700 dark:text-emerald-400' : 'text-emerald-950 dark:text-emerald-100'}`}>
+                                      {habit.title}
+                                    </span>
+                                    <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8.5px] font-bold uppercase tracking-wider shrink-0">
+                                      Ritual
+                                    </span>
                                   </div>
+
+                                  {isCompactHabit && (
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {habit.linkedGoal && !hasOverlap && (
+                                        <span className="text-[9.5px] font-semibold text-emerald-600 dark:text-emerald-400 truncate max-w-[110px] hidden md:inline">
+                                          ⚓ {habit.linkedGoal}
+                                        </span>
+                                      )}
+                                      <span className="text-[9.5px] font-mono font-semibold text-emerald-700 dark:text-emerald-300">
+                                        {format12Hour(startMin)} – {format12Hour(endMin % 1440)}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
 
-                                {habit.linkedGoal && (
-                                  <span className="text-[10px] font-semibold text-emerald-600 truncate max-w-[120px] hidden sm:inline">
-                                    ⚓ {habit.linkedGoal}
-                                  </span>
+                                {!isCompactHabit && (
+                                  <div className="flex items-center justify-between gap-2 text-[10px] min-w-0 w-full">
+                                    <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400 truncate">
+                                      {format12Hour(startMin)} – {format12Hour(endMin % 1440)} ({duration}m)
+                                    </span>
+                                    {habit.linkedGoal && (
+                                      <span className="text-[9.5px] font-semibold text-emerald-600 dark:text-emerald-400 truncate max-w-[120px] shrink-0">
+                                        ⚓ {habit.linkedGoal}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Scratch Puzzle Snap Notch if continuous with next item */}
+                                {hasSnapToNext && (
+                                  <div
+                                    className="absolute -bottom-1 left-8 w-5 h-1 rounded-b bg-emerald-300 dark:bg-emerald-700 pointer-events-none z-30"
+                                    title="Puzzle snap flow"
+                                  />
                                 )}
                               </div>
                             );
-                          })
-                        }
+                          }
 
-                        {colScheduled.map(({ task, startMin, endMin, duration, lane, totalLanes, isNested, nestedLane, nestedTotalLanes, containerTask, hasNestedChildren }) => {
+                          // ── Type 3: Task Block ──
+                          if (type !== 'task' || !task) return null;
                           const isFlexible = Boolean(task.isFlexible || task.durationMinutes === null);
 
                           const isBeingTransformed = transformState?.taskId === task.id;
@@ -2379,8 +2825,12 @@ const TodayView = React.memo(function TodayView({
                           const displayDuration = isBeingTransformed ? transformState.currentDuration : duration;
                           const displayEndMin = displayStartMin + displayDuration;
 
-                          const topPx = Math.max(0, ((displayStartMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
-                          const heightPx = isFlexible && !isBeingTransformed ? 36 : Math.max(36, (displayDuration / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT);
+                          const topPx = isBeingTransformed
+                            ? Math.max(0, ((displayStartMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT)
+                            : (computedTopPx ?? Math.max(0, ((displayStartMin - startDayMinutes) / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT));
+                          const heightPx = isBeingTransformed
+                            ? Math.max(34, (displayDuration / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT - 2)
+                            : (isFlexible ? 34 : (computedHeightPx ?? Math.max(34, (displayDuration / (TOTAL_HOURS * 60)) * TOTAL_HEIGHT - 2)));
 
                           const isLiveNow = isToday && (currentMinutesToday >= displayStartMin && currentMinutesToday <= displayEndMin);
                           const isHigh = task.priority === 'high' || task.impact === 'high';
@@ -2394,53 +2844,34 @@ const TodayView = React.memo(function TodayView({
                           );
 
                           const areaBorderClass = areaInfo?.color === 'purple'
-                            ? 'border-l-[3.5px] border-l-purple-500'
+                            ? 'border-l-[4px] border-l-purple-500'
                             : areaInfo?.color === 'emerald'
-                            ? 'border-l-[3.5px] border-l-emerald-500'
+                            ? 'border-l-[4px] border-l-emerald-500'
                             : areaInfo?.color === 'amber'
-                            ? 'border-l-[3.5px] border-l-amber-500'
+                            ? 'border-l-[4px] border-l-amber-500'
                             : areaInfo?.color === 'rose'
-                            ? 'border-l-[3.5px] border-l-rose-500'
+                            ? 'border-l-[4px] border-l-rose-500'
                             : areaInfo?.color === 'indigo'
-                            ? 'border-l-[3.5px] border-l-indigo-500'
-                            : 'border-l-[3.5px] border-l-[#0A84FF]';
+                            ? 'border-l-[4px] border-l-indigo-500'
+                            : 'border-l-[4px] border-l-[#0A84FF]';
 
                           // Distinct visual treatment for nested vs standard blocks
                           const cardAccent = isNested
-                            ? `bg-white/95 hover:bg-white text-slate-900 border-slate-200/90 shadow-[0_3px_12px_rgba(0,0,0,0.07)] ring-1 ring-black/[0.04] ${areaBorderClass}`
+                            ? `bg-white dark:bg-[#1A1C20] hover:bg-slate-50 dark:hover:bg-[#222429] text-slate-900 dark:text-slate-100 border-slate-200 dark:border-white/10 shadow-xs ${areaBorderClass}`
                             : isHigh
-                            ? 'bg-[#FFF5F5] hover:bg-[#FFEBEB] text-[#7F1D1D] border-red-200 border-l-[4px] border-l-red-500'
+                            ? 'bg-[#FFF5F5] dark:bg-rose-950/35 hover:bg-[#FFEBEB] dark:hover:bg-rose-900/35 text-[#7F1D1D] dark:text-rose-200 border-red-200 dark:border-rose-500/30 border-l-[4px] border-l-red-500'
                             : isLow
-                            ? 'bg-[#F0FDF4] hover:bg-[#DCFCE7] text-[#064E3B] border-emerald-200 border-l-[4px] border-l-emerald-500'
-                            : 'bg-[#F0F7FF] hover:bg-[#E5F1FF] text-[#0C4A6E] border-blue-200 border-l-[4px] border-l-[#0A84FF]';
+                            ? 'bg-[#F0FDF4] dark:bg-emerald-950/35 hover:bg-[#DCFCE7] dark:hover:bg-emerald-900/35 text-[#064E3B] dark:text-emerald-200 border-emerald-200 dark:border-emerald-500/30 border-l-[4px] border-l-emerald-500'
+                            : 'bg-[#F0F7FF] dark:bg-[#0A84FF]/15 hover:bg-[#E5F1FF] dark:hover:bg-[#0A84FF]/25 text-[#0C4A6E] dark:text-blue-200 border-blue-200 dark:border-blue-500/30 border-l-[4px] border-l-[#0A84FF]';
 
                           const timeStr = isFlexible && !isBeingTransformed ? format12Hour(displayStartMin) : `${format12Hour(displayStartMin)} – ${format12Hour(displayEndMin % 1440)}`;
                           const matchedGoal = goals.find(g => g.id === task.goalId);
                           const isTaskDone = isTaskCompletedForDate(task, colDate);
 
                           // Card size tiers
+                          const isUltraCompact = heightPx < 48;
+                          const isCompact = heightPx >= 48 && heightPx < 78;
                           const isSpacious = heightPx >= 110;
-                          const isCompact = heightPx < 65;
-
-                          // Compute non-overlapping positioning with smooth inset margins
-                          const hasOverlap = !isNested && totalLanes > 1;
-                          const widthStyle = isNested
-                            ? (nestedTotalLanes > 1
-                                ? `calc(${(100 / nestedTotalLanes)}% - 32px)`
-                                : 'calc(100% - 32px)')
-                            : (hasOverlap
-                                ? `calc(${100 / totalLanes}% - 6px)`
-                                : 'calc(100% - 8px)');
-
-                          const leftStyle = isNested
-                            ? (nestedTotalLanes > 1
-                                ? `calc(22px + ${(nestedLane || 0) * (100 / nestedTotalLanes)}%)`
-                                : '22px')
-                            : (hasOverlap
-                                ? `calc(${lane * (100 / totalLanes)}% + 3px)`
-                                : '4px');
-
-                          const zIndexVal = isNested ? (25 + (nestedLane || 0)) : (10 + (lane || 0));
 
                           return (
                             <div
@@ -2492,26 +2923,102 @@ const TodayView = React.memo(function TodayView({
                                 userSelect: 'none',
                                 WebkitUserSelect: 'none'
                               }}
-                              className={`absolute rounded-xl pointer-events-auto transition-all select-none touch-none ${
+                              className={`absolute rounded-xl pointer-events-auto overflow-hidden transition-all select-none touch-none ${
                                 activeTouchDrag?.item?.id === task.id
                                   ? 'opacity-40 ring-2 ring-[#0A84FF] scale-[0.98]'
                                   : isSelectedForTransform
                                   ? 'ring-2 ring-[#0A84FF] shadow-[0_0_0_2px_rgba(10,132,255,0.4),0_12px_32px_rgba(0,0,0,0.18)] z-40'
                                   : isEditorMode
                                   ? 'hover:ring-1 hover:ring-amber-400 hover:shadow-md'
-                                  : 'hover:shadow-lg hover:scale-[1.002] hover:z-35'
+                                  : 'hover:shadow-md hover:z-35'
                               } group border ${cardAccent} ${
-                                isCompact ? 'p-2 px-3 flex flex-col justify-center' : 'p-3 flex flex-col justify-between'
-                              } ${isTaskDone ? 'opacity-55 grayscale' : ''}`}
+                                isUltraCompact
+                                  ? 'px-2.5 py-0.5 flex items-center justify-between gap-2'
+                                  : isCompact
+                                  ? 'p-2 px-2.5 flex flex-col justify-between'
+                                  : 'p-2.5 px-3 flex flex-col justify-between'
+                              } ${isTaskDone ? 'opacity-60 grayscale-[30%]' : ''}`}
                             >
-                              {/* Parent block track guide when it contains nested sub-blocks */}
-                              {hasNestedChildren && (
-                                <div className="absolute left-[16px] top-[48px] bottom-[28px] w-[1px] border-l border-dashed border-red-300/50 pointer-events-none" />
-                              )}
+                              {/* Tier 0: Ultra-Compact Single Row (< 48px height, e.g. 20m-30m tasks) */}
+                              {isUltraCompact ? (
+                                <div className="flex items-center justify-between gap-2 min-w-0 w-full">
+                                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleTask?.(task.id, colDate);
+                                      }}
+                                      className="text-inherit opacity-75 hover:opacity-100 transition shrink-0"
+                                    >
+                                      {isTaskDone ? (
+                                        <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                                      ) : (
+                                        <Square className="w-3.5 h-3.5 text-slate-400 hover:text-[#0A84FF]" />
+                                      )}
+                                    </button>
 
-                              {/* Tier 1: Compact View (< 65px height) - ALWAYS renders Title first and never clips */}
-                              {isCompact ? (
-                                <div className="flex flex-col justify-center h-full min-w-0">
+                                    {isLiveNow && !isTaskDone && (
+                                      <span className="px-1 py-0.2 rounded bg-red-500 text-white text-[8px] font-black uppercase tracking-wider shrink-0">
+                                        NOW
+                                      </span>
+                                    )}
+
+                                    <span className={`text-[11.5px] font-bold tracking-tight truncate text-slate-900 dark:text-slate-100 ${isTaskDone ? 'line-through opacity-65' : ''}`}>
+                                      {task.title}
+                                    </span>
+
+                                    {areaInfo && !hasOverlap && (
+                                      <span className={`hidden sm:inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.2 rounded-full border ${areaInfo.badgeClass} shrink-0`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${areaInfo.dotClass}`} />
+                                        {areaInfo.shortLabel}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="font-mono font-semibold text-[9.5px] text-slate-600 dark:text-slate-300">
+                                      {timeStr}
+                                    </span>
+                                    <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                                      {!isTaskDone && onStartFocus && (
+                                        <button
+                                          type="button"
+                                          title="Start Focus"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onStartFocus(task.id);
+                                          }}
+                                          className="p-0.5 rounded bg-white dark:bg-[#202227] text-[#0A84FF] shadow-2xs"
+                                        >
+                                          <Play className="w-3 h-3 fill-current" />
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        title={task.recurrence && task.recurrence !== 'none' ? 'Delete recurring event' : 'Unslot back to tray'}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (task.recurrence && task.recurrence !== 'none') {
+                                            setRecurringDeleteTarget({ task, date: colDate });
+                                          } else {
+                                            handleUnslotTask(task.id);
+                                          }
+                                        }}
+                                        className="p-0.5 rounded bg-white dark:bg-[#202227] text-slate-500 hover:text-red-500 shadow-2xs"
+                                      >
+                                        {task.recurrence && task.recurrence !== 'none' ? (
+                                          <Trash2 className="w-3 h-3" />
+                                        ) : (
+                                          <X className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : isCompact ? (
+                                /* Tier 1: Compact 2-Row View (48px - 77px height, e.g. 45m tasks) */
+                                <div className="flex flex-col justify-between h-full min-w-0">
                                   {/* Row 1: Checkbox + Bold Title + Badges + Quick Actions */}
                                   <div className="flex items-center justify-between gap-2 min-w-0">
                                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -2537,20 +3044,14 @@ const TodayView = React.memo(function TodayView({
                                       )}
 
                                       {/* Main Task Title - bold & high contrast */}
-                                      <span className={`text-[12.5px] font-bold tracking-tight truncate text-slate-900 ${isTaskDone ? 'line-through opacity-60' : ''}`}>
+                                      <span className={`text-[12px] font-bold tracking-tight truncate text-slate-900 dark:text-slate-100 ${isTaskDone ? 'line-through opacity-60' : ''}`}>
                                         {task.title}
                                       </span>
 
-                                      {isNested && areaInfo && (
+                                      {areaInfo && (
                                         <span className={`hidden sm:inline-flex items-center gap-1 text-[8.5px] font-bold px-1.5 py-0.2 rounded-full border ${areaInfo.badgeClass} shrink-0`}>
                                           <span className={`w-1.5 h-1.5 rounded-full ${areaInfo.dotClass}`} />
                                           {areaInfo.shortLabel}
-                                        </span>
-                                      )}
-
-                                      {isNested && !areaInfo && (
-                                        <span className="hidden sm:inline-flex items-center gap-0.5 text-[8.5px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 shrink-0">
-                                          sub-block
                                         </span>
                                       )}
                                     </div>
@@ -2565,7 +3066,7 @@ const TodayView = React.memo(function TodayView({
                                             e.stopPropagation();
                                             onStartFocus(task.id);
                                           }}
-                                          className="p-0.5 rounded bg-white text-[#0A84FF] shadow-xs hover:scale-105 transition"
+                                          className="p-0.5 rounded bg-white dark:bg-[#202227] text-[#0A84FF] shadow-xs hover:scale-105 transition"
                                         >
                                           <Play className="w-3 h-3 fill-current" />
                                         </button>
@@ -2581,7 +3082,7 @@ const TodayView = React.memo(function TodayView({
                                             handleUnslotTask(task.id);
                                           }
                                         }}
-                                        className="p-0.5 rounded bg-white text-slate-500 hover:text-red-500 shadow-xs hover:scale-105 transition"
+                                        className="p-0.5 rounded bg-white dark:bg-[#202227] text-slate-500 dark:text-slate-400 hover:text-red-500 shadow-xs hover:scale-105 transition"
                                       >
                                         {task.recurrence && task.recurrence !== 'none' ? (
                                           <Trash2 className="w-3 h-3" />
@@ -2593,23 +3094,17 @@ const TodayView = React.memo(function TodayView({
                                   </div>
 
                                   {/* Row 2: Time + Duration + Goal pill */}
-                                  <div className="flex items-center gap-2 text-[10px] font-medium text-slate-500 mt-0.5 min-w-0">
-                                    <span className="font-mono font-semibold text-[9.5px] text-slate-700 bg-slate-100/70 px-1.5 py-0.2 rounded border border-slate-200/50 shrink-0">
+                                  <div className="flex items-center gap-2 text-[10px] font-medium text-slate-500 dark:text-slate-400 min-w-0">
+                                    <span className="font-mono font-semibold text-[9.5px] text-slate-700 dark:text-slate-200 bg-slate-100/80 dark:bg-white/10 px-1.5 py-0.2 rounded border border-slate-200/50 dark:border-white/10 shrink-0">
                                       {timeStr}
                                     </span>
-                                    <span className="px-1.5 py-0.2 rounded bg-black/[0.04] font-bold text-[9px] text-slate-600 shrink-0">
+                                    <span className="px-1.5 py-0.2 rounded bg-black/[0.04] dark:bg-white/10 font-bold text-[9px] text-slate-600 dark:text-slate-300 shrink-0">
                                       {formatDurationLabel(duration)}
                                     </span>
                                     {task.recurrence && task.recurrence !== 'none' && (
-                                      <span className="hidden sm:inline-flex items-center gap-0.5 text-[9px] font-bold text-teal-700 bg-teal-50 px-1 py-0.2 rounded border border-teal-200/50 shrink-0" title={`Repeats ${task.recurrence}`}>
+                                      <span className="hidden sm:inline-flex items-center gap-0.5 text-[9px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/40 px-1 py-0.2 rounded border border-teal-200/50 dark:border-teal-500/30 shrink-0" title={`Repeats ${task.recurrence}`}>
                                         <Repeat className="w-2.5 h-2.5" />
                                         <span className="capitalize">{task.recurrence}</span>
-                                      </span>
-                                    )}
-                                    {matchedGoal && (
-                                      <span className="hidden md:inline-flex items-center gap-1 text-[9px] font-medium text-slate-500 truncate max-w-[130px]">
-                                        <Flag className="w-2.5 h-2.5" />
-                                        <span className="truncate">{matchedGoal.title}</span>
                                       </span>
                                     )}
                                   </div>
@@ -2642,12 +3137,12 @@ const TodayView = React.memo(function TodayView({
                                           </span>
                                         )}
 
-                                        <span className={`text-[13px] font-bold tracking-tight truncate text-slate-900 ${isTaskDone ? 'line-through opacity-70' : ''}`}>
+                                        <span className={`text-[13px] font-bold tracking-tight truncate text-slate-900 dark:text-slate-100 ${isTaskDone ? 'line-through opacity-70' : ''}`}>
                                           {task.title}
                                         </span>
 
                                         {task.impact && (
-                                          <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider bg-white/70 opacity-80 shrink-0">
+                                          <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider bg-white/70 dark:bg-white/10 opacity-80 shrink-0">
                                             {task.impact}
                                           </span>
                                         )}
@@ -2662,7 +3157,7 @@ const TodayView = React.memo(function TodayView({
                                               e.stopPropagation();
                                               onStartFocus(task.id);
                                             }}
-                                            className="p-1 rounded-md bg-white text-[#0A84FF] shadow-xs hover:scale-105 transition"
+                                            className="p-1 rounded-md bg-white dark:bg-[#202227] text-[#0A84FF] shadow-xs hover:scale-105 transition"
                                           >
                                             <Play className="w-3.5 h-3.5 fill-current" />
                                           </button>
@@ -2678,7 +3173,7 @@ const TodayView = React.memo(function TodayView({
                                               handleUnslotTask(task.id);
                                             }
                                           }}
-                                          className="p-1 rounded-md bg-white text-slate-500 hover:text-red-500 shadow-xs hover:scale-105 transition"
+                                          className="p-1 rounded-md bg-white dark:bg-[#202227] text-slate-500 dark:text-slate-400 hover:text-red-500 shadow-xs hover:scale-105 transition"
                                         >
                                           {task.recurrence && task.recurrence !== 'none' ? (
                                             <Trash2 className="w-3.5 h-3.5" />
@@ -2691,7 +3186,7 @@ const TodayView = React.memo(function TodayView({
 
                                     {/* Focus Window Indicator for Container Tasks */}
                                     {hasNestedChildren && (
-                                      <div className="flex items-center gap-1.5 text-[9.5px] font-semibold text-red-900/80 bg-red-100/50 border border-red-200/50 rounded-md px-2 py-0.5 mt-1.5 w-fit">
+                                      <div className="flex items-center gap-1.5 text-[9.5px] font-semibold text-red-900/80 dark:text-red-200/90 bg-red-100/50 dark:bg-red-950/40 border border-red-200/50 dark:border-red-500/30 rounded-md px-2 py-0.5 mt-1.5 w-fit">
                                         <Layers className="w-3 h-3" />
                                         <span>Focus Window (Contains sub-blocks)</span>
                                         {task.notes && <span className="opacity-75">• Notes attached</span>}
@@ -2736,17 +3231,17 @@ const TodayView = React.memo(function TodayView({
                                   <div className="flex items-center justify-between text-[10px] font-medium opacity-90 mt-1">
                                     <div className="flex items-center gap-2">
                                       <span className="font-mono font-semibold">{timeStr}</span>
-                                      <span className="px-1.5 py-0.2 rounded bg-white/70 font-bold text-[9px]">
+                                      <span className="px-1.5 py-0.2 rounded bg-white/70 dark:bg-white/10 font-bold text-[9px]">
                                         {formatDurationLabel(duration)}
                                       </span>
                                       {task.recurrence && task.recurrence !== 'none' && (
-                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-white/80 font-bold text-[9px] text-teal-800 border border-teal-200/60" title={`Repeats ${task.recurrence}`}>
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-white/80 dark:bg-white/10 font-bold text-[9px] text-teal-800 dark:text-teal-200 border border-teal-200/60 dark:border-teal-500/30" title={`Repeats ${task.recurrence}`}>
                                           <Repeat className="w-2.5 h-2.5" />
                                           <span className="capitalize">{task.recurrence}</span>
                                         </span>
                                       )}
                                       {matchedGoal && (
-                                        <span className="hidden md:inline-flex items-center gap-1 text-[9px] font-semibold bg-white/60 px-1.5 py-0.2 rounded">
+                                        <span className="hidden md:inline-flex items-center gap-1 text-[9px] font-semibold bg-white/60 dark:bg-white/10 px-1.5 py-0.2 rounded">
                                           <Flag className="w-2.5 h-2.5" />
                                           <span className="truncate max-w-[120px]">{matchedGoal.title}</span>
                                         </span>
@@ -2754,7 +3249,7 @@ const TodayView = React.memo(function TodayView({
                                     </div>
 
                                     {Array.isArray(task.subtasks) && task.subtasks.length > 0 && (
-                                      <span className="flex items-center gap-1 text-[9px] font-semibold bg-white/70 px-1.5 py-0.2 rounded">
+                                      <span className="flex items-center gap-1 text-[9px] font-semibold bg-white/70 dark:bg-white/10 px-1.5 py-0.2 rounded">
                                         <ListChecks className="w-3 h-3" />
                                         <span>
                                           {task.subtasks.filter(s => s.completed).length}/{task.subtasks.length}
@@ -2888,6 +3383,31 @@ const TodayView = React.memo(function TodayView({
         />
       )}
 
+      {/* Habit Detail / Edit Modal */}
+      <HabitModal
+        isOpen={isHabitModalOpen}
+        onClose={() => {
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        }}
+        habit={editingHabit}
+        onSave={(data) => {
+          if (editingHabit && editingHabit.id) {
+            onUpdateHabit?.(editingHabit.id, data);
+          } else {
+            onAddHabit?.(data);
+          }
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        }}
+        onDelete={editingHabit ? (id) => {
+          onDeleteHabit?.(id);
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        } : undefined}
+        goals={goals}
+      />
+
       {/* Multi-Select Batch Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={showBatchDeleteConfirm}
@@ -2920,33 +3440,20 @@ const TodayView = React.memo(function TodayView({
       )}
 
       {/* ══════════════════════════════════════════════════════
-          MOBILE ONLY: FLOATING CIRCULAR CALENDAR BUTTON (BOTTOM RIGHT)
+          MOBILE ONLY: FLOATING CIRCULAR TASK TRAY / CALENDAR BUTTON (BOTTOM RIGHT)
          ══════════════════════════════════════════════════════ */}
       <button
         type="button"
         onClick={() => {
-          if (mobileTab === 'timeline') {
-            setIsMobileQuickTrayOpen(prev => !prev);
-          } else {
-            setMobileTab('timeline');
-          }
+          setIsMobileQuickTrayOpen(false);
+          setMobileTab(prev => (prev === 'timeline' ? 'tray' : 'timeline'));
         }}
-        className={`lg:hidden fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-30 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${
-          mobileTab === 'timeline'
-            ? isMobileQuickTrayOpen
-              ? 'bg-[#1A1B1F] text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] ring-2 ring-white/60'
-              : 'bg-[#0A84FF] text-white shadow-[0_8px_24px_rgba(10,132,255,0.5)]'
-            : 'bg-[#0A84FF] text-white shadow-[0_8px_24px_rgba(10,132,255,0.4)] hover:bg-[#0071E3]'
-        }`}
-        aria-label={mobileTab === 'timeline' ? (isMobileQuickTrayOpen ? 'Close Task Tray' : 'Open Task Tray') : 'View Calendar Timeline'}
-        title={mobileTab === 'timeline' ? (isMobileQuickTrayOpen ? 'Close Task Tray' : 'Quick-drag from tray') : 'View Calendar Timeline'}
+        className="lg:hidden fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-30 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer bg-[#0A84FF] text-white shadow-[0_8px_24px_rgba(10,132,255,0.5)] hover:bg-[#0071E3]"
+        aria-label={mobileTab === 'timeline' ? 'Open Task Tray' : 'View Calendar Timeline'}
+        title={mobileTab === 'timeline' ? 'Go to Task Tray' : 'Back to Calendar Timeline'}
       >
         {mobileTab === 'timeline' ? (
-          isMobileQuickTrayOpen ? (
-            <X className="w-5 h-5 transition-transform" />
-          ) : (
-            <Inbox className="w-5 h-5 transition-transform" />
-          )
+          <Inbox className="w-5 h-5 transition-transform" />
         ) : (
           <Calendar className="w-5 h-5 transition-transform" />
         )}
@@ -3053,7 +3560,7 @@ const TodayView = React.memo(function TodayView({
             pointerEvents: 'none',
             zIndex: 9999
           }}
-          className="px-3.5 py-2 rounded-2xl bg-[#0A84FF] text-white shadow-[0_16px_36px_rgba(10,132,255,0.5)] border border-white/40 flex items-center gap-2 text-xs font-bold select-none whitespace-nowrap animate-scaleIn"
+          className="px-3.5 py-2 rounded-2xl bg-[#0A84FF] text-white shadow-[0_16px_36px_rgba(10,132,255,0.5)] border border-white/40 flex items-center gap-2 text-xs font-bold select-none whitespace-nowrap animate-thumbScaleIn"
         >
           <span className="material-symbols-outlined text-[16px] animate-pulse">touch_app</span>
           <span className="truncate max-w-[150px]">{activeTouchDrag.item.title}</span>

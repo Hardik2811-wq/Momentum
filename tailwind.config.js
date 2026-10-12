@@ -90,6 +90,10 @@ export default {
           '100%': { transform: 'translateY(0)', opacity: '1' }
         },
         scaleIn: {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' }
+        },
+        thumbScaleIn: {
           '0%': { transform: 'translate(-50%, -130%) scale(0.75)', opacity: '0' },
           '100%': { transform: 'translate(-50%, -130%) scale(1)', opacity: '1' }
         },
@@ -101,6 +105,7 @@ export default {
       animation: {
         slideUp: 'slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1) both',
         scaleIn: 'scaleIn 0.18s ease-out both',
+        thumbScaleIn: 'thumbScaleIn 0.18s ease-out both',
         fadeIn: 'fadeIn 0.15s ease-out both'
       }
     }

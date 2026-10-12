@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import HabitModal from '../components/HabitModal';
 
 const REASONS = [
   'Low Energy',
@@ -59,6 +60,9 @@ export default function ReflectionsView({
   tasks = [],
   goals = [],
   habits = [],
+  onAddHabit,
+  onUpdateHabit,
+  onDeleteHabit,
   stats = {},
   reflections = {},
   updateReflection,
@@ -71,6 +75,8 @@ export default function ReflectionsView({
   const [goalTunedNotice, setGoalTunedNotice] = useState(false);
   const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [editingHabit, setEditingHabit] = useState(null);
+  const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
 
   const {
     total = 0,
@@ -259,13 +265,13 @@ export default function ReflectionsView({
   };
 
   return (
-    <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-canvas dark:bg-canvas-dark text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
-      <div className="flex flex-col w-full space-y-4 sm:space-y-gutter-xl max-w-6xl mx-auto pb-28">
+    <main className="w-full pt-[calc(3.85rem+env(safe-area-inset-top))] md:pt-15 pb-8 sm:pb-12 px-3.5 sm:px-6 md:px-margin-desktop min-h-screen bg-canvas dark:bg-canvas-dark text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
+      <div className="flex flex-col w-full space-y-3.5 sm:space-y-gutter-xl max-w-6xl mx-auto pb-28">
 
         {/* ── Header Row with Scope Switcher ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="hidden sm:flex items-center gap-2 mb-1">
               <span className="font-mono text-[10px] uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">
                 Continuous Calibration
               </span>
@@ -274,10 +280,10 @@ export default function ReflectionsView({
                 {currentWeek} • Active Cycle
               </span>
             </div>
-            <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#161618] dark:text-[#F7F6F2] tracking-tight">
+            <h1 className="font-editorial text-xl sm:text-3xl font-medium text-[#161618] dark:text-[#F7F6F2] tracking-tight">
               Weekly Review &amp; Reflections
             </h1>
-            <p className="font-sans text-xs sm:text-sm text-[#6B6A72] dark:text-[#8E8E93] max-w-xl">
+            <p className="hidden sm:block font-sans text-xs sm:text-sm text-[#6B6A72] dark:text-[#8E8E93] max-w-xl">
               Honest audits drive compounding momentum. Review wins, calibrate friction, set intentional trajectories.
             </p>
           </div>
@@ -823,10 +829,17 @@ export default function ReflectionsView({
               <span className="font-label-md text-label-md text-on-surface font-semibold">Habit Tune-Up</span>
               <span className="material-symbols-outlined text-primary text-[18px]">tune</span>
             </div>
-            <div className="my-2 p-3 rounded-xl bg-surface-container-low flex items-start gap-2.5">
+            <div
+              onClick={() => {
+                setEditingHabit(lowestHabit || null);
+                setIsHabitModalOpen(true);
+              }}
+              title={lowestHabit ? `Click to edit "${lowestHabit.title}" sequence` : 'Click to create habit sequence'}
+              className="my-2 p-3 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors flex items-start gap-2.5 cursor-pointer group/tune"
+            >
               <span className="material-symbols-outlined text-primary mt-0.5">autorenew</span>
               <div>
-                <span className="font-semibold text-sm text-on-surface block">{lowestHabit?.title || 'Habit Sequences'}</span>
+                <span className="font-semibold text-sm text-on-surface group-hover/tune:text-primary transition-colors block">{lowestHabit?.title || 'Habit Sequences'}</span>
                 <p className="font-caption text-xs text-on-surface-variant mt-0.5">
                   {lowestHabit
                     ? `Recorded ${(lowestHabit.completedDays || []).length} check-ins this cycle. Re-anchoring cadences prevents friction.`
@@ -837,10 +850,12 @@ export default function ReflectionsView({
             <button
               type="button"
               onClick={() => {
+                setEditingHabit(lowestHabit || null);
+                setIsHabitModalOpen(true);
                 setHabitTuneNotice(true);
                 setTimeout(() => setHabitTuneNotice(false), 2000);
               }}
-              className="w-full py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-xs font-semibold transition-colors"
+              className="w-full py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-xs font-semibold transition-colors cursor-pointer"
             >
               {habitTuneNotice ? '✓ Routine Re-anchored' : 'Re-anchor Anchor Window'}
             </button>
@@ -1015,6 +1030,30 @@ export default function ReflectionsView({
         isDanger={false}
         onConfirm={confirmFinalizeWeek}
         onCancel={() => setShowFinalizeConfirm(false)}
+      />
+
+      <HabitModal
+        isOpen={isHabitModalOpen}
+        onClose={() => {
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        }}
+        habit={editingHabit}
+        onSave={(data) => {
+          if (editingHabit && editingHabit.id) {
+            onUpdateHabit?.(editingHabit.id, data);
+          } else {
+            onAddHabit?.(data);
+          }
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        }}
+        onDelete={editingHabit ? (id) => {
+          onDeleteHabit?.(id);
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        } : undefined}
+        goals={goals}
       />
     </main>
   );

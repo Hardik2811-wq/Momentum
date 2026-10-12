@@ -21,18 +21,23 @@ export default function DeleteGoalModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-md animate-fadeIn"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+    >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[390px] rounded-3xl bg-white border border-black/[0.06] shadow-[0_20px_60px_rgba(0,0,0,0.12),0_4px_16px_rgba(0,0,0,0.04)] p-6 sm:p-7 flex flex-col items-center text-center transform transition-all animate-scaleIn"
+        className="w-full max-w-[390px] rounded-3xl bg-white dark:bg-[#1C1C20] border border-black/[0.08] dark:border-white/[0.1] shadow-[0_20px_60px_rgba(0,0,0,0.18),0_4px_16px_rgba(0,0,0,0.08)] p-6 sm:p-7 flex flex-col items-center text-center animate-scaleIn transition-colors"
       >
         {/* Playful Illustrated Trash with Floating Sparkle Dots */}
         <div className="relative mb-3 flex items-center justify-center">
           <div className="relative w-16 h-16 flex items-center justify-center">
             {/* Sparkle micro-dots */}
-            <span className="absolute top-1 left-2 w-1.5 h-1.5 rounded-full bg-red-300 animate-pulse"></span>
+            <span className="absolute top-1 left-2 w-1.5 h-1.5 rounded-full bg-red-300 dark:bg-red-400 animate-pulse"></span>
             <span className="absolute top-0 right-3 w-1 h-1 rounded-full bg-red-400"></span>
-            <span className="absolute bottom-2 left-1 w-1 h-1 rounded-full bg-red-300"></span>
+            <span className="absolute bottom-2 left-1 w-1 h-1 rounded-full bg-red-300 dark:bg-red-400"></span>
             <span className="absolute top-4 right-1 w-1.5 h-1.5 rounded-full bg-red-300"></span>
             <span className="absolute bottom-3 right-2 w-1 h-1 rounded-full bg-red-400"></span>
 
@@ -69,13 +74,13 @@ export default function DeleteGoalModal({
         </div>
 
         {/* Modal Title */}
-        <h3 className="text-[18px] font-semibold text-[#1A1B1F] tracking-tight leading-snug mb-1">
+        <h3 className="text-[18px] font-semibold text-[#1A1B1F] dark:text-[#F7F6F2] tracking-tight leading-snug mb-1">
           Delete Strategic Goal?
         </h3>
 
         {/* Subtitle / Question */}
-        <p className="text-[12px] text-[#71717A] mb-4">
-          Choose how to handle linked deliverables for <span className="font-semibold text-[#1A1B1F]">"{goal.title}"</span>:
+        <p className="text-[12px] text-[#71717A] dark:text-[#A1A1AA] mb-4">
+          Choose how to handle linked deliverables for <span className="font-semibold text-[#1A1B1F] dark:text-[#F7F6F2]">"{goal.title}"</span>:
         </p>
 
         {/* Two Selectable Choice Cards */}
@@ -85,24 +90,24 @@ export default function DeleteGoalModal({
             onClick={() => setDeleteMode('cascade')}
             className={`cursor-pointer p-3.5 rounded-2xl border transition-all flex items-start gap-3 ${
               deleteMode === 'cascade'
-                ? 'bg-red-50/70 border-[#E5484D]/40 shadow-xs ring-1 ring-[#E5484D]/30'
-                : 'bg-white border-black/[0.08] hover:border-black/[0.15]'
+                ? 'bg-red-50/70 dark:bg-red-950/30 border-[#E5484D]/40 dark:border-red-500/50 shadow-xs ring-1 ring-[#E5484D]/30'
+                : 'bg-white dark:bg-[#252529] border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.15] dark:hover:border-white/[0.15]'
             }`}
           >
             <div className="mt-0.5">
               <span className={`w-4 h-4 rounded-full flex items-center justify-center border transition-all ${
                 deleteMode === 'cascade'
                   ? 'border-[#E5484D] bg-[#E5484D] text-white'
-                  : 'border-black/[0.25] bg-white'
+                  : 'border-black/[0.25] dark:border-white/[0.3] bg-white dark:bg-[#1C1C20]'
               }`}>
                 {deleteMode === 'cascade' && <span className="w-1.5 h-1.5 rounded-full bg-white"></span>}
               </span>
             </div>
             <div className="flex-1">
-              <div className="text-[13px] font-semibold text-[#1A1B1F] leading-tight mb-0.5">
+              <div className="text-[13px] font-semibold text-[#1A1B1F] dark:text-[#F7F6F2] leading-tight mb-0.5">
                 Delete Goal & All Connected Items
               </div>
-              <p className="text-[11px] text-[#71717A] leading-relaxed">
+              <p className="text-[11px] text-[#71717A] dark:text-[#A1A1AA] leading-relaxed">
                 Purges {connectedTasksCount} connected {connectedTasksCount === 1 ? 'task' : 'tasks'}
                 {connectedHabitsCount > 0 ? ` and ${connectedHabitsCount} linked ${connectedHabitsCount === 1 ? 'habit' : 'habits'}` : ''}.
               </p>
@@ -114,24 +119,24 @@ export default function DeleteGoalModal({
             onClick={() => setDeleteMode('unlink')}
             className={`cursor-pointer p-3.5 rounded-2xl border transition-all flex items-start gap-3 ${
               deleteMode === 'unlink'
-                ? 'bg-blue-50/70 border-[#0A84FF]/40 shadow-xs ring-1 ring-[#0A84FF]/30'
-                : 'bg-white border-black/[0.08] hover:border-black/[0.15]'
+                ? 'bg-blue-50/70 dark:bg-blue-950/30 border-[#0A84FF]/40 dark:border-blue-500/50 shadow-xs ring-1 ring-[#0A84FF]/30'
+                : 'bg-white dark:bg-[#252529] border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.15] dark:hover:border-white/[0.15]'
             }`}
           >
             <div className="mt-0.5">
               <span className={`w-4 h-4 rounded-full flex items-center justify-center border transition-all ${
                 deleteMode === 'unlink'
                   ? 'border-[#0A84FF] bg-[#0A84FF] text-white'
-                  : 'border-black/[0.25] bg-white'
+                  : 'border-black/[0.25] dark:border-white/[0.3] bg-white dark:bg-[#1C1C20]'
               }`}>
                 {deleteMode === 'unlink' && <span className="w-1.5 h-1.5 rounded-full bg-white"></span>}
               </span>
             </div>
             <div className="flex-1">
-              <div className="text-[13px] font-semibold text-[#1A1B1F] leading-tight mb-0.5">
+              <div className="text-[13px] font-semibold text-[#1A1B1F] dark:text-[#F7F6F2] leading-tight mb-0.5">
                 Keep Tasks & Habits (Unlink Only)
               </div>
-              <p className="text-[11px] text-[#71717A] leading-relaxed">
+              <p className="text-[11px] text-[#71717A] dark:text-[#A1A1AA] leading-relaxed">
                 Only deletes goal horizon; preserves {totalConnected > 0 ? `all ${totalConnected}` : ''} tasks & habits in backlog as standalone.
               </p>
             </div>
@@ -143,14 +148,14 @@ export default function DeleteGoalModal({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-2.5 px-4 rounded-full text-[13px] font-medium text-[#4B4B52] bg-white border border-black/[0.12] hover:bg-black/[0.03] active:scale-[0.98] transition-all"
+            className="flex-1 py-2.5 px-4 rounded-full text-[13px] font-medium text-[#4B4B52] dark:text-[#D4D4D8] bg-white dark:bg-[#252529] border border-black/[0.12] dark:border-white/[0.12] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-[0.98] transition-all cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleConfirm}
-            className="flex-1 py-2.5 px-4 rounded-full text-[13px] font-semibold text-white bg-[#E5484D] hover:bg-[#D93D42] shadow-sm shadow-red-500/25 active:scale-[0.98] transition-all"
+            className="flex-1 py-2.5 px-4 rounded-full text-[13px] font-semibold text-white bg-[#E5484D] hover:bg-[#D93D42] shadow-sm shadow-red-500/25 active:scale-[0.98] transition-all cursor-pointer"
           >
             Delete Goal
           </button>

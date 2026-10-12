@@ -176,277 +176,319 @@ const HabitsView = React.memo(function HabitsView({ habits = [], checkInHabit, a
     URL.revokeObjectURL(url);
   };
   return (
-    <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-canvas dark:bg-canvas-dark text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
-      <div className="flex flex-col w-full space-y-4 sm:space-y-gutter-2xl">
-{/* Bauhaus Editorial Header Masthead */}
-<div className="relative w-full rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] p-6 shadow-double-bezel">
-<div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-gutter-lg">
-<div className="space-y-1">
-<div className="flex items-center gap-2">
-<span className="font-mono text-[10px] uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">Mindful Momentum</span>
-<span className="w-1 h-1 rounded-full bg-[#8E8E93]" />
-<span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-[#2E6F40] dark:text-[#4ADE80]">
-<span className="w-1.5 h-1.5 rounded-full bg-[#2E6F40] dark:bg-[#4ADE80] animate-pulse"></span>
-Live Sync Active
-</span>
-</div>
-<h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#161618] dark:text-[#F7F6F2] tracking-tight">Habits &amp; Streaks</h1>
-<p className="font-sans text-xs sm:text-sm text-[#6B6A72] dark:text-[#8E8E93]">Calibrated consistency without burnout. Built with graceful resilience.</p>
-</div>
-<div className="flex items-center gap-gutter-md self-stretch sm:self-auto">
-<button onClick={handleOpenCreate} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white text-xs font-semibold transition-all shadow-double-bezel active:scale-[0.98] cursor-pointer">
-<span className="material-symbols-outlined text-[18px]">add</span>
-<span>New Habit</span>
-</button>
-</div>
-</div>
-{/* Apple Health Ring Inspired Status Bar */}
-<div className="mt-gutter-xl pt-gutter-lg flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-gutter-lg">
-<div className="flex-1 flex flex-wrap items-center gap-gutter-xl">
-{/* SVG Radial Multi-Ring Visualizer */}
-<div className="flex items-center gap-gutter-md">
-<div className="relative w-14 h-14 flex items-center justify-center flex-shrink-0">
-<svg className="w-full h-full -rotate-90" viewBox="0 0 52 52">
-<circle className="stroke-surface-container-highest fill-none" cx="26" cy="26" r="21" strokeWidth="4.5" />
-<circle className="stroke-secondary fill-none transition-all duration-1000 ease-out" cx="26" cy="26" r="21" strokeDasharray="131.9" strokeDashoffset="8" strokeLinecap="round" strokeWidth="4.5" />
-<circle className="stroke-surface-container-highest fill-none" cx="26" cy="26" r="14" strokeWidth="4" />
-<circle className="stroke-primary fill-none transition-all duration-1000 ease-out" cx="26" cy="26" r="14" strokeDasharray="87.9" strokeDashoffset="15" strokeLinecap="round" strokeWidth="4" />
-</svg>
-<span className="absolute font-label-sm text-label-sm text-on-surface">{completionPct}%</span>
-</div>
-<div>
-<div className="font-headline-sm text-headline-sm text-on-surface">Weekly Completion</div>
-<div className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1.5">
-<span>{stats.habitsCompletedToday || 0} of {stats.totalHabits || 0} targets checked</span>
-<span className="text-outline-variant">•</span>
-<span className="text-secondary font-label-sm text-label-sm">Top 3% personal best</span>
-</div>
-</div>
-</div>
-<div className="h-8 w-px bg-surface-container-highest hidden sm:block"></div>
-{/* Grace Days Reserve Badge */}
-<div className="flex items-center gap-gutter-md">
-<div className="w-10 h-10 rounded-full bg-secondary-fixed/50 flex items-center justify-center text-on-secondary-fixed">
-<span className="material-symbols-outlined text-[20px]" style={{ 'fontVariationSettings': "\"FILL\" 1" }}>favorite</span>
-</div>
-<div>
-<div className="font-title text-title text-on-surface">{totalGraceDays} Grace Days Ready</div>
-<div className="font-caption text-caption text-on-surface-variant">Protects streaks automatically against missed check-ins</div>
-</div>
-</div>
-</div>
-{/* Quick Metrics Pill List */}
-<div className="flex items-center gap-gutter-sm overflow-x-auto py-1">
-<div className="px-gutter-md py-2 rounded-xl bg-surface-container-lowest/80 backdrop-blur shadow-sm flex items-center gap-gutter-sm flex-shrink-0">
-<span className="material-symbols-outlined text-secondary text-[18px]">local_fire_department</span>
-<div>
-<span className="font-caption text-caption text-on-surface-variant block leading-none">Best Streak</span>
-<span className="font-title text-title text-on-surface">{stats.longestStreak || 0}d</span>
-</div>
-</div>
-<div className="px-gutter-md py-2 rounded-xl bg-surface-container-lowest/80 backdrop-blur shadow-sm flex items-center gap-gutter-sm flex-shrink-0">
-<span className="material-symbols-outlined text-primary text-[18px]">timelapse</span>
-<div>
-<span className="font-caption text-caption text-on-surface-variant block leading-none">Total Flow</span>
-<span className="font-title text-title text-on-surface">18.4h</span>
-</div>
-</div>
-<div className="px-gutter-md py-2 rounded-xl bg-surface-container-lowest/80 backdrop-blur shadow-sm flex items-center gap-gutter-sm flex-shrink-0">
-<span className="material-symbols-outlined text-tertiary text-[18px]">health_metrics</span>
-<div>
-<span className="font-caption text-caption text-on-surface-variant block leading-none">Health Index</span>
-<span className="font-title text-title text-on-surface">9.8</span>
-</div>
-</div>
-</div>
-</div>
-</div>
-{/* Main Workstation Canvas: 2-Column Responsive Layout */}
-<div className="grid grid-cols-1 xl:grid-cols-12 gap-gutter-xl items-start">
-{/* Left Column: Active Habits Stack (8 cols) */}
-<div className="xl:col-span-8 space-y-gutter-base">
-<div className="flex items-center justify-between px-gutter-xs">
-<div className="flex items-center gap-gutter-sm">
-<h2 className="font-headline-sm text-headline-sm text-on-surface">Active Habit Sequences</h2>
-<span className="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-caption text-caption">{habits.length} Tracked</span>
-</div>
-<div className="flex items-center gap-gutter-xs bg-surface-container-low p-1 rounded-full text-on-surface-variant font-label-sm text-label-sm">
-<button onClick={() => setDailyToggle('Daily')} className={`px-gutter-md py-1 rounded-full transition-all ${dailyToggle === 'Daily' ? 'bg-surface-container-lowest text-on-surface shadow-sm' : 'hover:text-on-surface'}`}>Daily</button>
-<button onClick={() => setDailyToggle('Weekly')} className={`px-gutter-md py-1 rounded-full transition-all ${dailyToggle === 'Weekly' ? 'bg-surface-container-lowest text-on-surface shadow-sm' : 'hover:text-on-surface'}`}>Weekly</button>
-</div>
-</div>
-{habits.map(habit => {
-  const streakInfo = stats.habitStreaks?.find(s => s.id === habit.id);
-  const streak = streakInfo ? streakInfo.streak : calcStreak(habit.completedDays || []);
-  const color = HABIT_COLOR_CLASSES[habit.colorToken] || HABIT_COLOR_CLASSES.primary;
-  const decay = computeHabitDecayMetrics(habit, today);
-  
-  return (
-    <div key={habit.id} className="group relative rounded-2xl bg-surface-container-lowest p-gutter-lg sm:p-gutter-xl shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-outline-variant/30">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-gutter-base pb-gutter-md">
-        <div
-          onClick={() => handleOpenEdit(habit)}
-          className="flex items-start gap-gutter-base min-w-0 cursor-pointer group/title"
-          title="Click to edit habit sequence"
-        >
-          <div className={`w-12 h-12 rounded-2xl ${color.fixed} flex items-center justify-center flex-shrink-0 shadow-sm transition-transform group-hover/title:scale-105`}>
-            <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: '"FILL" 1' }}>{habit.icon || 'star'}</span>
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-gutter-sm">
-              <h3 className="font-title text-title text-on-surface truncate group-hover/title:text-primary transition-colors">{habit.title}</h3>
-              <span className="px-2.5 py-0.5 rounded-full bg-surface-container-low font-caption text-caption text-on-surface-variant">{habit.duration}</span>
-              {habit.linkedGoal && (
-                <span className={`font-label-sm text-label-sm ${color.text} flex items-center gap-0.5`}>
-                  <span>→ {habit.linkedGoal}</span>
-                  <span className="material-symbols-outlined text-[14px]">arrow_outward</span>
+    <main className="w-full pt-[calc(3.85rem+env(safe-area-inset-top))] md:pt-15 pb-8 sm:pb-12 px-3.5 sm:px-6 md:px-margin-desktop min-h-screen bg-canvas dark:bg-canvas-dark text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
+      <div className="flex flex-col w-full space-y-3.5 sm:space-y-6 max-w-[1440px] mx-auto">
+        {/* Bauhaus Editorial Header Masthead */}
+        <div className="relative w-full rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] p-3.5 sm:p-6 shadow-double-bezel">
+          <div className="relative z-10 flex items-center justify-between gap-2 flex-wrap">
+            <div className="min-w-0">
+              <div className="hidden sm:flex items-center gap-2 mb-0.5">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">Mindful Momentum</span>
+                <span className="w-1 h-1 rounded-full bg-[#8E8E93]" />
+                <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-[#2E6F40] dark:text-[#4ADE80]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#2E6F40] dark:bg-[#4ADE80] animate-pulse" />
+                  Live Sync Active
                 </span>
-              )}
-            </div>
-            {habit.description && (
-              <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">{habit.description}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex md:flex-col items-end justify-between md:justify-center gap-1 flex-shrink-0">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low">
-            <span className="material-symbols-outlined text-[18px] text-on-surface" style={{ fontVariationSettings: '"FILL" 1' }}>local_fire_department</span>
-            <span className="font-title text-title text-on-surface tracking-tight">{streak} Days</span>
-          </div>
-          <div className="flex items-center gap-1 text-secondary font-label-sm text-label-sm">
-            <span className="material-symbols-outlined text-[15px]" style={{ fontVariationSettings: '"FILL" 1' }}>verified_user</span>
-            <span>Shield Active ({habit.graceDays || 0} stored)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Habit Decay Alert Strip */}
-      {decay.isAtRisk && (
-        <div className={`mt-2 mb-2 p-2.5 rounded-xl flex items-center justify-between gap-2 text-[11px] border transition-all ${
-          decay.riskLevel === 'critical'
-            ? 'bg-rose-50/90 border-rose-200/80 text-rose-800'
-            : 'bg-amber-50/90 border-amber-200/80 text-amber-900'
-        }`}>
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="material-symbols-outlined text-[15px] shrink-0">
-              {decay.riskLevel === 'critical' ? 'warning' : 'timelapse'}
-            </span>
-            <span className="font-bold shrink-0">
-              {decay.riskLevel === 'critical' ? 'Critical Decay' : 'Decay Warning'} ({Math.round(decay.survivalProb * 100)}% survival):
-            </span>
-            <span className="truncate">{decay.mvrSuggestion}</span>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              checkInHabit(habit.id, today);
-            }}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 cursor-pointer shadow-3xs transition active:scale-95 ${
-              decay.riskLevel === 'critical'
-                ? 'bg-rose-600 text-white hover:bg-rose-700'
-                : 'bg-amber-600 text-white hover:bg-amber-700'
-            }`}
-          >
-            2m Micro-rep
-          </button>
-        </div>
-      )}
-      
-      <div className="pt-gutter-base mt-gutter-xs flex flex-col sm:flex-row sm:items-center justify-between gap-gutter-md border-t border-outline-variant/15">
-        <div className="flex items-center gap-2">
-          {weekDaysMeta.map(({ dayStr, isToday, dayLabel, formattedDate }) => {
-            const isCompleted = habit.completedDays?.includes(dayStr);
-            
-            return (
-              <div key={dayStr} className="flex flex-col items-center gap-1.5">
-                <span className={`font-caption text-caption ${isToday ? `${color.text} font-bold` : 'text-on-surface-variant'}`}>{dayLabel}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    checkInHabit(habit.id, dayStr);
-                  }}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-xs transition-all duration-200 hover:scale-110 active:scale-95 ${
-                    isCompleted
-                      ? `${isToday ? color.checked : 'bg-secondary-container text-on-secondary-container font-semibold'} shadow-sm`
-                      : isToday
-                        ? 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/30'
-                        : 'bg-surface-container-low hover:bg-surface-container text-outline hover:text-on-surface'
-                  }`}
-                  title={`${formattedDate} — ${isCompleted ? 'Completed (Click to undo)' : 'Missed / Not checked (Click to check in)'}`}
-                  aria-label={`${isCompleted ? 'Undo' : 'Complete'} ${habit.title} for ${formattedDate}`}
-                >
-                  {isCompleted ? (
-                    <span className="material-symbols-outlined text-[18px]">done</span>
-                  ) : isToday ? (
-                    <span className="material-symbols-outlined text-[16px] text-outline">radio_button_unchecked</span>
-                  ) : (
-                    <span className="text-[12px] font-bold opacity-40 hover:opacity-100">+</span>
-                  )}
-                </button>
               </div>
-            );
-          })}
-        </div>
-        
-        <div className="flex items-center gap-1.5 self-end sm:self-center">
-          {/* 1. Edit Button */}
-          <button
-            type="button"
-            onClick={() => handleOpenEdit(habit)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-neutral-600 hover:text-on-surface hover:bg-neutral-100 transition-colors"
-            title="Edit habit sequence"
-          >
-            <span className="material-symbols-outlined text-[15px]">edit</span>
-            <span>Edit</span>
-          </button>
+              <h1 className="font-editorial text-xl sm:text-3xl font-medium text-[#161618] dark:text-[#F7F6F2] tracking-tight">Habits &amp; Streaks</h1>
+              <p className="hidden sm:block font-sans text-xs sm:text-sm text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">Calibrated consistency without burnout. Built with graceful resilience.</p>
+            </div>
+            <button
+              onClick={handleOpenCreate}
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#161618] hover:bg-[#2A2A2E] text-white dark:bg-[#F7F6F2] dark:text-[#161618] dark:hover:bg-white text-[11.5px] sm:text-xs font-semibold transition-all shadow-double-bezel active:scale-[0.98] shrink-0 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px] sm:text-[18px]">add</span>
+              <span>New Habit</span>
+            </button>
+          </div>
 
-          {/* 2. Grace Shield (Graces the habit for today) */}
-          <button
-            type="button"
-            onClick={() => handleApplyGraceToday(habit)}
-            disabled={!habit.graceDays || habit.graceDays <= 0}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              habit.graceDays > 0
-                ? 'text-secondary hover:text-secondary hover:bg-secondary-fixed/30 active:scale-95 cursor-pointer'
-                : 'text-neutral-400 opacity-40 cursor-not-allowed'
-            }`}
-            title={
-              habit.graceDays > 0
-                ? `Use 1 Grace Shield for today (${habit.graceDays} available)`
-                : 'No grace shields remaining'
-            }
-          >
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: '"FILL" 1' }}>
-              verified_user
-            </span>
-            <span>Shield</span>
-            {habit.graceDays > 0 && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary-fixed text-on-secondary-fixed font-bold ml-0.5">
-                {habit.graceDays}
-              </span>
-            )}
-          </button>
+          {/* Mobile Compact 4-Col Telemetry Strip (< lg) */}
+          <div className="grid grid-cols-4 gap-2 pt-3 mt-3 border-t border-black/[0.06] dark:border-white/[0.08] lg:hidden">
+            <div className="p-2 rounded-xl bg-[#F7F6F2]/80 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06]">
+              <span className="block font-mono text-[8.5px] uppercase tracking-wider text-[#6B6A72] dark:text-[#8E8E93] truncate">Weekly</span>
+              <span className="font-mono text-base font-bold text-[#0F52BA] dark:text-[#6495ED] tabular-nums">{completionPct}%</span>
+            </div>
+            <div className="p-2 rounded-xl bg-[#F7F6F2]/80 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06]">
+              <span className="block font-mono text-[8.5px] uppercase tracking-wider text-[#6B6A72] dark:text-[#8E8E93] truncate">Checked</span>
+              <span className="font-mono text-base font-bold text-[#161618] dark:text-[#F7F6F2] tabular-nums">{stats.habitsCompletedToday || 0}/{stats.totalHabits || 0}</span>
+            </div>
+            <div className="p-2 rounded-xl bg-[#F7F6F2]/80 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06]">
+              <span className="block font-mono text-[8.5px] uppercase tracking-wider text-[#6B6A72] dark:text-[#8E8E93] truncate">Shields</span>
+              <span className="font-mono text-base font-bold text-[#2E6F40] dark:text-[#4ADE80] tabular-nums">{totalGraceDays}d</span>
+            </div>
+            <div className="p-2 rounded-xl bg-[#F7F6F2]/80 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06]">
+              <span className="block font-mono text-[8.5px] uppercase tracking-wider text-[#6B6A72] dark:text-[#8E8E93] truncate">Best Run</span>
+              <span className="font-mono text-base font-bold text-[#D97706] dark:text-[#FBBF24] tabular-nums">{stats.longestStreak || 0}d</span>
+            </div>
+          </div>
 
-          {/* 3. Delete Symbol (Modal Confirmation) */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setHabitToDelete(habit);
-            }}
-            className="flex items-center gap-1 p-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-error hover:bg-red-50 transition-colors"
-            title={`Delete "${habit.title}"`}
-          >
-            <span className="material-symbols-outlined text-[16px]">delete</span>
-          </button>
+          {/* Desktop Apple Health Ring Inspired Status Bar (lg+) */}
+          <div className="hidden lg:flex mt-5 pt-4 border-t border-black/[0.06] dark:border-white/[0.08] items-center justify-between gap-4">
+            <div className="flex-1 flex flex-wrap items-center gap-6">
+              {/* SVG Radial Multi-Ring Visualizer */}
+              <div className="flex items-center gap-3">
+                <div className="relative w-14 h-14 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 52 52">
+                    <circle className="stroke-surface-container-highest fill-none" cx="26" cy="26" r="21" strokeWidth="4.5" />
+                    <circle className="stroke-secondary fill-none transition-all duration-1000 ease-out" cx="26" cy="26" r="21" strokeDasharray="131.9" strokeDashoffset="8" strokeLinecap="round" strokeWidth="4.5" />
+                    <circle className="stroke-surface-container-highest fill-none" cx="26" cy="26" r="14" strokeWidth="4" />
+                    <circle className="stroke-primary fill-none transition-all duration-1000 ease-out" cx="26" cy="26" r="14" strokeDasharray="87.9" strokeDashoffset="15" strokeLinecap="round" strokeWidth="4" />
+                  </svg>
+                  <span className="absolute font-label-sm text-label-sm text-on-surface">{completionPct}%</span>
+                </div>
+                <div>
+                  <div className="font-headline-sm text-headline-sm text-on-surface">Weekly Completion</div>
+                  <div className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1.5">
+                    <span>{stats.habitsCompletedToday || 0} of {stats.totalHabits || 0} targets checked</span>
+                    <span className="text-outline-variant">•</span>
+                    <span className="text-secondary font-label-sm text-label-sm">Top 3% personal best</span>
+                  </div>
+                </div>
+              </div>
+              <div className="h-8 w-px bg-surface-container-highest" />
+              {/* Grace Days Reserve Badge */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-secondary-fixed/50 flex items-center justify-center text-on-secondary-fixed">
+                  <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: '"FILL" 1' }}>favorite</span>
+                </div>
+                <div>
+                  <div className="font-title text-title text-on-surface">{totalGraceDays} Grace Days Ready</div>
+                  <div className="font-caption text-caption text-on-surface-variant">Protects streaks automatically against missed check-ins</div>
+                </div>
+              </div>
+            </div>
+            {/* Quick Metrics Pill List */}
+            <div className="flex items-center gap-2.5 overflow-x-auto py-1">
+              <div className="px-3.5 py-2 rounded-xl bg-surface-container-lowest/80 backdrop-blur shadow-sm flex items-center gap-2 flex-shrink-0">
+                <span className="material-symbols-outlined text-secondary text-[18px]">local_fire_department</span>
+                <div>
+                  <span className="font-caption text-caption text-on-surface-variant block leading-none">Best Streak</span>
+                  <span className="font-title text-title text-on-surface">{stats.longestStreak || 0}d</span>
+                </div>
+              </div>
+              <div className="px-3.5 py-2 rounded-xl bg-surface-container-lowest/80 backdrop-blur shadow-sm flex items-center gap-2 flex-shrink-0">
+                <span className="material-symbols-outlined text-primary text-[18px]">timelapse</span>
+                <div>
+                  <span className="font-caption text-caption text-on-surface-variant block leading-none">Total Flow</span>
+                  <span className="font-title text-title text-on-surface">18.4h</span>
+                </div>
+              </div>
+              <div className="px-3.5 py-2 rounded-xl bg-surface-container-lowest/80 backdrop-blur shadow-sm flex items-center gap-2 flex-shrink-0">
+                <span className="material-symbols-outlined text-tertiary text-[18px]">health_metrics</span>
+                <div>
+                  <span className="font-caption text-caption text-on-surface-variant block leading-none">Health Index</span>
+                  <span className="font-title text-title text-on-surface">9.8</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  );
-})}
-</div>
+
+        {/* Main Workstation Canvas: 2-Column Responsive Layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 items-start">
+          {/* Left Column: Active Habits Stack (8 cols) */}
+          <div className="xl:col-span-8 space-y-3 sm:space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-[#161618] dark:text-[#F7F6F2]">Active Habit Sequences</h2>
+                <span className="px-2 py-0.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] text-[#6B6A72] dark:text-[#8E8E93] font-mono text-[10px] font-bold">{habits.length} Tracked</span>
+              </div>
+              <div className="flex items-center gap-0.5 bg-black/[0.05] dark:bg-white/[0.06] p-0.5 rounded-full text-[#6B6A72] dark:text-[#8E8E93] text-[11px] font-semibold">
+                <button onClick={() => setDailyToggle('Daily')} className={`px-3 py-1 rounded-full transition-all cursor-pointer ${dailyToggle === 'Daily' ? 'bg-white dark:bg-[#1E1E24] text-[#161618] dark:text-[#F7F6F2] shadow-xs' : 'hover:text-on-surface'}`}>Daily</button>
+                <button onClick={() => setDailyToggle('Weekly')} className={`px-3 py-1 rounded-full transition-all cursor-pointer ${dailyToggle === 'Weekly' ? 'bg-white dark:bg-[#1E1E24] text-[#161618] dark:text-[#F7F6F2] shadow-xs' : 'hover:text-on-surface'}`}>Weekly</button>
+              </div>
+            </div>
+
+            {habits.map(habit => {
+              const streakInfo = stats.habitStreaks?.find(s => s.id === habit.id);
+              const streak = streakInfo ? streakInfo.streak : calcStreak(habit.completedDays || []);
+              const color = HABIT_COLOR_CLASSES[habit.colorToken] || HABIT_COLOR_CLASSES.primary;
+              const decay = computeHabitDecayMetrics(habit, today);
+              
+              return (
+                <div key={habit.id} className="group relative rounded-2xl bg-white dark:bg-[#1A1A1E] p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all duration-200 border border-black/[0.06] dark:border-white/[0.08]">
+                  <div className="flex items-start justify-between gap-2.5 pb-3">
+                    <div
+                      onClick={() => handleOpenEdit(habit)}
+                      className="flex items-start gap-3 min-w-0 cursor-pointer group/title flex-1"
+                      title="Click to edit habit sequence"
+                    >
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl ${color.fixed} flex items-center justify-center flex-shrink-0 shadow-xs transition-transform group-hover/title:scale-105`}>
+                        <span className="material-symbols-outlined text-[20px] sm:text-[24px]" style={{ fontVariationSettings: '"FILL" 1' }}>{habit.icon || 'star'}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <h3 className="text-[14.5px] sm:text-base font-bold text-[#161618] dark:text-[#F7F6F2] truncate group-hover/title:text-[#0F52BA] transition-colors">{habit.title}</h3>
+                          <span className="px-2 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[10px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">{habit.duration}</span>
+                          {habit.cadence && habit.cadence !== 'Anytime' && (
+                            <span className="px-2 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[10px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+                              {habit.cadence}
+                            </span>
+                          )}
+                          {habit.targetFrequency && habit.targetFrequency !== 'Every Day' && (
+                            <span className="px-2 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[10px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+                              {habit.targetFrequency === 'Custom' && Array.isArray(habit.customDays) && habit.customDays.length > 0
+                                ? habit.customDays.join(', ')
+                                : habit.targetFrequency}
+                            </span>
+                          )}
+                          {habit.isTimeBlocked !== false && habit.startTime && (
+                            <span className="px-2 py-0.5 rounded-full bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] text-[10px] font-mono font-semibold flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[11px]">schedule</span>
+                              {habit.startTime}
+                            </span>
+                          )}
+                          {habit.linkedGoal && (
+                            <span className={`text-[10.5px] font-semibold ${color.text} flex items-center gap-0.5`}>
+                              <span>→ {habit.linkedGoal}</span>
+                            </span>
+                          )}
+                        </div>
+                        {habit.description && (
+                          <p className="text-[11.5px] text-[#6B6A72] dark:text-[#8E8E93] mt-0.5 line-clamp-1">{habit.description}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20">
+                        <span className="material-symbols-outlined text-[15px] text-amber-600 dark:text-amber-400" style={{ fontVariationSettings: '"FILL" 1' }}>local_fire_department</span>
+                        <span className="font-mono text-[11px] font-bold tracking-tight">{streak}d</span>
+                      </div>
+                      <div className="hidden sm:flex items-center gap-1 text-[#2E6F40] dark:text-[#4ADE80] text-[10.5px] font-semibold">
+                        <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: '"FILL" 1' }}>verified_user</span>
+                        <span>{habit.graceDays || 0} Shields</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Habit Decay Alert Strip */}
+                  {decay.isAtRisk && (
+                    <div className={`mb-2.5 p-2 rounded-xl flex items-center justify-between gap-2 text-[11px] border transition-all ${
+                      decay.riskLevel === 'critical'
+                        ? 'bg-rose-500/[0.08] border-rose-500/25 text-rose-800 dark:text-rose-200'
+                        : 'bg-amber-500/[0.08] border-amber-500/25 text-amber-900 dark:text-amber-200'
+                    }`}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="material-symbols-outlined text-[15px] shrink-0">
+                          {decay.riskLevel === 'critical' ? 'warning' : 'timelapse'}
+                        </span>
+                        <span className="font-bold shrink-0">
+                          {Math.round(decay.survivalProb * 100)}% Lindy:
+                        </span>
+                        <span className="truncate">{decay.mvrSuggestion}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          checkInHabit(habit.id, today);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 cursor-pointer shadow-3xs transition active:scale-95 ${
+                          decay.riskLevel === 'critical'
+                            ? 'bg-rose-600 text-white hover:bg-rose-700'
+                            : 'bg-amber-600 text-white hover:bg-amber-700'
+                        }`}
+                      >
+                        2m Rep
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div className="pt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-t border-black/[0.06] dark:border-white/[0.08]">
+                    <div className="grid grid-cols-7 gap-1.5 sm:flex sm:items-center sm:gap-2 w-full sm:w-auto">
+                      {weekDaysMeta.map(({ dayStr, isToday, dayLabel, formattedDate }) => {
+                        const isCompleted = habit.completedDays?.includes(dayStr);
+                        
+                        return (
+                          <div key={dayStr} className="flex flex-col items-center gap-1">
+                            <span className={`font-mono text-[10px] ${isToday ? `${color.text} font-bold` : 'text-[#6B6A72] dark:text-[#8E8E93]'}`}>{dayLabel}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                checkInHabit(habit.id, dayStr);
+                              }}
+                              className={`w-full sm:w-9 h-9 rounded-xl flex items-center justify-center shadow-xs transition-all duration-200 active:scale-95 cursor-pointer ${
+                                isCompleted
+                                  ? `${isToday ? color.checked : 'bg-secondary-container text-on-secondary-container font-semibold'} shadow-sm`
+                                  : isToday
+                                    ? 'bg-black/[0.06] dark:bg-white/[0.1] text-[#161618] dark:text-[#F7F6F2] border border-black/[0.12] dark:border-white/[0.16]'
+                                    : 'bg-black/[0.03] dark:bg-white/[0.05] text-[#8E8E93] hover:text-[#161618] dark:hover:text-[#F7F6F2]'
+                              }`}
+                              title={`${formattedDate} — ${isCompleted ? 'Completed (Click to undo)' : 'Missed / Not checked (Click to check in)'}`}
+                              aria-label={`${isCompleted ? 'Undo' : 'Complete'} ${habit.title} for ${formattedDate}`}
+                            >
+                              {isCompleted ? (
+                                <span className="material-symbols-outlined text-[18px]">done</span>
+                              ) : isToday ? (
+                                <span className="material-symbols-outlined text-[16px] opacity-60">radio_button_unchecked</span>
+                              ) : (
+                                <span className="text-[12px] font-bold opacity-40 hover:opacity-100">+</span>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="flex items-center justify-end gap-1 pt-1 sm:pt-0">
+                      {/* 1. Edit Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(habit)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#6B6A72] dark:text-[#A0A0AB] hover:text-[#161618] dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                        title="Edit habit sequence"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">edit</span>
+                        <span>Edit</span>
+                      </button>
+
+                      {/* 2. Grace Shield (Graces the habit for today) */}
+                      <button
+                        type="button"
+                        onClick={() => handleApplyGraceToday(habit)}
+                        disabled={!habit.graceDays || habit.graceDays <= 0}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                          habit.graceDays > 0
+                            ? 'text-[#2E6F40] dark:text-[#4ADE80] hover:bg-emerald-500/10 active:scale-95 cursor-pointer'
+                            : 'text-neutral-400 opacity-40 cursor-not-allowed'
+                        }`}
+                        title={
+                          habit.graceDays > 0
+                            ? `Use 1 Grace Shield for today (${habit.graceDays} available)`
+                            : 'No grace shields remaining'
+                        }
+                      >
+                        <span className="material-symbols-outlined text-[15px]" style={{ fontVariationSettings: '"FILL" 1' }}>
+                          verified_user
+                        </span>
+                        <span>Shield</span>
+                        {habit.graceDays > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-[#2E6F40] dark:text-[#4ADE80] font-bold ml-0.5">
+                            {habit.graceDays}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* 3. Delete Symbol (Modal Confirmation) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHabitToDelete(habit);
+                        }}
+                        className="flex items-center gap-1 p-1.5 rounded-lg text-xs font-semibold text-[#8E8E93] hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        title={`Delete "${habit.title}"`}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 {/* Right Column: Wisdom & Weekly Rhythm */}
 <div className="xl:col-span-4 space-y-gutter-base xl:sticky xl:top-20">
 {/* Quick Micro-Context Card with editorial photo */}

@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   Sparkles,
   Inbox,
-  RotateCcw
+  RotateCcw,
+  Pencil
 } from 'lucide-react';
 import {
   DndContext,
@@ -40,6 +41,7 @@ import AnimatedNumber from '../components/ui/AnimatedNumber';
 import TaskCard from '../components/TaskCard';
 import TaskDetailModal from '../components/TaskDetailModal';
 import ScheduleDetailModal from '../components/ScheduleDetailModal';
+import HabitModal from '../components/HabitModal';
 import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanDate, todayPlanDate, isTaskScheduledForDate, isTaskCompletedForDate, calculateEndTime } from '../lib/taskMetadata';
 import {
   classifyDayItems,
@@ -83,14 +85,17 @@ function SortableTaskItem({ id, children }) {
 
 const DashboardView = React.memo(function DashboardView({
   tasks = [], onToggleTask, onDeleteTask, onUpdateTask, onToggleSubtask, onReorderTasks,
-  onOpenQuickAdd, onStartFocus, onCheckInHabit, stats = {}, setActiveTab,
+  onOpenQuickAdd, onStartFocus, onCheckInHabit, onAddHabit, onUpdateHabit, onDeleteHabit, stats = {}, setActiveTab,
   settings = {}, onUpdateSettings, goals = [], habits = [],
   schedules = [], onUpdateSchedule, onDeleteSchedule, moveTaskToBacklog, sweepMissedTasksToBacklog,
 }) {
   const [filter, setFilter] = useState('all');
   const [editingTask, setEditingTask] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
+  const [editingHabit, setEditingHabit] = useState(null);
+  const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [mobileSection, setMobileSection] = useState('focus'); // 'focus' | 'timeline' | 'habits'
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   const todaySchedules = useMemo(() => {
@@ -180,8 +185,10 @@ const DashboardView = React.memo(function DashboardView({
   const nextTask = dayClassification.focusTarget;
 
   const missedTasksList = useMemo(() => {
-    return dayClassification.missedTasks || (dayClassification.missed || []).filter(m => m.itemType === 'task');
-  }, [dayClassification.missedTasks, dayClassification.missed]);
+    const todayMissed = dayClassification.missedTasks || (dayClassification.missed || []).filter(m => m.itemType === 'task');
+    const pastMissed = dayClassification.totallyMissedTasks || [];
+    return [...todayMissed, ...pastMissed];
+  }, [dayClassification.missedTasks, dayClassification.missed, dayClassification.totallyMissedTasks]);
 
   // Active tasks for upcoming queue (excludes missed tasks and current focus target)
   const activeUpcomingTasks = useMemo(() => {
@@ -474,7 +481,14 @@ const DashboardView = React.memo(function DashboardView({
     });
 
     // 2. Real Habits (real user habits with scheduled/preferred time)
+    const todayDayOfWeek = new Date(`${todayPlan}T12:00:00`).getDay();
+    const dayShorts = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     (habits || []).forEach(h => {
+      if (h.isTimeBlocked === false) return;
+      const targetFreq = h.targetFrequency || 'Every Day';
+      if (targetFreq === 'Weekdays' && (todayDayOfWeek < 1 || todayDayOfWeek > 5)) return;
+      if (targetFreq === '3 Days / Wk' && !(todayDayOfWeek === 1 || todayDayOfWeek === 3 || todayDayOfWeek === 5)) return;
+      if (targetFreq === 'Custom' && Array.isArray(h.customDays) && !h.customDays.includes(dayShorts[todayDayOfWeek])) return;
       const isDone = Boolean((h.completedDays || []).includes(today));
       const sTime = h.startTime || '08:00';
       items.push({
@@ -546,9 +560,10 @@ const DashboardView = React.memo(function DashboardView({
   const getPillPalette = (item, index) => {
     if (item.isDone) {
       return {
-        bg: 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-2xs',
-        nodeBorder: 'border-emerald-600',
-        lineColor: 'bg-emerald-600/40'
+        cardBg: 'bg-[#2E6F40]/[0.05] dark:bg-[#2E6F40]/[0.12] border-[#2E6F40]/20',
+        barColor: 'bg-[#2E6F40]',
+        timeColor: 'text-[#2E6F40] dark:text-emerald-400',
+        nodeBorder: 'border-[#2E6F40]'
       };
     }
 
@@ -556,89 +571,58 @@ const DashboardView = React.memo(function DashboardView({
     const cat = (item.category || '').toLowerCase();
     const str = `${title} ${cat}`;
 
-    // Academic / College / Class / Work Split
+    // Academic / College / Class / Work Split -> Cobalt
     if (str.includes('college') || str.includes('class') || str.includes('lecture') || str.includes('study') || str.includes('work') || str.includes('split') || str.includes('meeting')) {
       return {
-        bg: 'bg-[#1E3A8A] hover:bg-[#172554] text-white shadow-2xs',
-        nodeBorder: 'border-[#2563EB]',
-        lineColor: 'bg-[#2563EB]/40'
+        cardBg: 'bg-[#F7F6F2]/85 dark:bg-[#222227] border-black/[0.07] dark:border-white/[0.08] hover:border-[#0F52BA]/35',
+        barColor: 'bg-[#0F52BA]',
+        timeColor: 'text-[#0F52BA] dark:text-[#6495ED]',
+        nodeBorder: 'border-[#0F52BA]'
       };
     }
 
-    // High Intensity / HIIT / Sprint
-    if (str.includes('hiit') || str.includes('sprint') || str.includes('interval')) {
+    // High Intensity / HIIT / Sprint / Cardio -> Terracotta / Amber
+    if (str.includes('hiit') || str.includes('sprint') || str.includes('interval') || str.includes('zone 2') || str.includes('cardio') || str.includes('run')) {
       return {
-        bg: 'bg-[#991B1B] hover:bg-[#7F1D1D] text-white shadow-2xs',
-        nodeBorder: 'border-[#DC2626]',
-        lineColor: 'bg-[#DC2626]/40'
+        cardBg: 'bg-[#F7F6F2]/85 dark:bg-[#222227] border-black/[0.07] dark:border-white/[0.08] hover:border-[#C84B31]/35',
+        barColor: 'bg-[#C84B31]',
+        timeColor: 'text-[#C84B31] dark:text-orange-400',
+        nodeBorder: 'border-[#C84B31]'
       };
     }
 
-    // Cardio / Zone 2 / Run
-    if (str.includes('zone 2') || str.includes('cardio') || str.includes('run')) {
+    // Strength / Gym / Mobility / Nutrition -> Forest
+    if (str.includes('strength') || str.includes('gym') || str.includes('lift') || str.includes('workout') || str.includes('mobility') || str.includes('nutrition') || str.includes('protein')) {
       return {
-        bg: 'bg-[#C2410C] hover:bg-[#9A3412] text-white shadow-2xs',
-        nodeBorder: 'border-[#EA580C]',
-        lineColor: 'bg-[#EA580C]/40'
+        cardBg: 'bg-[#F7F6F2]/85 dark:bg-[#222227] border-black/[0.07] dark:border-white/[0.08] hover:border-[#2E6F40]/35',
+        barColor: 'bg-[#2E6F40]',
+        timeColor: 'text-[#2E6F40] dark:text-emerald-400',
+        nodeBorder: 'border-[#2E6F40]'
       };
     }
 
-    // Strength / Gym / Lifting
-    if (str.includes('strength') || str.includes('gym') || str.includes('lift') || str.includes('workout')) {
+    // Creative / Review / Reading -> Violet
+    if (str.includes('dance') || str.includes('music') || str.includes('guitar') || str.includes('art') || str.includes('creative') || str.includes('review') || str.includes('sleep') || str.includes('reading')) {
       return {
-        bg: 'bg-[#334155] hover:bg-[#1E293B] text-white shadow-2xs',
-        nodeBorder: 'border-[#475569]',
-        lineColor: 'bg-[#475569]/40'
+        cardBg: 'bg-[#F7F6F2]/85 dark:bg-[#222227] border-black/[0.07] dark:border-white/[0.08] hover:border-purple-500/35',
+        barColor: 'bg-purple-600 dark:bg-purple-400',
+        timeColor: 'text-purple-700 dark:text-purple-300',
+        nodeBorder: 'border-purple-600'
       };
     }
 
-    // Dance / Music / Guitar / Creative
-    if (str.includes('dance') || str.includes('music') || str.includes('guitar') || str.includes('art') || str.includes('creative')) {
-      return {
-        bg: 'bg-[#6B21A8] hover:bg-[#581C87] text-white shadow-2xs',
-        nodeBorder: 'border-[#9333EA]',
-        lineColor: 'bg-[#9333EA]/40'
-      };
-    }
-
-    // Mobility / Yoga / Stretch
-    if (str.includes('mobility') || str.includes('stretch') || str.includes('yoga') || str.includes('recovery')) {
-      return {
-        bg: 'bg-[#0F766E] hover:bg-[#115E59] text-white shadow-2xs',
-        nodeBorder: 'border-[#0D9488]',
-        lineColor: 'bg-[#0D9488]/40'
-      };
-    }
-
-    // Nutrition / Diet / Meals
-    if (str.includes('nutrition') || str.includes('protein') || str.includes('diet') || str.includes('meal')) {
-      return {
-        bg: 'bg-[#15803D] hover:bg-[#166534] text-white shadow-2xs',
-        nodeBorder: 'border-[#16A34A]',
-        lineColor: 'bg-[#16A34A]/40'
-      };
-    }
-
-    // Sleep / Night / Reading
-    if (str.includes('sleep') || str.includes('night') || str.includes('bed') || str.includes('evening') || str.includes('reading')) {
-      return {
-        bg: 'bg-[#312E81] hover:bg-[#1E1B4B] text-white shadow-2xs',
-        nodeBorder: 'border-[#4338CA]',
-        lineColor: 'bg-[#4338CA]/40'
-      };
-    }
-
-    // Fallback rotating executive palettes
     const palettes = [
-      { bg: 'bg-[#1E3A8A] hover:bg-[#172554] text-white shadow-2xs', nodeBorder: 'border-[#2563EB]', lineColor: 'bg-[#2563EB]/40' },
-      { bg: 'bg-[#0F766E] hover:bg-[#115E59] text-white shadow-2xs', nodeBorder: 'border-[#0D9488]', lineColor: 'bg-[#0D9488]/40' },
-      { bg: 'bg-[#581C87] hover:bg-[#3B0764] text-white shadow-2xs', nodeBorder: 'border-[#7E22CE]', lineColor: 'bg-[#7E22CE]/40' },
-      { bg: 'bg-[#334155] hover:bg-[#1E293B] text-white shadow-2xs', nodeBorder: 'border-[#475569]', lineColor: 'bg-[#475569]/40' },
-      { bg: 'bg-[#C2410C] hover:bg-[#9A3412] text-white shadow-2xs', nodeBorder: 'border-[#EA580C]', lineColor: 'bg-[#EA580C]/40' },
-      { bg: 'bg-[#0284C7] hover:bg-[#0369A1] text-white shadow-2xs', nodeBorder: 'border-[#0EA5E9]', lineColor: 'bg-[#0EA5E9]/40' }
+      { cardBg: 'bg-[#F7F6F2]/85 dark:bg-[#222227] border-black/[0.07] dark:border-white/[0.08]', barColor: 'bg-[#0F52BA]', timeColor: 'text-[#0F52BA] dark:text-[#6495ED]', nodeBorder: 'border-[#0F52BA]' },
+      { cardBg: 'bg-[#F7F6F2]/85 dark:bg-[#222227] border-black/[0.07] dark:border-white/[0.08]', barColor: 'bg-[#2E6F40]', timeColor: 'text-[#2E6F40] dark:text-emerald-400', nodeBorder: 'border-[#2E6F40]' },
+      { cardBg: 'bg-[#F7F6F2]/85 dark:bg-[#222227] border-black/[0.07] dark:border-white/[0.08]', barColor: 'bg-[#D97706]', timeColor: 'text-[#D97706] dark:text-amber-400', nodeBorder: 'border-[#D97706]' },
+      { cardBg: 'bg-[#F7F6F2]/85 dark:bg-[#222227] border-black/[0.07] dark:border-white/[0.08]', barColor: 'bg-purple-600', timeColor: 'text-purple-700 dark:text-purple-300', nodeBorder: 'border-purple-600' }
     ];
     return palettes[index % palettes.length];
   };
+
+  const nextTimelineItem = useMemo(() => {
+    return todayTimelineItems.find(item => !item.isDone && (item.timeMin + (item.durationMinutes || 60)) > currentMinutes) || todayTimelineItems.find(item => !item.isDone) || null;
+  }, [todayTimelineItems, currentMinutes]);
 
   const last7Days = useMemo(() => {
     const days = [];
@@ -654,74 +638,115 @@ const DashboardView = React.memo(function DashboardView({
   }, []);
 
   return (
-    <main className="w-full min-h-screen bg-[#F7F6F2] dark:bg-[#121214] pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-14 px-3 sm:px-5 lg:px-8 py-4 sm:py-6 transition-colors duration-200">
-      <div className="mx-auto w-full max-w-[1520px] space-y-4 sm:space-y-5">
+    <main className="w-full min-h-screen bg-[#F7F6F2] dark:bg-[#121214] pt-[calc(3.85rem+env(safe-area-inset-top))] md:pt-15 pb-6 sm:pb-8 px-3.5 sm:px-5 lg:px-8 transition-colors duration-200">
+      <div className="mx-auto w-full max-w-[1520px] space-y-3.5 sm:space-y-5">
         
         {/* ── Sub-header: Minimalist Focus Briefing ── */}
-        <header data-block-id="dashboard-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-black/[0.06] dark:border-white/[0.07]">
+        <header data-block-id="dashboard-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 pb-2 border-b border-black/[0.06] dark:border-white/[0.07]">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-editorial tracking-tight text-[#161618] dark:text-[#F7F6F2] truncate flex items-center gap-2">
+            <h1 className="text-[22px] sm:text-3xl font-editorial tracking-tight text-[#161618] dark:text-[#F7F6F2] truncate flex items-center gap-2 leading-tight">
               <span>{greeting}, {userName}</span>
-              <span className="text-xl">{progressEmotion.emoji}</span>
+              <span className="text-lg sm:text-xl">{progressEmotion.emoji}</span>
             </h1>
             <p className="font-editorial text-xs sm:text-sm italic text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
               Focus on what matters right now · Lock your momentum.
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Quick Metrics Capsule */}
-            <div className="flex items-center gap-3 bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] rounded-xl px-3 py-1.5 shadow-2xs">
-              <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#0F52BA] dark:text-[#6495ED]">
-                <Clock className="w-3.5 h-3.5" />
+            <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] rounded-xl px-3 py-1.5 shadow-2xs">
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono font-bold text-[#0F52BA] dark:text-[#6495ED]">
+                <Clock className="w-3.5 h-3.5 shrink-0" />
                 <span>{Math.round(totalPlannedMinutes / 60 * 10) / 10}h planned</span>
               </div>
               <span className="h-3 w-[1px] bg-black/10 dark:bg-white/10" />
-              <div className="flex items-center gap-1.5 text-xs font-mono text-[#6B6A72] dark:text-[#8E8E93]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>{completedTodayTasksCount}/{todayTasks.length} done</span>
               </div>
               <span className="h-3 w-[1px] bg-black/10 dark:bg-white/10" />
-              <div className="flex items-center gap-1.5 text-xs font-mono text-[#6B6A72] dark:text-[#8E8E93]">
-                <Flame className="w-3.5 h-3.5 text-amber-500" />
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+                <Flame className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 <span>{checkedHabits}/{habits.length} habits</span>
               </div>
             </div>
           </div>
         </header>
 
+        {/* ── Android / Mobile Segmented Workspace Switcher (< lg) ── */}
+        <div className="lg:hidden flex items-center p-1 rounded-2xl bg-black/[0.05] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.07]">
+          {[
+            { id: 'focus', label: 'Focus & Tasks', badge: activeQueueTasks.length + (nextTask ? 1 : 0) },
+            { id: 'timeline', label: 'Timeline', badge: todayTimelineItems.length },
+            { id: 'habits', label: 'Habits & Goals', badge: `${checkedHabits}/${habits.length}` }
+          ].map((tab) => {
+            const active = mobileSection === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setMobileSection(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-[11.5px] transition-all cursor-pointer select-none ${
+                  active
+                    ? 'bg-white dark:bg-[#1E1E24] text-[#161618] dark:text-[#F7F6F2] font-bold shadow-xs'
+                    : 'text-[#6B6A72] dark:text-[#8E8E93] font-medium hover:text-[#161618] dark:hover:text-white'
+                }`}
+              >
+                <span className="truncate">{tab.label}</span>
+                <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
+                  active
+                    ? 'bg-[#0F52BA]/12 text-[#0F52BA] dark:bg-[#6495ED]/20 dark:text-[#6495ED] font-bold'
+                    : 'bg-black/[0.05] dark:bg-white/[0.06] text-[#6B6A72] dark:text-[#8E8E93]'
+                }`}>
+                  {tab.badge}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* ── 3-PANE THINGS 3 x SUNSAMA WORKSPACE ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 lg:gap-6 items-start">
           
           {/* ══════════════════════════════════════════════════════════
               PANE 1: DAILY TIMELINE (Left 4 Cols)
-              Faithful Capsule Metro Rail (Real Items Only)
+              Tactile Editorial Timeline Rail (Zero Overflow)
               ══════════════════════════════════════════════════════════ */}
-          <aside className="lg:col-span-4 bg-white dark:bg-[#1A1A1E] rounded-2xl border border-black/[0.07] dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] space-y-4">
+          <aside className={`${mobileSection === 'timeline' ? 'block' : 'hidden lg:block'} lg:col-span-4 bg-white dark:bg-[#1A1A1E] rounded-2xl border border-black/[0.07] dark:border-white/[0.08] p-3.5 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] space-y-3.5 min-w-0 overflow-hidden`}>
             <div className="flex items-center justify-between pb-2 border-b border-black/[0.05] dark:border-white/[0.06]">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#0F52BA] dark:text-[#6495ED]" />
-                <h2 className="text-sm font-semibold tracking-tight text-[#161618] dark:text-[#F7F6F2]">Daily Timeline</h2>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-black/[0.05] dark:bg-white/[0.08] text-[#6B6A72] dark:text-[#8E8E93]">
-                  {todayTimelineItems.length} {todayTimelineItems.length === 1 ? 'item' : 'items'}
+              <div className="flex items-center gap-2 min-w-0">
+                <Calendar className="w-4 h-4 text-[#0F52BA] dark:text-[#6495ED] shrink-0" />
+                <h2 className="text-sm font-bold tracking-tight text-[#161618] dark:text-[#F7F6F2] truncate">Daily Timeline</h2>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-black/[0.05] dark:bg-white/[0.08] text-[#6B6A72] dark:text-[#8E8E93] shrink-0">
+                  {todayTimelineItems.length}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0F52BA] dark:text-[#6495ED] hover:underline cursor-pointer"
-                title="Add timetable schedule block"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Time Block</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab?.('today')}
+                  className="text-[11px] font-mono font-semibold text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#0F52BA] transition cursor-pointer"
+                >
+                  Grid →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenQuickAdd?.({ initialMode: 'schedule' })}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#0F52BA]/10 text-[11px] font-semibold text-[#0F52BA] dark:text-[#6495ED] hover:bg-[#0F52BA]/15 transition cursor-pointer"
+                  title="Add timetable schedule block"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Block</span>
+                </button>
+              </div>
             </div>
 
-            {/* Faithful Capsule Metro Timeline Canvas */}
+            {/* Tactile Editorial Timeline List */}
             {todayTimelineItems.length > 0 ? (
-              <div className="relative py-2 space-y-3.5 max-h-[calc(100vh-210px)] overflow-y-auto pr-1 scrollbar-thin">
-                {/* Continuous Vertical Rail Track */}
-                <div className="absolute left-[16px] top-0 bottom-0 w-[2.5px] bg-slate-300 dark:bg-slate-700" />
+              <div className="relative py-1 space-y-2.5 max-h-[calc(100dvh-250px)] overflow-y-auto overflow-x-hidden pr-0.5 scrollbar-thin">
+                {/* Subtle Vertical Rail Track */}
+                <div className="absolute left-[11px] top-2 bottom-2 w-[1.5px] bg-black/[0.08] dark:bg-white/[0.10]" />
 
                 {todayTimelineItems.map((item, index) => {
                   const palette = getPillPalette(item, index);
@@ -732,66 +757,81 @@ const DashboardView = React.memo(function DashboardView({
                   const isCurrentActive = currentMinutes >= sMin && currentMinutes < eMin && !isDone;
 
                   return (
-                    <div key={item.id} className="relative flex items-center pl-9 group min-h-[40px]">
+                    <div key={item.id} className="relative flex items-center pl-7 min-w-0 w-full">
                       {/* Node on Vertical Rail */}
-                      <div className={`absolute left-[10px] z-10 flex items-center justify-center transition-all ${
+                      <div className={`absolute left-[6px] z-10 flex items-center justify-center transition-all ${
                         isCurrentActive
-                          ? 'w-4 h-4 rounded-full bg-[#0D47A1] text-white ring-4 ring-[#0D47A1]/35 -translate-x-[1px]'
+                          ? 'w-3.5 h-3.5 rounded-full bg-[#0F52BA] text-white ring-4 ring-[#0F52BA]/25 -translate-x-[1px]'
                           : isDone
-                            ? 'w-3.5 h-3.5 rounded-full bg-[#2E7D32] text-white shadow-2xs'
-                            : `w-3.5 h-3.5 rounded-full border-2 ${palette.nodeBorder} bg-white dark:bg-[#1A1A1E]`
+                            ? 'w-3 h-3 rounded-full bg-[#2E6F40] text-white'
+                            : `w-3 h-3 rounded-full border-2 ${palette.nodeBorder} bg-white dark:bg-[#1A1A1E]`
                       }`}>
                         {isDone && <Check className="w-2 h-2 stroke-[3]" />}
                       </div>
 
-                      {/* Horizontal Branch Arm */}
-                      <div className="absolute left-[17px] w-5 h-[2px] bg-slate-300 dark:bg-slate-700" />
-
-                      {/* Tactile Pill Capsule — Full Width Aligned */}
+                      {/* Tactile Card — Strictly Contained (min-w-0) */}
                       <div
                         onClick={() => {
                           if (item.type === 'schedule') setEditingSchedule(item.raw);
                           else if (item.type === 'task') setEditingTask(item.raw);
-                          else handleHabitCheck(item.rawId);
+                          else {
+                            setEditingHabit(item.raw);
+                            setIsHabitModalOpen(true);
+                          }
                         }}
-                        className={`flex-1 flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl sm:rounded-full transition-all cursor-pointer select-none hover:brightness-105 active:scale-[0.99] shadow-2xs ${palette.bg}`}
+                        title={item.type === 'habit' ? 'Click to edit habit sequence' : 'Click to edit details'}
+                        className={`flex-1 min-w-0 overflow-hidden flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl border transition-all cursor-pointer select-none active:scale-[0.99] ${
+                          isCurrentActive
+                            ? 'bg-[#0F52BA]/[0.06] dark:bg-[#0F52BA]/[0.15] border-[#0F52BA]/35 shadow-2xs'
+                            : palette.cardBg
+                        }`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-mono text-xs font-bold tabular-nums shrink-0">
-                            {formatTime(item.startTime)}
-                          </span>
-                          <span className="opacity-50 text-xs shrink-0">•</span>
-                          <span className={`text-xs font-semibold truncate ${isDone ? 'line-through opacity-85' : ''}`}>
-                            {item.title}
-                          </span>
-                          {item.category && (
-                            <span className="text-[9px] font-mono opacity-80 uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-black/15 dark:bg-white/15 shrink-0 hidden sm:inline-block">
-                              {item.category}
-                            </span>
-                          )}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          {/* Left Semantic Accent Bar */}
+                          <div className={`w-1 h-7 rounded-full shrink-0 ${palette.barColor}`} />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`font-mono text-[10.5px] font-bold tabular-nums shrink-0 ${palette.timeColor}`}>
+                                {formatTime(item.startTime)}
+                              </span>
+                              <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.2 rounded bg-black/[0.04] dark:bg-white/[0.06] text-[#6B6A72] dark:text-[#8E8E93] shrink-0">
+                                {item.category || item.type}
+                              </span>
+                              {isCurrentActive && (
+                                <span className="text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-[#0F52BA] text-white shrink-0">
+                                  Now
+                                </span>
+                              )}
+                            </div>
+                            <p className={`text-[12.5px] font-semibold truncate leading-snug mt-0.5 ${
+                              isDone
+                                ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]'
+                                : 'text-[#161618] dark:text-[#F7F6F2]'
+                            }`}>
+                              {item.title}
+                            </p>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {isDone ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold opacity-95">
-                              <span>{item.type === 'schedule' ? 'Attended' : 'Done'}</span>
-                              <Check className="w-3 h-3 stroke-[3]" />
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (item.type === 'schedule') handleToggleScheduleDone(item.raw, todayPlan, e);
-                                else if (item.type === 'habit') handleHabitCheck(item.rawId);
-                                else handleToggleTask(item.rawId);
-                              }}
-                              className="w-[18px] h-[18px] rounded-full border border-white/70 hover:border-white hover:bg-white/20 flex items-center justify-center transition-all cursor-pointer"
-                              title={item.type === 'schedule' ? 'Mark attended' : 'Mark done'}
-                            >
-                              <Check className="w-2.5 h-2.5 text-white opacity-0 hover:opacity-100 stroke-[3]" />
-                            </button>
-                          )}
+                        <div className="flex items-center shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (item.type === 'schedule') handleToggleScheduleDone(item.raw, todayPlan, e);
+                              else if (item.type === 'habit') handleHabitCheck(item.rawId);
+                              else handleToggleTask(item.rawId);
+                            }}
+                            className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
+                              isDone
+                                ? 'bg-[#2E6F40] border-[#2E6F40] text-white shadow-2xs'
+                                : 'border-black/20 dark:border-white/25 bg-white dark:bg-[#1A1A1E] text-transparent hover:border-[#2E6F40] hover:text-[#2E6F40]'
+                            }`}
+                            title={isDone ? 'Click to undo' : item.type === 'schedule' ? 'Mark attended' : 'Mark done'}
+                          >
+                            <Check className="w-3 h-3 stroke-[2.5]" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -803,7 +843,7 @@ const DashboardView = React.memo(function DashboardView({
                 <Clock className="w-8 h-8 text-[#6B6A72]/40 mx-auto mb-2" />
                 <p className="text-xs font-medium text-[#161618] dark:text-[#F7F6F2]">No items scheduled today</p>
                 <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
-                  Click + Time Block or add tasks with a start time.
+                  Click + Block or add tasks with a start time.
                 </p>
                 <button
                   type="button"
@@ -821,7 +861,27 @@ const DashboardView = React.memo(function DashboardView({
               PANE 2: DAILY FOCUS QUEUE (Center 5 Cols)
               Unified Executive Workbench (Header, Triage, Active Target, Queue)
               ══════════════════════════════════════════════════════════ */}
-          <section className="lg:col-span-5 bg-white dark:bg-[#1A1A1E] rounded-2xl border border-black/[0.07] dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] space-y-4">
+          <section className={`${mobileSection === 'focus' ? 'block' : 'hidden lg:block'} lg:col-span-5 bg-white dark:bg-[#1A1A1E] rounded-2xl border border-black/[0.07] dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] space-y-4 min-w-0 overflow-hidden`}>
+            {/* Compact Mobile Schedule Peek Strip (Links directly to Timeline tab) */}
+            {nextTimelineItem && (
+              <div
+                onClick={() => setMobileSection('timeline')}
+                className="lg:hidden flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl bg-[#F7F6F2] dark:bg-[#222227] border border-black/[0.06] dark:border-white/[0.07] cursor-pointer active:scale-[0.99] transition"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-[#0F52BA] shrink-0" />
+                  <span className="font-mono text-[10.5px] font-bold text-[#0F52BA] dark:text-[#6495ED] shrink-0">
+                    {formatTime(nextTimelineItem.startTime)}
+                  </span>
+                  <span className="text-xs font-semibold text-[#161618] dark:text-[#F7F6F2] truncate">
+                    {nextTimelineItem.title}
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] font-bold text-[#0F52BA] dark:text-[#6495ED] shrink-0">
+                  Timeline →
+                </span>
+              </div>
+            )}
             
             {/* ── Workbench Header & Filter Tabs ── */}
             <div className="flex items-center justify-between pb-2 border-b border-black/[0.05] dark:border-white/[0.06]">
@@ -998,7 +1058,9 @@ const DashboardView = React.memo(function DashboardView({
                               {item.title}
                             </h4>
                             <p className="text-[11px] text-amber-600 dark:text-amber-400 font-mono mt-0.5">
-                              Window passed ({startFormatted} – {endFormatted}) • {effortLabel(item.durationMinutes)}
+                              {item.isTotallyMissed
+                                ? `Scheduled for past date (${item.plannedDate || 'earlier'}) • Carried over`
+                                : `Window passed (${startFormatted} – ${endFormatted}) • ${effortLabel(item.durationMinutes)}`}
                             </p>
                           </div>
                         </div>
@@ -1115,7 +1177,7 @@ const DashboardView = React.memo(function DashboardView({
           </section>
 
           {/* Pane 3: Habits & Horizons (3 cols) */}
-          <aside data-block-id="dashboard-sidebar-column" className="space-y-4 lg:col-span-3">
+          <aside data-block-id="dashboard-sidebar-column" className={`${mobileSection === 'habits' ? 'block' : 'hidden lg:block'} space-y-4 lg:col-span-3 min-w-0 overflow-hidden`}>
             {/* Habits Widget (Spacious Negative-Spacing Architecture) */}
             <div data-block-id="dashboard-habits-card" className="rounded-2xl bg-white dark:bg-[#1A1A1E] p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] border border-black/[0.07] dark:border-white/[0.08]">
               <div className="flex items-center justify-between mb-3">
@@ -1130,13 +1192,26 @@ const DashboardView = React.memo(function DashboardView({
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab('habits')}
-                  className="text-xs font-mono font-medium text-[#0F52BA] dark:text-[#6495ED] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <span>All</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingHabit(null);
+                      setIsHabitModalOpen(true);
+                    }}
+                    title="Create new habit"
+                    className="w-6 h-6 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] flex items-center justify-center text-[#161618] dark:text-[#F7F6F2] transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('habits')}
+                    className="text-xs font-mono font-medium text-[#0F52BA] dark:text-[#6495ED] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>All</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
 
               {/* Habit Completion Progress Bar */}
@@ -1154,31 +1229,53 @@ const DashboardView = React.memo(function DashboardView({
                   return (
                     <div
                       key={habit.id}
-                      className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] space-y-1.5"
+                      className="group/habit p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] space-y-1.5"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleHabitCheck(habit.id)}
-                          className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer group"
-                        >
-                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all shrink-0 ${
-                            doneToday ? 'border-[#2E6F40] bg-[#2E6F40] text-white' : 'border-black/25 dark:border-white/30 group-hover:border-[#2E6F40]'
-                          }`}>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <button
+                            type="button"
+                            onClick={() => handleHabitCheck(habit.id)}
+                            title={doneToday ? 'Checked in today (click to undo)' : 'Check in for today'}
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                              doneToday ? 'border-[#2E6F40] bg-[#2E6F40] text-white' : 'border-black/25 dark:border-white/30 hover:border-[#2E6F40]'
+                            }`}
+                          >
                             {doneToday && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                          </span>
-                          <span className={`text-xs font-semibold truncate ${
-                            doneToday ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : 'text-[#161618] dark:text-[#F7F6F2]'
-                          }`}>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingHabit(habit);
+                              setIsHabitModalOpen(true);
+                            }}
+                            title="Click to edit habit sequence"
+                            className={`text-xs font-semibold truncate text-left hover:text-[#0F52BA] dark:hover:text-[#6495ED] transition-colors cursor-pointer ${
+                              doneToday ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : 'text-[#161618] dark:text-[#F7F6F2]'
+                            }`}
+                          >
                             {habit.title}
-                          </span>
-                        </button>
-                        {streak > 0 && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold text-[#C84B31] bg-[#C84B31]/10 px-1.5 py-0.2 rounded shrink-0">
-                            <Flame className="w-2.5 h-2.5 fill-current" />
-                            <span>{streak}d</span>
-                          </span>
-                        )}
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {streak > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold text-[#C84B31] bg-[#C84B31]/10 px-1.5 py-0.2 rounded shrink-0">
+                              <Flame className="w-2.5 h-2.5 fill-current" />
+                              <span>{streak}d</span>
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingHabit(habit);
+                              setIsHabitModalOpen(true);
+                            }}
+                            title="Edit habit sequence"
+                            className="p-1 rounded-md text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-[#F7F6F2] hover:bg-black/5 dark:hover:bg-white/5 opacity-70 group-hover/habit:opacity-100 transition cursor-pointer"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* 7-day dot matrix */}
@@ -1186,16 +1283,22 @@ const DashboardView = React.memo(function DashboardView({
                         {last7Days.map((day) => {
                           const isCompletedOnDay = habit.completedDays?.includes(day.key);
                           return (
-                            <div key={day.key} className="flex flex-col items-center gap-0.5">
+                            <button
+                              key={day.key}
+                              type="button"
+                              onClick={() => onCheckInHabit?.(habit.id, day.key)}
+                              title={`${day.label}: ${isCompletedOnDay ? 'Completed (click to undo)' : 'Click to check in'}`}
+                              className="flex flex-col items-center gap-0.5 cursor-pointer group/dot"
+                            >
                               <span className="text-[8px] font-mono text-[#6B6A72]/60 uppercase">{day.label}</span>
-                              <div className={`w-2 h-2 rounded-full transition-all ${
+                              <div className={`w-2 h-2 rounded-full transition-all group-hover/dot:scale-125 ${
                                 isCompletedOnDay
                                   ? 'bg-[#2E6F40]'
                                   : day.isToday
                                     ? 'border border-dashed border-[#2E6F40]'
                                     : 'bg-black/10 dark:bg-white/10'
                               }`} />
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
@@ -1281,6 +1384,29 @@ const DashboardView = React.memo(function DashboardView({
         onClose={() => setEditingSchedule(null)}
         onUpdateSchedule={onUpdateSchedule}
         onDeleteSchedule={onDeleteSchedule}
+      />
+      <HabitModal
+        isOpen={isHabitModalOpen}
+        onClose={() => {
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        }}
+        habit={editingHabit}
+        onSave={(data) => {
+          if (editingHabit && editingHabit.id) {
+            onUpdateHabit?.(editingHabit.id, data);
+          } else {
+            onAddHabit?.(data);
+          }
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        }}
+        onDelete={editingHabit ? (id) => {
+          onDeleteHabit?.(id);
+          setIsHabitModalOpen(false);
+          setEditingHabit(null);
+        } : undefined}
+        goals={goals}
       />
     </main>
   );

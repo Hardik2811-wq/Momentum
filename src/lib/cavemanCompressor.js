@@ -89,6 +89,9 @@ export function sanitizeCavemanEgress(rawOutput = '') {
 
   let cleaned = rawOutput.trim();
 
+  // Strip reasoning <think>...</think> blocks from thinking models (Qwen3, DeepSeek, Kimi)
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
   // Strip code fences if present (```json ... ``` or ``` ...)
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();

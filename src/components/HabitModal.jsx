@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { queryLearnedMemory } from '../lib/nlpMemory';
+import { parseCompoundDuration } from '../lib/taskMetadata';
 import ConfirmModal from './ConfirmModal';
 
 const DURATION_PRESETS = ['Open / Flex', '15 mins', '30 mins', '45 mins', '60 mins'];
@@ -294,7 +295,15 @@ export default function HabitModal({
       setIsTimeBlocked(Boolean(habit.isTimeBlocked || habit.startTime));
       setTargetFrequency(habit.targetFrequency || 'Every Day');
       setCustomDays(habit.customDays || ['Mon', 'Wed', 'Fri']);
-      setLinkedGoal(habit.linkedGoal || '');
+      const rawGoal = (habit.linkedGoal || '').trim();
+      const matchedGoalObj = (goals || []).find(g => {
+        if (Array.isArray(g.linkedHabitIds) && g.linkedHabitIds.some(hid => String(hid) === String(habit.id))) return true;
+        if (!rawGoal || !g.title) return false;
+        const gt = g.title.trim().toLowerCase();
+        const rg = rawGoal.toLowerCase();
+        return gt === rg || gt.includes(rg) || rg.includes(gt);
+      });
+      setLinkedGoal(matchedGoalObj ? matchedGoalObj.title : rawGoal);
       setGraceDays(habit.graceDays ?? 1);
     } else {
       setTitle('');
@@ -313,7 +322,7 @@ export default function HabitModal({
     setConfirmDelete(false);
     setIsGoalMenuOpen(false);
     setNlpDetected(null);
-  }, [habit, goals, isOpen]);
+  }, [habit, isOpen]);
 
   if (!isOpen) return null;
 
@@ -346,22 +355,27 @@ export default function HabitModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/45 backdrop-blur-md overflow-hidden animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/45 backdrop-blur-md overflow-hidden animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-xl bg-surface-bone dark:bg-[#1A1A1E] rounded-2xl shadow-[0_32px_100px_rgba(0,0,0,0.25)] border border-black/[0.08] dark:border-white/[0.08] overflow-hidden my-auto max-h-[96vh] flex flex-col text-ink-primary dark:text-[#F7F6F2]">
+      <div className="relative w-full max-w-xl bg-surface-bone dark:bg-[#1A1A1E] rounded-t-[28px] sm:rounded-2xl shadow-[0_32px_100px_rgba(0,0,0,0.28)] border border-black/[0.08] dark:border-white/[0.08] overflow-hidden sm:my-auto max-h-[92dvh] sm:max-h-[96vh] flex flex-col text-ink-primary dark:text-[#F7F6F2] animate-androidSheet">
         {/* Subtle Ambient Color Line */}
         <div
           className="h-1 w-full transition-colors duration-300 shrink-0"
           style={{ backgroundColor: activeSignpost.accentHex }}
         />
 
+        {/* Android Bottom Sheet Drag Handle (Mobile Only) */}
+        <div className="sm:hidden flex justify-center pt-2 pb-0.5 bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
+          <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/20" />
+        </div>
+
         {/* Modal Header */}
-        <header className="px-5 sm:px-6 pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
+        <header className="px-5 sm:px-6 pt-2.5 sm:pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
           <div>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeSignpost.accentHex }} />
@@ -383,8 +397,8 @@ export default function HabitModal({
           </button>
         </header>
 
-        {/* Modal Body (Streamlined to fit without scrolling) */}
-        <form onSubmit={handleSubmit} className="px-5 sm:px-6 py-3 space-y-3 overflow-visible flex-1 flex flex-col justify-between">
+        {/* Modal Body */}
+        <form onSubmit={handleSubmit} className="px-5 sm:px-6 py-3 space-y-3 overflow-y-auto sm:overflow-visible overscroll-contain flex-1 flex flex-col justify-between">
           {/* 1. Live Interactive Preview Card (Slim & Compact) */}
           <div className="rounded-xl bg-neutral-50/80 p-2.5 border border-black/[0.06] flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -651,7 +665,7 @@ export default function HabitModal({
                     onClick={() => {
                       const next = !isTimeBlocked;
                       setIsTimeBlocked(next);
-                      if (next && !startTime) setStartTime(cadence === 'Evening' ? '21:00' : cadence === 'Afternoon' ? '14:00' : '07:30');
+                      if (next && !startTime) setStartTime(cadence.includes('Evening') ? '21:00' : cadence.includes('Afternoon') ? '14:00' : '07:30');
                     }}
                     className={`relative w-8 h-4.5 rounded-full transition-colors cursor-pointer ${
                       isTimeBlocked ? 'bg-primary' : 'bg-neutral-300'
@@ -819,7 +833,7 @@ export default function HabitModal({
           </div>
 
           {/* Modal Footer Bar */}
-          <footer className="pt-2 border-t border-black/[0.07] dark:border-white/[0.08] flex items-center justify-between gap-3 shrink-0">
+          <footer className="sticky bottom-0 bg-surface-bone dark:bg-[#1A1A1E] pt-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-0 border-t border-black/[0.07] dark:border-white/[0.08] flex items-center justify-between gap-3 shrink-0 z-10">
             {isEditing && onDelete ? (
               <button
                 type="button"

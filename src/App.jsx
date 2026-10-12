@@ -31,11 +31,17 @@ export default function App() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
+  const [editingGlobalHabit, setEditingGlobalHabit] = useState(null);
   const [isAiCopilotOpen, setIsAiCopilotOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [quickAddProps, setQuickAddProps] = useState({});
   const [isUniversalEditorMode, setIsUniversalEditorMode] = useState(false);
   const store = useStore();
+
+  const openHabitEditor = (habit = null) => {
+    setEditingGlobalHabit(habit);
+    setIsHabitModalOpen(true);
+  };
 
   useEffect(() => {
     // Initialize Capacitor Local Notifications
@@ -93,6 +99,9 @@ export default function App() {
             onUpdateSettings={store.updateSettings}
             onStartFocus={startFocusForTask}
             onCheckInHabit={store.checkInHabit}
+            onAddHabit={store.addHabit}
+            onUpdateHabit={store.updateHabit}
+            onDeleteHabit={store.deleteHabit}
             goals={store.goals}
             habits={store.habits}
             schedules={store.schedules}
@@ -117,7 +126,9 @@ export default function App() {
             onDeleteSchedules={store.deleteSchedules}
             onStartFocus={startFocusForTask}
             onCheckInHabit={store.checkInHabit}
+            onAddHabit={store.addHabit}
             onUpdateHabit={store.updateHabit}
+            onDeleteHabit={store.deleteHabit}
           />
         );
       case 'goals':
@@ -132,6 +143,9 @@ export default function App() {
             settings={store.settings}
             tasks={store.tasks}
             habits={store.habits}
+            onAddHabit={store.addHabit}
+            onUpdateHabit={store.updateHabit}
+            onDeleteHabit={store.deleteHabit}
             addTask={store.addTask}
             onToggleTask={store.toggleTask}
             onStartFocus={startFocusForTask}
@@ -157,6 +171,9 @@ export default function App() {
             tasks={store.tasks}
             goals={store.goals}
             habits={store.habits}
+            onAddHabit={store.addHabit}
+            onUpdateHabit={store.updateHabit}
+            onDeleteHabit={store.deleteHabit}
             stats={store.stats}
             reflections={store.reflections}
             updateReflection={store.updateReflection}
@@ -194,7 +211,7 @@ export default function App() {
             onCheckInHabit={store.checkInHabit}
             onOpenQuickAdd={openQuickAdd}
             onOpenNewGoal={() => setIsGoalModalOpen(true)}
-            onOpenNewHabit={() => setIsHabitModalOpen(true)}
+            onOpenNewHabit={() => openHabitEditor(null)}
           />
         );
       default:
@@ -207,6 +224,9 @@ export default function App() {
             onUpdateSettings={store.updateSettings}
             onStartFocus={startFocusForTask}
             onCheckInHabit={store.checkInHabit}
+            onAddHabit={store.addHabit}
+            onUpdateHabit={store.updateHabit}
+            onDeleteHabit={store.deleteHabit}
             goals={store.goals}
             habits={store.habits}
             schedules={store.schedules}
@@ -228,7 +248,7 @@ export default function App() {
         onCheckInHabit={store.checkInHabit}
         onOpenQuickAdd={openQuickAdd}
         onOpenNewGoal={() => setIsGoalModalOpen(true)}
-        onOpenNewHabit={() => setIsHabitModalOpen(true)}
+        onOpenNewHabit={() => openHabitEditor(null)}
       />
       <AuthGate>
       <div className="min-h-screen font-sans bg-[#F7F6F2] dark:bg-[#121214] text-[#161618] dark:text-[#EAE8E3]">
@@ -246,6 +266,8 @@ export default function App() {
           activeTab={activeTab}
           tasks={store.tasks}
           goals={store.goals}
+          habits={store.habits}
+          onEditHabit={(h) => openHabitEditor(h)}
           setActiveTab={setActiveTab}
           isUniversalEditorMode={isUniversalEditorMode}
           onToggleUniversalEditor={() => setIsUniversalEditorMode(v => !v)}
@@ -275,7 +297,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         onOpenQuickAdd={openQuickAdd}
         onOpenNewGoal={() => setIsGoalModalOpen(true)}
-        onOpenNewHabit={() => setIsHabitModalOpen(true)}
+        onOpenNewHabit={() => openHabitEditor(null)}
         onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
       />
 
@@ -317,11 +339,28 @@ export default function App() {
         habits={store.habits}
       />
 
-      {/* Habit Creation Modal accessible globally */}
+      {/* Habit Creation & Edit Modal accessible globally */}
       <HabitModal
         isOpen={isHabitModalOpen}
-        onClose={() => setIsHabitModalOpen(false)}
-        onSave={store.addHabit}
+        onClose={() => {
+          setIsHabitModalOpen(false);
+          setEditingGlobalHabit(null);
+        }}
+        habit={editingGlobalHabit}
+        onSave={(data) => {
+          if (editingGlobalHabit && editingGlobalHabit.id) {
+            store.updateHabit(editingGlobalHabit.id, data);
+          } else {
+            store.addHabit(data);
+          }
+          setIsHabitModalOpen(false);
+          setEditingGlobalHabit(null);
+        }}
+        onDelete={editingGlobalHabit ? (id) => {
+          store.deleteHabit(id);
+          setIsHabitModalOpen(false);
+          setEditingGlobalHabit(null);
+        } : undefined}
         goals={store.goals}
       />
 

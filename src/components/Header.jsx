@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 
 const TITLE_MAP = {
-  dashboard:   'Dashboard',
+  dashboard:   'Today',
   today:       'Planner',
   goals:       'Goals',
   habits:      'Habits',
@@ -14,6 +14,8 @@ export default function Header({
   activeTab,
   tasks = [],
   goals = [],
+  habits = [],
+  onEditHabit,
   setActiveTab,
   isUniversalEditorMode = false,
   onToggleUniversalEditor,
@@ -76,11 +78,14 @@ export default function Header({
     tasks?.forEach(t => {
       if (t.title?.toLowerCase().includes(q)) filteredResults.push({ ...t, type: 'task', tab: 'today' });
     });
+    habits?.forEach(h => {
+      if (h.title?.toLowerCase().includes(q)) filteredResults.push({ ...h, type: 'habit', tab: 'habits' });
+    });
     goals?.forEach(g => {
       if (g.title?.toLowerCase().includes(q)) filteredResults.push({ ...g, type: 'goal', tab: 'goals' });
     });
   }
-  const topResults = filteredResults.slice(0, 5);
+  const topResults = filteredResults.slice(0, 6);
 
   const recentTasks = (tasks || [])
     .slice()
@@ -96,10 +101,10 @@ export default function Header({
   ];
 
   return (
-    <header className={`fixed top-0 left-0 ${isSidebarCollapsed ? 'md:left-[64px]' : 'md:left-[240px]'} right-0 h-[calc(3.5rem+env(safe-area-inset-top))] md:h-12 pt-[env(safe-area-inset-top)] md:pt-0 z-40 flex items-center justify-between px-3 md:px-5 backdrop-blur-xl border-b transition-all duration-200 bg-[#F7F6F2]/90 dark:bg-[#121214]/90 border-black/[0.07] dark:border-white/[0.08]`}>
+    <header className={`fixed top-0 left-0 ${isSidebarCollapsed ? 'md:left-[64px]' : 'md:left-[240px]'} right-0 h-[calc(3.25rem+env(safe-area-inset-top))] md:h-12 pt-[env(safe-area-inset-top)] md:pt-0 z-40 flex items-center justify-between px-3.5 md:px-5 backdrop-blur-xl border-b transition-all duration-200 bg-[#F7F6F2]/92 dark:bg-[#121214]/92 border-black/[0.07] dark:border-white/[0.08]`}>
 
-      {/* ── Left: Sidebar Toggle & Newsreader Date ── */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      {/* ── Left: Sidebar Toggle & Screen Title / Date ── */}
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 shrink-0">
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -111,11 +116,11 @@ export default function Header({
           </span>
         </button>
 
-        <div className="flex items-center gap-2">
-          <div className="md:hidden w-7 h-7 rounded-md bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] flex items-center justify-center font-mono font-bold text-xs shadow-xs">
-            M
-          </div>
-          <span className="font-editorial text-[16px] sm:text-[18px] text-[#161618] dark:text-[#F7F6F2] tracking-tight whitespace-nowrap">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="md:hidden text-[16px] font-bold text-[#161618] dark:text-[#F7F6F2] tracking-tight">
+            {TITLE_MAP[activeTab] || 'Today'}
+          </span>
+          <span className="font-mono md:font-editorial text-[11px] md:text-[18px] text-[#6B6A72] md:text-[#161618] dark:text-[#8E8E93] dark:md:text-[#F7F6F2] tracking-tight whitespace-nowrap">
             {todayDateFormatted}
           </span>
         </div>
@@ -154,20 +159,20 @@ export default function Header({
         })}
       </div>
 
-      {/* ── Right Controls: + New Task, Search, Copilot, Status ── */}
+      {/* ── Right Controls: + New Task (Desktop), Search, Copilot, Status ── */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        {/* + New Task Button */}
+        {/* + New Task Button (Desktop/Tablet only — Mobile uses Bottom Nav FAB) */}
         <button
           type="button"
           onClick={onOpenQuickAdd}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] text-[11px] font-semibold hover:opacity-90 active:scale-95 shadow-tactile transition cursor-pointer"
+          className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] text-[11px] font-semibold hover:opacity-90 active:scale-95 shadow-tactile transition cursor-pointer"
         >
           <span className="material-symbols-outlined text-[14px]">add</span>
-          <span className="hidden sm:inline">New Task</span>
+          <span>New Task</span>
         </button>
 
         {/* ── Search Input ── */}
-        <div className="max-w-[120px] sm:max-w-[180px] lg:max-w-[220px] relative">
+        <div className="w-[128px] sm:w-[175px] lg:w-[215px] relative">
           <span className={`material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[14px] pointer-events-none transition-colors ${
             searchFocused ? 'text-[#0F52BA]' : 'text-[#8E8E93]'
           }`}>search</span>
@@ -179,7 +184,7 @@ export default function Header({
             placeholder="Search…"
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-            className={`w-full h-7 pl-6.5 pr-2 sm:pr-7 rounded-lg text-[11.5px] tracking-tight outline-none border transition-all bg-white/70 dark:bg-[#1A1A1E]/70 border-black/[0.07] dark:border-white/[0.08] text-[#161618] dark:text-[#F7F6F2] placeholder:text-[#8E8E93] ${
+            className={`w-full h-7 pl-7 pr-2 sm:pr-7 rounded-lg text-[11.5px] tracking-tight outline-none border transition-all bg-white/80 dark:bg-[#1A1A1E]/80 border-black/[0.07] dark:border-white/[0.08] text-[#161618] dark:text-[#F7F6F2] placeholder:text-[#8E8E93] ${
               searchFocused ? 'bg-white dark:bg-[#1E1E22] border-[#0F52BA]/60 shadow-[0_0_0_2px_rgba(15,82,186,0.12)]' : 'hover:border-black/[0.12]'
             }`}
           />
@@ -192,15 +197,24 @@ export default function Header({
                   {topResults.map((result, idx) => (
                     <li key={idx}>
                       <button
-                        className="w-full text-left px-3 py-1.5 text-[11.5px] text-[#161618] dark:text-[#F7F6F2] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
+                        className="w-full text-left px-3 py-1.5 text-[11.5px] text-[#161618] dark:text-[#F7F6F2] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors flex items-center justify-between gap-2"
                         onClick={() => {
-                          if (setActiveTab) setActiveTab(result.tab);
+                          if (result.type === 'habit' && onEditHabit) {
+                            onEditHabit(result);
+                          } else if (setActiveTab) {
+                            setActiveTab(result.tab);
+                          }
                           setSearchQuery('');
                           setSearchFocused(false);
                         }}
                       >
-                        <div className="font-medium truncate">{result.title}</div>
-                        <div className="text-[9.5px] font-mono text-[#8E8E93] capitalize">{result.type}</div>
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{result.title}</div>
+                          <div className="text-[9.5px] font-mono text-[#8E8E93] capitalize">{result.type}</div>
+                        </div>
+                        {result.type === 'habit' && (
+                          <span className="material-symbols-outlined text-[13px] text-[#8E8E93] shrink-0">edit</span>
+                        )}
                       </button>
                     </li>
                   ))}

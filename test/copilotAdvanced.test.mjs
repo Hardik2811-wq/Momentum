@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveLocalCopilotIntent } from '../src/lib/copilotIntentRouter.js';
-import { normalizeCopilotPlan } from '../src/lib/groqClient.js';
+import {
+  normalizeCopilotPlan,
+  detectAiProvider,
+  generateMcpBridgeToken,
+  buildExternalChatBridgePrompt,
+  parseExternalChatPlanResponse
+} from '../src/lib/groqClient.js';
 import { harvestCopilotPlan, getNlpMemory, resetNlpMemory } from '../src/lib/nlpMemory.js';
 
 test('resolveLocalCopilotIntent handles schedule task offline with 0 API tokens', () => {
@@ -151,3 +157,47 @@ test('harvestCopilotPlan teaches local memory verbs from approved AI plans', () 
   const memory = getNlpMemory();
   assert.ok(Boolean(memory.learnedVerbs['benchmark']));
 });
+
+test('Multi-Provider AI & Claude/ChatGPT MCP Bridge helpers validate keys, tokens, and <think>-wrapped JSON plans', async () => {
+  assert.equal(detectAiProvider('AIzaSyA12345678901234567890123456789'), 'gemini');
+  assert.equal(detectAiProvider('gsk_12345678901234567890123456'), 'groq');
+  assert.equal(detectAiProvider('sk-or-v1-12345678901234567890123456'), 'openrouter');
+  assert.equal(detectAiProvider('invalid_key'), null);
+
+  const bridgeInfo = await generateMcpBridgeToken('user-999');
+  assert.ok(bridgeInfo.token.startsWith('mom_user-999_'));
+  assert.equal(bridgeInfo.tokenHash.length, 64);
+  assert.ok(bridgeInfo.mcpUrl.includes('/functions/v1/momentum-mcp?token=mom_user-999_'));
+  assert.ok(bridgeInfo.openApiUrl.includes('/functions/v1/momentum-mcp/openapi.json?token=mom_user-999_'));
+
+  const prompt = buildExternalChatBridgePrompt({
+    userPrompt: 'Schedule CN and CML labs',
+    todayDate: '2026-10-13'
+  });
+  assert.ok(prompt.includes('MOMENTUM OS'));
+  assert.ok(prompt.includes('Schedule CN and CML labs'));
+
+  const rawClaudeOrQwenReply = `<think>Let me calculate the best non-overlapping time slots...</think>
+Here is your plan:
+\`\`\`json
+{
+  "summary": "CN & CML Sprint",
+  "tasks": [
+    {
+      "title": "CN Socket Programming Lab",
+      "plannedDate": "2026-10-14",
+      "startTime": "10:00",
+      "durationMinutes": 90,
+      "impact": "high"
+    }
+  ]
+}
+\`\`\``;
+
+  const parsed = parseExternalChatPlanResponse(rawClaudeOrQwenReply, '2026-10-13');
+  assert.equal(parsed.hasPlan, true);
+  assert.equal(parsed.plan.tasks.length, 1);
+  assert.equal(parsed.plan.tasks[0].title, 'CN Socket Programming Lab');
+  assert.equal(parsed.plan.tasks[0].durationMinutes, 90);
+});
+

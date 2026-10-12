@@ -756,10 +756,7 @@ export default function useStore() {
     if (Array.isArray(saved.goals)) setGoals(saved.goals);
     if (Array.isArray(saved.habits)) setHabits(saved.habits);
     if (Array.isArray(saved.schedules)) {
-      // If cloud has schedules, adopt them.
-      // If cloud has empty array but local has non-empty schedules (e.g. migration from local-only version),
-      // preserve local schedules so migration doesn't wipe them.
-      setSchedules(prev => (saved.schedules.length > 0 || !prev?.length ? saved.schedules : prev));
+      setSchedules(prev => (saved.schedules.length > 0 || !prev?.length || saved._mcpUpdated ? saved.schedules : prev));
     }
     if (saved.reflections && typeof saved.reflections === 'object') setReflections(saved.reflections);
     if (Array.isArray(saved.focusSessions)) setFocusSessions(saved.focusSessions);
@@ -789,6 +786,7 @@ export default function useStore() {
       focusSessions: Array.isArray(saved.focusSessions) ? saved.focusSessions : []
     };
     lastSyncedJsonRef.current = JSON.stringify(snapshotData);
+    setLastSyncedAt(Date.now());
 
     setTimeout(() => {
       isApplyingRemoteRef.current = false;
@@ -842,16 +840,38 @@ export default function useStore() {
 
     let activeSession = null;
     let channel = null;
+    let subscribedUserId = null;
 
     const setupRealtime = (userId) => {
+      if (!userId) {
+        if (channel) {
+          supabase.removeChannel(channel);
+          channel = null;
+        }
+        subscribedUserId = null;
+        return;
+      }
+
+      // Avoid duplicate subscription if already subscribed for this user
+      if (channel && subscribedUserId === userId) {
+        return;
+      }
+
       if (channel) {
         supabase.removeChannel(channel);
         channel = null;
       }
-      if (!userId) return;
+      subscribedUserId = userId;
 
+      const basePrefix = `workspace_realtime_${userId}`;
+      if (typeof supabase.getChannels === 'function') {
+        const existing = supabase.getChannels().filter(c => c.topic?.includes(basePrefix));
+        existing.forEach(c => supabase.removeChannel(c));
+      }
+
+      const uniqueTopic = `${basePrefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       channel = supabase
-        .channel(`workspace_realtime_${userId}`)
+        .channel(uniqueTopic)
         .on(
           'postgres_changes',
           {
@@ -874,6 +894,7 @@ export default function useStore() {
               });
               if (incomingJson !== lastSyncedJsonRef.current) {
                 applyRemoteSnapshot(incoming, activeSession?.user?.user_metadata);
+                setLastSyncedAt(Date.now());
               }
             }
           }
@@ -887,7 +908,9 @@ export default function useStore() {
       setupRealtime(session?.user?.id);
     };
 
-    supabase.auth.getSession().then(({ data }) => handleSession(data.session));
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session) handleSession(data.session);
+    });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => handleSession(session));
 
     // When returning to tab/app (especially on mobile resume)
@@ -903,7 +926,11 @@ export default function useStore() {
 
     return () => {
       listener?.subscription?.unsubscribe();
-      if (channel) supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+      subscribedUserId = null;
       if (typeof window !== 'undefined') {
         window.removeEventListener('focus', handleRecheck);
         document.removeEventListener('visibilitychange', handleRecheck);
@@ -1094,6 +1121,15 @@ export default function useStore() {
               seenHabitIds.add(String(h.id));
               linkedHabits.push(h);
             }
+          }
+        }
+        for (let i = 0; i < habits.length; i++) {
+          const h = habits[i];
+          if (seenHabitIds.has(String(h.id))) continue;
+          const cleanGoalName = (h.linkedGoal || '').replace(/^Horizon:\s*/i, '').trim().toLowerCase();
+          if (cleanGoalName && (titleKey.includes(cleanGoalName) || cleanGoalName.includes(titleKey))) {
+            seenHabitIds.add(String(h.id));
+            linkedHabits.push(h);
           }
         }
       }
@@ -1440,6 +1476,11 @@ export default function useStore() {
     setGoals(prev => [...prev, createdGoal]);
     learnFromGoalSave(createdGoal);
 
+    if (Array.isArray(linkedHabitIds) && linkedHabitIds.length > 0 && createdGoal.title) {
+      const idSet = new Set(linkedHabitIds.map(String));
+      setHabits(prev => prev.map(h => idSet.has(String(h.id)) ? { ...h, linkedGoal: createdGoal.title } : h));
+    }
+
     // If initial tasks provided, auto-create linked tasks in Planner
     if (Array.isArray(initialTasks) && initialTasks.length > 0) {
       const formattedTasks = initialTasks
@@ -1466,15 +1507,31 @@ export default function useStore() {
 
     showToast(`Goal created: "${createdGoal.title}"`);
     return newId;
-  }, [setGoals, setTasks, showToast]);
+  }, [setGoals, setHabits, setTasks, showToast]);
 
   const updateGoal = useCallback((id, patch) => {
     const target = goals.find(g => String(g.id) === String(id));
     if (target) {
       learnFromGoalSave({ ...target, ...patch });
     }
+    const nextTitle = patch.title || target?.title || '';
     setGoals(prev => prev.map(g => String(g.id) === String(id) ? { ...g, ...patch } : g));
-    if (patch.title && target && patch.title !== target.title) {
+    if (Array.isArray(patch.linkedHabitIds)) {
+      const nextIdSet = new Set(patch.linkedHabitIds.map(String));
+      const oldTitleLower = (target?.title || '').trim().toLowerCase();
+      setHabits(prev => prev.map(h => {
+        if (nextIdSet.has(String(h.id))) {
+          return { ...h, linkedGoal: nextTitle || h.linkedGoal };
+        }
+        const hGoalLower = (h.linkedGoal || '').trim().toLowerCase();
+        const wasLinked = (Array.isArray(target?.linkedHabitIds) && target.linkedHabitIds.some(hid => String(hid) === String(h.id))) ||
+          (oldTitleLower && hGoalLower && (hGoalLower === oldTitleLower || oldTitleLower.includes(hGoalLower) || hGoalLower.includes(oldTitleLower)));
+        if (wasLinked) {
+          return { ...h, linkedGoal: '' };
+        }
+        return h;
+      }));
+    } else if (patch.title && target && patch.title !== target.title) {
       setHabits(prev => prev.map(h => {
         if (String(h.linkedGoalId) === String(id) || h.linkedGoal === target.title) {
           return { ...h, linkedGoal: patch.title };
@@ -1597,24 +1654,56 @@ export default function useStore() {
       id: newId
     };
     setHabits(prev => [...prev, newHabit]);
+    if (newHabit.linkedGoal) {
+      const targetTitle = newHabit.linkedGoal.trim().toLowerCase();
+      setGoals(prev => prev.map(g => {
+        const gt = (g.title || '').trim().toLowerCase();
+        const isMatch = gt && targetTitle && (gt === targetTitle || gt.includes(targetTitle) || targetTitle.includes(gt));
+        if (!isMatch) return g;
+        const existing = Array.isArray(g.linkedHabitIds) ? g.linkedHabitIds : [];
+        if (existing.some(hid => String(hid) === String(newId))) return g;
+        return { ...g, linkedHabitIds: [...existing, newId] };
+      }));
+    }
     learnFromHabitSave(newHabit);
     showToast(`Habit added: "${habit.title}"`);
     return newId;
-  }, [setHabits, showToast]);
+  }, [setHabits, setGoals, showToast]);
 
   const updateHabit = useCallback((id, patch) => {
-    const target = habits.find(h => h.id === id);
+    const target = habits.find(h => String(h.id) === String(id));
     if (target) {
       learnFromHabitSave({ ...target, ...patch });
     }
-    setHabits(prev => prev.map(h => h.id === id ? { ...h, ...patch } : h));
+    setHabits(prev => prev.map(h => String(h.id) === String(id) ? { ...h, ...patch } : h));
+    if (patch.linkedGoal !== undefined) {
+      const targetTitle = (patch.linkedGoal || '').trim().toLowerCase();
+      setGoals(prev => prev.map(g => {
+        const gt = (g.title || '').trim().toLowerCase();
+        const existing = Array.isArray(g.linkedHabitIds) ? g.linkedHabitIds : [];
+        const isMatch = Boolean(gt && targetTitle && (gt === targetTitle || gt.includes(targetTitle) || targetTitle.includes(gt)));
+        const hasId = existing.some(hid => String(hid) === String(id));
+        if (isMatch && !hasId) {
+          return { ...g, linkedHabitIds: [...existing, id] };
+        }
+        if (!isMatch && hasId) {
+          return { ...g, linkedHabitIds: existing.filter(hid => String(hid) !== String(id)) };
+        }
+        return g;
+      }));
+    }
     showToast('Habit updated');
-  }, [setHabits, showToast]);
+  }, [habits, setHabits, setGoals, showToast]);
 
   const deleteHabit = useCallback((id) => {
-    const target = habits.find(h => h.id === id);
+    const target = habits.find(h => String(h.id) === String(id));
     if (!target) return;
-    setHabits(prev => prev.filter(h => h.id !== id));
+    setHabits(prev => prev.filter(h => String(h.id) !== String(id)));
+    setGoals(prev => prev.map(g => {
+      if (!Array.isArray(g.linkedHabitIds)) return g;
+      if (!g.linkedHabitIds.some(hid => String(hid) === String(id))) return g;
+      return { ...g, linkedHabitIds: g.linkedHabitIds.filter(hid => String(hid) !== String(id)) };
+    }));
     showToast(`Habit deleted: "${target.title}"`, {
       actionLabel: 'Undo',
       onAction: () => {
@@ -1622,11 +1711,11 @@ export default function useStore() {
         showToast('Habit restored');
       }
     });
-  }, [habits, setHabits, showToast]);
+  }, [habits, setHabits, setGoals, showToast]);
 
   const useGraceDay = useCallback((id) => {
     setHabits(prev => prev.map(h =>
-      h.id === id && h.graceDays > 0
+      String(h.id) === String(id) && h.graceDays > 0
         ? { ...h, graceDays: h.graceDays - 1 }
         : h
     ));

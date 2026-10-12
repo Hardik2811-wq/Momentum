@@ -22,14 +22,37 @@ import {
 const AI_FUNCTION = 'groq-proxy';
 const BYOK_FUNCTION = 'byok-credentials';
 
+export function detectAiProvider(rawKey = '') {
+  const key = (rawKey || '').trim();
+  if (!key) return null;
+  if (/^AIza[A-Za-z0-9_-]{25,}$/.test(key)) return 'gemini';
+  if (/^gsk_[A-Za-z0-9_-]{20,}$/.test(key)) return 'groq';
+  if (/^sk-or-[A-Za-z0-9_-]{20,}$/.test(key)) return 'openrouter';
+  if (/^sk-[A-Za-z0-9_-]{20,}$/.test(key)) return 'openai';
+  return null;
+}
+
+export function getAiProviderLabel(provider) {
+  switch (provider) {
+    case 'gemini': return 'Google Gemini 2.5 Flash';
+    case 'groq': return 'Groq LPU (Kimi-K2 / Llama 3.3 70B)';
+    case 'openrouter': return 'OpenRouter (Claude / DeepSeek / Gemini)';
+    case 'openai': return 'OpenAI (GPT-4o)';
+    default: return 'Cloud AI';
+  }
+}
+
 export function getLocalGroqKey() {
-  if (typeof window === 'undefined') return '';
-  try {
-    const key = window.localStorage?.getItem('momentum_groq_api_key') || '';
-    if (key && key.startsWith('gsk_')) return key;
-  } catch {}
+  if (typeof window !== 'undefined') {
+    try {
+      const key = window.localStorage?.getItem('momentum_groq_api_key') || '';
+      if (detectAiProvider(key)) return key.trim();
+    } catch {}
+  }
+  const envGemini = import.meta?.env?.VITE_GEMINI_API_KEY || '';
+  if (detectAiProvider(envGemini)) return envGemini.trim();
   const envKey = import.meta?.env?.VITE_GROQ_API_KEY || '';
-  if (envKey && envKey.startsWith('gsk_')) return envKey;
+  if (detectAiProvider(envKey)) return envKey.trim();
   return '';
 }
 
@@ -67,16 +90,29 @@ async function getAvailableGroqModels(apiKey) {
 }
 
 const OLLAMA_HOSTS = [
-  'http://100.128.172.45:11435', // LAN proxy (accessible from phone & emulator)
   'http://127.0.0.1:11434',      // Local PC direct
   'http://localhost:11434',
   'http://10.0.2.2:11434'        // Android emulator host loopback
 ];
 
+async function probeOllamaHost(host, timeoutMs = 450) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const ping = await fetch(`${host}/api/tags`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!ping.ok) throw new Error('Non-200');
+    const tags = await ping.json();
+    const models = tags.models || [];
+    if (models.length === 0) throw new Error('No models');
+    return { host, models };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
 async function callOllama(messages, { temperature, maxTokens, jsonMode = true } = {}) {
-  // If running in browser over HTTPS (e.g. Vercel, Netlify), browsers strictly block
-  // unencrypted http:// and loopback addresses due to Mixed Content and Private Network Access CORS policies.
-  // Probing these hosts causes red console error spam. Skip immediately unless on HTTP or in native Capacitor container.
   const isHttpsBrowser = typeof window !== 'undefined' &&
     window.location.protocol === 'https:' &&
     !window.Capacitor?.isNativePlatform();
@@ -85,80 +121,190 @@ async function callOllama(messages, { temperature, maxTokens, jsonMode = true } 
     return null;
   }
 
-  for (const host of OLLAMA_HOSTS) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      const ping = await fetch(`${host}/api/tags`, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (!ping.ok) continue;
+  try {
+    const { host, models } = await Promise.any(OLLAMA_HOSTS.map(h => probeOllamaHost(h, 450)));
+    const targetModel = models.find(m => m.name.includes('qwen2.5-coder') || m.name.includes('qwen3'))?.name || models[0].name;
 
-      const tags = await ping.json();
-      const models = tags.models || [];
-      if (models.length === 0) continue;
-
-      // Prefer qwen2.5-coder or first available model
-      const targetModel = models.find(m => m.name.includes('qwen2.5-coder'))?.name || models[0].name;
-
-      const body = {
-        model: targetModel,
-        messages,
-        stream: false,
-        options: {
-          temperature: temperature ?? 0.2,
-          num_predict: maxTokens ?? 4096
-        }
-      };
-      if (jsonMode) {
-        body.format = 'json';
+    const body = {
+      model: targetModel,
+      messages,
+      stream: false,
+      options: {
+        temperature: temperature ?? 0.2,
+        num_predict: maxTokens ?? 4096
       }
-
-      const res = await fetch(`${host}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        return {
-          content: data.message?.content || '',
-          model: `ollama:${targetModel}`
-        };
-      }
-    } catch {
-      // Try next host
+    };
+    if (jsonMode) {
+      body.format = 'json';
     }
+
+    const res = await fetch(`${host}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        content: data.message?.content || '',
+        model: `ollama:${targetModel}`
+      };
+    }
+  } catch {
+    // No local Ollama reachable within 450ms
   }
   return null;
 }
 
-async function callAiService(messages, { temperature, maxTokens, jsonMode = true } = {}) {
-  // 1. Try local Ollama first (free, offline, tested with qwen2.5-coder)
-  try {
-    const ollamaResult = await callOllama(messages, { temperature, maxTokens, jsonMode });
-    if (ollamaResult && ollamaResult.content) {
-      return ollamaResult;
+async function callGeminiService(apiKey, messages, { temperature, maxTokens, jsonMode = true } = {}) {
+  const systemMsgs = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+  const chatContents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
+    }));
+
+  const geminiCandidates = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+  let lastError = null;
+
+  for (const model of geminiCandidates) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const payload = {
+        contents: chatContents.length > 0 ? chatContents : [{ role: 'user', parts: [{ text: 'Hello' }] }],
+        generationConfig: {
+          temperature: temperature ?? 0.2,
+          maxOutputTokens: maxTokens ?? 4096,
+          ...(jsonMode ? { responseMimeType: 'application/json' } : {})
+        }
+      };
+      if (systemMsgs) {
+        payload.systemInstruction = { parts: [{ text: systemMsgs }] };
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+        if (text) {
+          return { content: text, model };
+        }
+      }
+      const errData = await res.json().catch(() => ({}));
+      lastError = errData?.error?.message || `Gemini API returned HTTP ${res.status}`;
+      if (res.status === 400 && lastError.toLowerCase().includes('api key')) {
+        throw new Error('Invalid Gemini API Key. Tap Settings -> Manage key to update.');
+      }
+    } catch (err) {
+      if (err.message && err.message.includes('Invalid Gemini API Key')) throw err;
+      lastError = err.message;
     }
-  } catch {}
+  }
+  throw new Error(lastError || 'Gemini API request failed.');
+}
 
-  // 2. Try Groq API with robust model discovery to eliminate 404 errors
+async function callOpenAiCompatibleService(provider, apiKey, messages, { temperature, maxTokens, jsonMode = true, taskTier = 'copilot' } = {}) {
+  const baseUrl = provider === 'openrouter'
+    ? 'https://openrouter.ai/api/v1/chat/completions'
+    : 'https://api.openai.com/v1/chat/completions';
+
+  const candidates = provider === 'openrouter'
+    ? (taskTier === 'copilot'
+        ? ['anthropic/claude-3.7-sonnet', 'google/gemini-2.5-flash', 'deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-3.3-70b-instruct']
+        : ['google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b-instruct'])
+    : ['gpt-4o-mini', 'gpt-4o'];
+
+  let lastError = null;
+  for (const model of candidates) {
+    try {
+      const payload = {
+        model,
+        messages,
+        temperature: temperature ?? 0.2,
+        max_tokens: maxTokens ?? 4096,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
+      };
+      const res = await fetch(baseUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          content: data?.choices?.[0]?.message?.content || '',
+          model: data?.model || model
+        };
+      }
+      const errData = await res.json().catch(() => ({}));
+      lastError = errData?.error?.message || `${provider} returned HTTP ${res.status}`;
+      if (res.status === 401) throw new Error(`Invalid ${provider} API key.`);
+    } catch (err) {
+      if (err.message?.includes('Invalid')) throw err;
+      lastError = err.message;
+    }
+  }
+  throw new Error(lastError || `${provider} request failed.`);
+}
+
+async function callAiService(messages, { temperature, maxTokens, jsonMode = true, taskTier = 'copilot' } = {}) {
   const localKey = getLocalGroqKey();
-  if (localKey) {
-    const available = await getAvailableGroqModels(localKey);
-    const standardCandidates = [
-      'llama-3.3-70b-versatile',
-      'llama-3.1-8b-instant',
-      'qwen/qwen3.8-27b'
-    ];
+  const provider = detectAiProvider(localKey);
+  const preferOllama = typeof window !== 'undefined' && window.localStorage?.getItem('momentum_prefer_ollama') === 'true';
 
-    let candidateModels = standardCandidates;
+  // 1. Only try local Ollama first if explicitly preferred or when no cloud key is configured
+  if (preferOllama || !localKey) {
+    try {
+      const ollamaResult = await callOllama(messages, { temperature, maxTokens, jsonMode });
+      if (ollamaResult && ollamaResult.content) {
+        return ollamaResult;
+      }
+    } catch {}
+  }
+
+  // 2. Route to Google Gemini 2.5 Flash if a Gemini key (AIza...) is configured
+  if (localKey && provider === 'gemini') {
+    return await callGeminiService(localKey, messages, { temperature, maxTokens, jsonMode });
+  }
+
+  // 3. Route to OpenRouter / OpenAI if sk-or-... or sk-... is configured
+  if (localKey && (provider === 'openrouter' || provider === 'openai')) {
+    return await callOpenAiCompatibleService(provider, localKey, messages, { temperature, maxTokens, jsonMode, taskTier });
+  }
+
+  // 4. Route to Groq LPU with task-tier-optimized frontier models
+  if (localKey && provider === 'groq') {
+    const available = await getAvailableGroqModels(localKey);
+    const tierCandidates = taskTier === 'copilot'
+      ? [
+          'moonshotai/kimi-k2-instruct',
+          'openai/gpt-oss-120b',
+          'llama-3.3-70b-versatile',
+          'qwen/qwen3-32b'
+        ]
+      : [
+          'llama-3.3-70b-versatile',
+          'openai/gpt-oss-20b',
+          'llama-3.1-8b-instant'
+        ];
+
+    let candidateModels = tierCandidates;
     if (available && available.length > 0) {
-      const matched = standardCandidates.filter(m => available.includes(m));
+      const matched = tierCandidates.filter(m => available.includes(m));
       if (matched.length > 0) {
         candidateModels = matched;
       } else {
-        const chatModels = available.filter(m => !m.includes('whisper') && !m.includes('guard'));
+        const chatModels = available.filter(m => !m.includes('whisper') && !m.includes('guard') && !m.includes('tts'));
         if (chatModels.length > 0) candidateModels = chatModels;
       }
     }
@@ -198,10 +344,10 @@ async function callAiService(messages, { temperature, maxTokens, jsonMode = true
         lastError = errData?.error?.message || `Groq API returned HTTP ${response.status}`;
         const lowerErr = lastError.toLowerCase();
 
-        // If error is model-specific (decommissioned, not found, retired), proceed to next candidate
         if (
           response.status === 400 ||
           response.status === 404 ||
+          response.status === 429 ||
           lowerErr.includes('decommissioned') ||
           lowerErr.includes('does not exist') ||
           lowerErr.includes('not supported') ||
@@ -211,7 +357,6 @@ async function callAiService(messages, { temperature, maxTokens, jsonMode = true
           continue;
         }
 
-        // If invalid API key or auth, stop immediately
         if (response.status === 401) {
           throw new Error('Invalid Groq API Key. Tap Settings -> Manage key to update.');
         }
@@ -222,19 +367,19 @@ async function callAiService(messages, { temperature, maxTokens, jsonMode = true
     if (lastError) throw new Error(lastError);
   }
 
-  // 3. Fallback to Supabase edge function proxy if configured
+  // 5. Fallback to Supabase edge function proxy if configured
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.functions.invoke(AI_FUNCTION, {
       body: { messages, temperature, maxTokens, jsonMode }
     });
 
     if (error || !data?.content) {
-      throw new Error(data?.error || 'AI service request failed. Tap Settings -> Manage key to add your Groq key.');
+      throw new Error(data?.error || 'AI service request failed. Tap Settings -> Manage key to add your Gemini or Groq key.');
     }
     return data;
   }
 
-  throw new Error('No AI engine connected. Make sure Ollama is running or add a Groq key in Settings.');
+  throw new Error('No AI engine connected. Add a free Gemini 2.5 Flash or Groq key in Settings, or use the Claude/ChatGPT Bridge.');
 }
 
 async function callByokService(body) {
@@ -249,7 +394,14 @@ async function callByokService(body) {
 export async function getByokStatus() {
   const localKey = getLocalGroqKey();
   if (localKey) {
-    return { success: true, configured: true, storage: 'device' };
+    const provider = detectAiProvider(localKey);
+    return {
+      success: true,
+      configured: true,
+      storage: 'device',
+      provider,
+      providerLabel: getAiProviderLabel(provider)
+    };
   }
   if (isSupabaseConfigured && supabase) {
     try {
@@ -265,37 +417,52 @@ export async function getByokStatus() {
 
 export async function saveByokKey(key) {
   const cleanKey = (key || '').trim();
-  if (!/^gsk_[A-Za-z0-9_-]{20,}$/.test(cleanKey)) {
-    return { success: false, error: 'Enter a valid Groq API key (starts with gsk_).' };
+  const provider = detectAiProvider(cleanKey);
+  if (!provider) {
+    return {
+      success: false,
+      error: 'Enter a valid API key: Google Gemini (AIza...), Groq (gsk_...), or OpenRouter (sk-or-...).'
+    };
   }
 
-  // Live validate with Groq API
+  // Live validate with selected provider
   try {
-    const DIRECT_PROVIDER_BASE = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1'].join('/');
-    const testRes = await fetch(`${DIRECT_PROVIDER_BASE}/models`, {
-      headers: { Authorization: ['Bearer', cleanKey].join(' ') }
-    });
-    if (!testRes.ok) {
-      const errData = await testRes.json().catch(() => ({}));
-      return {
-        success: false,
-        error: errData?.error?.message || 'Invalid Groq API key. Check console.groq.com/keys.'
-      };
+    if (provider === 'gemini') {
+      const testRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(cleanKey)}`
+      );
+      if (!testRes.ok) {
+        const errData = await testRes.json().catch(() => ({}));
+        return {
+          success: false,
+          error: errData?.error?.message || 'Invalid Google Gemini API key. Check aistudio.google.com/apikey.'
+        };
+      }
+    } else if (provider === 'groq') {
+      const DIRECT_PROVIDER_BASE = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1'].join('/');
+      const testRes = await fetch(`${DIRECT_PROVIDER_BASE}/models`, {
+        headers: { Authorization: ['Bearer', cleanKey].join(' ') }
+      });
+      if (!testRes.ok) {
+        const errData = await testRes.json().catch(() => ({}));
+        return {
+          success: false,
+          error: errData?.error?.message || 'Invalid Groq API key. Check console.groq.com/keys.'
+        };
+      }
     }
   } catch (netErr) {
-    console.warn('Groq key live check skipped due to network:', netErr);
+    console.warn('API key live check skipped due to network:', netErr);
   }
 
-  // Save to device localStorage
   try {
     const storageKey = ['momentum', 'groq', 'api', 'key'].join('_');
     window.localStorage?.setItem(storageKey, cleanKey);
-  } catch (storageErr) {
+  } catch {
     return { success: false, error: 'Could not store key in device storage.' };
   }
 
-  // Optional background sync to Supabase edge function if session exists
-  if (isSupabaseConfigured && supabase) {
+  if (isSupabaseConfigured && supabase && provider === 'groq') {
     try {
       const session = (await supabase.auth.getSession())?.data?.session;
       if (session) {
@@ -304,7 +471,12 @@ export async function saveByokKey(key) {
     } catch {}
   }
 
-  return { success: true, configured: true };
+  return {
+    success: true,
+    configured: true,
+    provider,
+    providerLabel: getAiProviderLabel(provider)
+  };
 }
 
 export async function deleteByokKey() {
@@ -391,7 +563,7 @@ export async function parseWithGroq(input = '', goals = [], options = {}) {
     const result = await callAiService([
       { role: 'system', content: enforceCavemanSystemPrompt(SYSTEM_PROMPT) },
       { role: 'user', content: userPrompt }
-    ], { temperature: 0.1, maxTokens: 800 });
+    ], { temperature: 0.1, maxTokens: 800, taskTier: 'quick' });
 
     const cleanContent = sanitizeCavemanEgress(result.content);
     return { success: true, data: JSON.parse(cleanContent), source: 'groq_api', model: result.model };
@@ -973,7 +1145,7 @@ export async function generateExecutivePlanWithAI({
   messages.push({ role: 'user', content: userInstruction });
 
   try {
-    const result = await callAiService(messages, { temperature: 0.2, maxTokens: 4096 });
+    const result = await callAiService(messages, { temperature: 0.2, maxTokens: 4096, taskTier: 'copilot' });
     const cleanContent = sanitizeCavemanEgress(result.content);
     return {
       success: true,
@@ -984,4 +1156,194 @@ export async function generateExecutivePlanWithAI({
     return { success: false, error: error.message || 'AI service request failed.' };
   }
 }
+
+/**
+ * Computes SHA-256 hex digest of a string in browser or Node.js
+ */
+async function sha256Hex(text) {
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const data = new TextEncoder().encode(text);
+    const hashBuf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuf))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  // Fallback simple hash if crypto.subtle unavailable
+  let h = 0;
+  for (let i = 0; i < text.length; i++) {
+    h = (Math.imul(31, h) + text.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h).toString(16).padStart(64, '0');
+}
+
+export function getMcpEndpointBase() {
+  const supaUrl = (import.meta?.env?.VITE_SUPABASE_URL || 'https://momentum-os.supabase.co').replace(/\/$/, '');
+  return `${supaUrl}/functions/v1/momentum-mcp`;
+}
+
+export function getSavedMcpBridgeInfo() {
+  if (typeof window === 'undefined') {
+    return { configured: false, token: '', mcpUrl: '', openApiUrl: '' };
+  }
+  try {
+    const token = window.localStorage?.getItem('momentum_mcp_bridge_token') || '';
+    const base = getMcpEndpointBase();
+    if (!token) {
+      return {
+        configured: false,
+        token: '',
+        mcpUrl: base,
+        openApiUrl: `${base}/openapi.json`
+      };
+    }
+    return {
+      configured: true,
+      token,
+      mcpUrl: `${base}?token=${encodeURIComponent(token)}`,
+      openApiUrl: `${base}/openapi.json?token=${encodeURIComponent(token)}`
+    };
+  } catch {
+    return { configured: false, token: '', mcpUrl: '', openApiUrl: '' };
+  }
+}
+
+export async function generateMcpBridgeToken(explicitUserId = '') {
+  let userId = explicitUserId;
+  if (!userId && isSupabaseConfigured && supabase) {
+    try {
+      const session = (await supabase.auth.getSession())?.data?.session;
+      if (session?.user?.id) userId = session.user.id;
+    } catch {}
+  }
+  if (!userId) {
+    userId = 'local-operator';
+  }
+
+  const randBytes = new Uint8Array(18);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(randBytes);
+  } else {
+    for (let i = 0; i < randBytes.length; i++) randBytes[i] = Math.floor(Math.random() * 256);
+  }
+  const secretHex = Array.from(randBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  const token = `mom_${userId}_${secretHex}`;
+  const tokenHash = await sha256Hex(token);
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage?.setItem('momentum_mcp_bridge_token', token);
+    } catch {}
+  }
+
+  const base = getMcpEndpointBase();
+  return {
+    token,
+    tokenHash,
+    mcpUrl: `${base}?token=${encodeURIComponent(token)}`,
+    openApiUrl: `${base}/openapi.json?token=${encodeURIComponent(token)}`
+  };
+}
+
+/**
+ * Builds a 1-click self-contained prompt with live compressed workspace state + strict JSON schema
+ * so the user can paste into free claude.ai or chatgpt.com and paste the JSON response back.
+ */
+export function buildExternalChatBridgePrompt({
+  userPrompt = '',
+  goals = [],
+  habits = [],
+  tasks = [],
+  schedules = [],
+  stats = null,
+  todayDate = '',
+  currentTime = ''
+} = {}) {
+  const currentDateStr = todayDate || new Date().toISOString().slice(0, 10);
+  const nowTime = currentTime || new Date().toTimeString().slice(0, 5);
+  const memoryBlock = serializeDenseMemory({
+    goals,
+    habits,
+    tasks,
+    schedules,
+    stats,
+    todayDate: currentDateStr,
+    currentTime: nowTime,
+    query: userPrompt
+  });
+  const directive = getCustomCopilotDirective();
+
+  return [
+    `# MOMENTUM OS — LIVE WORKSPACE SNAPSHOT (${currentDateStr} ${nowTime})`,
+    directive ? `\n## MASTER STRATEGY DIRECTIVE\n${directive}` : '',
+    `\n## LIVE WORKSPACE MEMORY\n${memoryBlock}`,
+    `\n## USER REQUEST\n${userPrompt.trim() || 'Analyze my live workspace, resolve schedule conflicts, and propose my highest-leverage execution plan for today and this week.'}`,
+    `\n## REQUIRED OUTPUT FORMAT (Reply ONLY with a single JSON code block matching this schema so I can paste it straight back into Momentum OS):`,
+    '```json',
+    JSON.stringify({
+      message: 'Concise executive briefing explaining the schedule',
+      hasPlan: true,
+      hasDeletion: false,
+      deletion: null,
+      plan: {
+        summary: '1-line operational headline',
+        goals: [],
+        habits: [],
+        schedules: [
+          {
+            title: 'Class or Fixed Routine',
+            category: 'College',
+            startTime: '09:30',
+            endTime: '11:30',
+            durationMinutes: 120,
+            plannedDate: currentDateStr,
+            recurrence: 'weekly',
+            repeatDays: [1, 3, 5],
+            recurrenceEndDate: null
+          }
+        ],
+        tasks: [
+          {
+            title: 'High-impact execution block',
+            plannedDate: currentDateStr,
+            startTime: '14:00',
+            durationMinutes: 60,
+            impact: 'high',
+            priority: 'high',
+            energy: 'High',
+            recurrence: 'none',
+            areas: ['Deep Focus'],
+            existingGoalId: null,
+            subtasks: ['Step 1', 'Step 2']
+          }
+        ]
+      }
+    }, null, 2),
+    '```'
+  ].filter(Boolean).join('\n');
+}
+
+/**
+ * Parses a pasted JSON or markdown response from Claude.ai or ChatGPT.com into a normalized Momentum plan
+ */
+export function parseExternalChatPlanResponse(rawText = '', todayDate = '', contextEntities = {}) {
+  const cleanJson = sanitizeCavemanEgress(rawText);
+  if (!cleanJson) {
+    throw new Error('Paste the JSON response from Claude or ChatGPT.');
+  }
+  const parsed = JSON.parse(cleanJson);
+  const currentDateStr = todayDate || new Date().toISOString().slice(0, 10);
+  // Support either full { hasPlan, plan } wrapper or direct { summary, tasks, schedules } object
+  const wrapped = parsed.plan
+    ? { ...parsed, hasPlan: true }
+    : (parsed.tasks || parsed.schedules || parsed.goals || parsed.habits)
+      ? {
+          message: parsed.message || parsed.summary || 'Imported plan from Claude / ChatGPT Bridge.',
+          hasPlan: true,
+          plan: parsed
+        }
+      : parsed;
+
+  return normalizeCopilotPlan(wrapped, currentDateStr, contextEntities);
+}
+
 

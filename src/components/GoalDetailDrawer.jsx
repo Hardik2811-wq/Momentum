@@ -191,6 +191,7 @@ export default function GoalDetailDrawer({
   onDeleteGoal,
   tasks = [],
   habits = [],
+  onEditHabit,
   addTask,
   onToggleTask,
   onStartFocus,
@@ -215,7 +216,10 @@ export default function GoalDetailDrawer({
       setDateType(goal.dateType || (goal.targetDate ? 'custom' : 'open'));
       setTargetDate(goal.targetDate || '');
       setStatus(goal.status || ((goal.workProgress ?? goal.progress) === 100 ? 'completed' : 'active'));
-      setLinkedHabitIds(goal.linkedHabitIds || []);
+      const derivedIds = Array.isArray(goal.linkedHabits) && goal.linkedHabits.length > 0
+        ? goal.linkedHabits.map(h => h.id)
+        : (goal.linkedHabitIds || []);
+      setLinkedHabitIds(derivedIds);
     }
   }, [goal]);
 
@@ -628,22 +632,44 @@ export default function GoalDetailDrawer({
                 </label>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {habits.map(habit => {
-                    const isLinked = linkedHabitIds.includes(habit.id);
+                    const isLinked = linkedHabitIds.some(hid => String(hid) === String(habit.id));
                     return (
-                      <button
+                      <div
                         key={habit.id}
-                        type="button"
-                        onClick={() => toggleHabit(habit.id)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition border ${
+                        className={`inline-flex items-center rounded-full text-[11px] font-semibold transition border overflow-hidden ${
                           isLinked
                             ? 'bg-purple-600 text-white border-purple-600 shadow-3xs'
                             : 'bg-white text-[#64748B] border-black/[0.08] hover:bg-[#F0EFF5]'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[13px]">{habit.icon || 'repeat'}</span>
-                        <span>{habit.title}</span>
-                        {isLinked && <span className="material-symbols-outlined text-[12px]">done</span>}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleHabit(habit.id)}
+                          className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 cursor-pointer"
+                          title={isLinked ? 'Click to unlink ritual from goal' : 'Click to link ritual to goal'}
+                        >
+                          <span className="material-symbols-outlined text-[13px]">{habit.icon || 'repeat'}</span>
+                          <span>{habit.title}</span>
+                          {isLinked && <span className="material-symbols-outlined text-[12px]">done</span>}
+                        </button>
+                        {onEditHabit && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditHabit(habit);
+                            }}
+                            title={`Edit "${habit.title}" sequence`}
+                            className={`px-1.5 py-1 border-l transition cursor-pointer flex items-center justify-center ${
+                              isLinked
+                                ? 'border-white/20 hover:bg-purple-700 text-white/85 hover:text-white'
+                                : 'border-black/[0.06] hover:bg-black/[0.06] text-slate-400 hover:text-slate-700'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[12px]">edit</span>
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>

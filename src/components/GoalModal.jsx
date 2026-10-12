@@ -156,17 +156,22 @@ export default function GoalModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/40 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/45 backdrop-blur-md animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       onClick={resetForm}
     >
       <div
-        className="w-full max-w-4xl max-h-[92vh] sm:max-h-[88vh] rounded-2xl bg-surface-bone dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col text-ink-primary dark:text-[#F7F6F2] transition-all animate-in zoom-in-95 duration-200"
+        className="w-full max-w-4xl max-h-[92dvh] sm:max-h-[88vh] rounded-t-[28px] sm:rounded-2xl bg-surface-bone dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.28)] overflow-hidden flex flex-col text-ink-primary dark:text-[#F7F6F2] transition-all animate-androidSheet"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Android Bottom Sheet Drag Handle (Mobile Only) */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-0.5 bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
+          <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/20" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-3 sm:py-3.5 border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-accent-cobalt" />
             <h3 className="font-editorial text-[17px] font-normal text-ink-primary dark:text-[#F7F6F2] tracking-tight">
@@ -396,7 +401,7 @@ export default function GoalModal({
           </div>
 
           {/* Footer */}
-          <div className="px-5 sm:px-6 py-3.5 border-t border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] flex items-center justify-end gap-2 shrink-0">
+          <div className="px-5 sm:px-6 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:pb-3.5 border-t border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518] flex items-center justify-end gap-2 shrink-0">
             <button
               type="button"
               onClick={resetForm}

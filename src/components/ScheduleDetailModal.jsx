@@ -138,31 +138,36 @@ export default function ScheduleDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/45 backdrop-blur-sm animate-fadeIn"
       role="presentation"
       onMouseDown={onClose}
     >
       <div
-        className="w-full max-w-[560px] bg-white rounded-3xl border border-black/[0.08] shadow-[0_32px_96px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col max-h-[92vh] text-[#1A1B1F]"
+        className="w-full max-w-[560px] bg-surface-bone dark:bg-[#1A1A1E] rounded-t-[28px] sm:rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_96px_rgba(0,0,0,0.26)] overflow-hidden flex flex-col max-h-[92dvh] text-[#1A1B1F] dark:text-[#F7F6F2] animate-androidSheet"
         role="dialog"
         aria-modal="true"
         onMouseDown={(e) => e.stopPropagation()}
       >
+        {/* Android Bottom Sheet Drag Handle (Mobile Only) */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-0.5 bg-[#FAFAFC] dark:bg-[#151518] shrink-0">
+          <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/20" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.06] bg-[#FAFAFC]">
+        <div className="flex items-center justify-between px-6 py-3.5 sm:py-4 border-b border-black/[0.06] dark:border-white/[0.08] bg-[#FAFAFC] dark:bg-[#151518]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200/60 flex items-center justify-center text-indigo-600 shadow-2xs">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/60 dark:border-indigo-800/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-2xs">
               <span className="material-symbols-outlined text-[19px]">school</span>
             </div>
             <div>
-              <h2 className="text-[15px] font-bold text-[#1A1B1F] tracking-tight">Edit Class / Schedule Block</h2>
-              <p className="text-[11px] text-[#64748B]">Fixed timetable routines appear on your calendar</p>
+              <h2 className="text-[15px] font-bold text-[#1A1B1F] dark:text-[#F7F6F2] tracking-tight">Edit Class / Schedule Block</h2>
+              <p className="text-[11px] text-[#64748B] dark:text-[#8E8E93]">Fixed timetable routines appear on your calendar</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#8E8E93] hover:text-[#1A1B1F] hover:bg-black/[0.05] transition cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#8E8E93] hover:text-[#1A1B1F] dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
@@ -330,7 +335,7 @@ export default function ScheduleDetailModal({
         </form>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-black/[0.06] bg-[#FAFAFC]">
+        <div className="flex items-center justify-between px-6 pt-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:py-4 border-t border-black/[0.06] dark:border-white/[0.08] bg-[#FAFAFC] dark:bg-[#151518] shrink-0">
           <button
             type="button"
             onClick={() => setShowConfirmDelete(true)}

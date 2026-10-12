@@ -28,11 +28,17 @@
   100% { transform: scale(1); }
 }
 
-.animate-fadeIn    { animation: fadeIn 0.18s cubic-bezier(0.16,1,0.3,1) forwards; }
-.animate-slideIn   { animation: slideIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards; }
-.animate-taskUp    { animation: taskSlideUp 0.28s cubic-bezier(0.16,1,0.3,1) forwards; }
-.animate-taskDown  { animation: taskSlideDown 0.28s cubic-bezier(0.16,1,0.3,1) forwards; }
-.animate-checkPop  { animation: checkPop 0.24s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+@keyframes androidSheetUp {
+  0%   { opacity: 0; transform: translateY(28px) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-fadeIn       { animation: fadeIn 0.18s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-slideIn      { animation: slideIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-taskUp       { animation: taskSlideUp 0.28s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-taskDown     { animation: taskSlideDown 0.28s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-checkPop     { animation: checkPop 0.24s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.animate-androidSheet { animation: androidSheetUp 0.24s cubic-bezier(0.22,1,0.36,1) forwards; }
 
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -42,7 +48,11 @@
 
 /* ── Mobile Touch & Safe Areas ─────────────── */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 16px));
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .scrollbar-none::-webkit-scrollbar {
@@ -53,9 +63,14 @@
   scrollbar-width: none;
 }
 
-/* Tap highlight optimization for native mobile app feel */
+/* Tap highlight & touch optimization for native Android app feel */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Scrollbar ─────────────────────────────── */
@@ -114,15 +129,15 @@ main {
   border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* ── Typography & OpenType Feature Enhancements ── */
+/* ── Typography & OpenType Feature Enhancements (Stitch Design Taste) ── */
 body, .font-sans {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+  font-family: 'Plus Jakarta Sans', 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.012em;
   text-rendering: optimizeLegibility;
 }
 
 .font-display {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
   letter-spacing: -0.025em;
 }
 

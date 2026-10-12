@@ -1,7 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { parseDocumentFile } from '../lib/documentParser';
-import { generateExecutivePlanWithAI, hasAiService } from '../lib/groqClient';
+import {
+  buildExternalChatBridgePrompt,
+  generateExecutivePlanWithAI,
+  hasAiService,
+  parseExternalChatPlanResponse
+} from '../lib/groqClient';
 import { todayPlanDate, calculateEndTime, parseCompoundDuration, calculateNextArrivingDate } from '../lib/taskMetadata';
 import { resolveLocalCopilotIntent } from '../lib/copilotIntentRouter';
 import { harvestCopilotPlan } from '../lib/nlpMemory';
@@ -35,7 +40,7 @@ export default function AiCopilotModal({
   activeTab = '',
   onOpenApiKeyModal
 }) {
-  const [copilotView, setCopilotView] = useState('chat'); // 'chat' | 'graph'
+  const [copilotView, setCopilotView] = useState('chat'); // 'chat' | 'graph' | 'bridge'
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [attachedDoc, setAttachedDoc] = useState(null);
@@ -45,6 +50,10 @@ export default function AiCopilotModal({
   const [executedDeletions, setExecutedDeletions] = useState(new Set());
   const [lastCreatedEntities, setLastCreatedEntities] = useState(null);
   const [editingPlanIds, setEditingPlanIds] = useState(new Set());
+  const [bridgeQuery, setBridgeQuery] = useState('');
+  const [bridgeCopied, setBridgeCopied] = useState(false);
+  const [bridgePasteText, setBridgePasteText] = useState('');
+  const [bridgeError, setBridgeError] = useState('');
 
   const toggleEditPlan = (messageId) => {
     setEditingPlanIds(prev => {
@@ -731,6 +740,53 @@ export default function AiCopilotModal({
     } catch {}
   };
 
+  const handleCopyBridgePrompt = async () => {
+    const promptText = buildExternalChatBridgePrompt({
+      userPrompt: bridgeQuery || input,
+      goals,
+      habits,
+      tasks,
+      schedules,
+      stats,
+      todayDate: todayPlanDate(),
+      currentTime: new Date().toTimeString().slice(0, 5)
+    });
+    try {
+      await navigator.clipboard.writeText(promptText);
+      setBridgeCopied(true);
+      setTimeout(() => setBridgeCopied(false), 2500);
+    } catch {}
+  };
+
+  const handleApplyPastedBridgeJson = () => {
+    setBridgeError('');
+    try {
+      const normalized = parseExternalChatPlanResponse(bridgePasteText, todayPlanDate(), {
+        goals,
+        habits,
+        schedules,
+        tasks
+      });
+      const msgId = `bridge-${Date.now()}`;
+      setMessages(prev => [
+        ...prev,
+        {
+          id: msgId,
+          role: 'assistant',
+          content: normalized.message || 'Imported execution plan from Claude.ai / ChatGPT.com Bridge. Review and click Approve below:',
+          hasPlan: Boolean(normalized.hasPlan && normalized.plan),
+          plan: normalized.plan || null,
+          hasDeletion: Boolean(normalized.hasDeletion && normalized.deletion),
+          deletion: normalized.deletion || null
+        }
+      ]);
+      setBridgePasteText('');
+      setCopilotView('chat');
+    } catch (err) {
+      setBridgeError(err.message || 'Could not parse JSON response. Make sure you copied the JSON block from Claude or ChatGPT.');
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150"
@@ -745,40 +801,53 @@ export default function AiCopilotModal({
         </div>
 
         {/* Minimal Header */}
-        <header className="px-4 sm:px-5 py-2.5 border-b border-black/[0.07] dark:border-white/[0.08] flex items-center justify-between shrink-0 bg-[#F7F6F2] dark:bg-[#151518] select-none">
+        <header className="px-3.5 sm:px-5 py-2.5 border-b border-black/[0.07] dark:border-white/[0.08] flex items-center justify-between shrink-0 bg-[#F7F6F2] dark:bg-[#151518] select-none">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <h3 className="font-editorial text-[17px] font-normal text-ink-primary dark:text-[#F7F6F2] tracking-tight">Copilot</h3>
             <span className="font-mono text-[11px] uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93] hidden sm:inline">• Plan &amp; Schedule</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* View Mode Toggle: Chat vs Graphify Life Graph */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* View Mode Toggle: Chat vs Claude/GPT Bridge vs Graphify */}
             <div className="flex items-center p-0.5 bg-black/[0.05] dark:bg-white/[0.07] rounded-lg border border-black/[0.06] dark:border-white/[0.08]">
               <button
                 type="button"
                 onClick={() => setCopilotView('chat')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
                   copilotView === 'chat'
                     ? 'bg-white dark:bg-[#252529] text-ink-primary dark:text-[#F7F6F2] shadow-2xs'
                     : 'text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2]'
                 }`}
                 title="Copilot Chat Assistant"
               >
-                <span className="material-symbols-outlined text-[14px]">chat</span>
+                <span className="material-symbols-outlined text-[13px]">chat</span>
                 <span>Chat</span>
               </button>
               <button
                 type="button"
+                onClick={() => setCopilotView('bridge')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                  copilotView === 'bridge'
+                    ? 'bg-violet-600 text-white shadow-2xs'
+                    : 'text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2]'
+                }`}
+                title="1-Click Claude.ai & ChatGPT.com Bridge"
+              >
+                <span className="material-symbols-outlined text-[13px]">bolt</span>
+                <span>Claude/GPT</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setCopilotView('graph')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
                   copilotView === 'graph'
                     ? 'bg-accent-cobalt text-white shadow-2xs'
                     : 'text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2]'
                 }`}
                 title="Graphify Life Graph DAG"
               >
-                <span className="material-symbols-outlined text-[14px]">hub</span>
+                <span className="material-symbols-outlined text-[13px]">hub</span>
                 <span>Graphify</span>
               </button>
             </div>
@@ -802,6 +871,98 @@ export default function AiCopilotModal({
             toggleTask={toggleTask}
             onSwitchToChat={() => setCopilotView('chat')}
           />
+        ) : copilotView === 'bridge' ? (
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <div className="p-3.5 rounded-2xl bg-violet-500/10 border border-violet-500/20 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-300">
+                  CLAUDE.AI &amp; CHATGPT.COM BRIDGE
+                </span>
+                <a
+                  href="/MOMENTUM_CLAUDE_SKILL.md"
+                  download="MOMENTUM_CLAUDE_SKILL.md"
+                  className="text-[11px] font-semibold text-[#0A84FF] hover:underline flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[13px]">download</span>
+                  <span>Download Claude Skill (.MD)</span>
+                </a>
+              </div>
+              <p className="text-[12px] text-ink-secondary dark:text-[#A0A0A8] leading-relaxed">
+                Use <strong>Claude 3.7 / Opus 4.6</strong> on <code className="font-mono text-[11px]">claude.ai</code> or <strong>GPT-5 / o3</strong> on <code className="font-mono text-[11px]">chatgpt.com</code> with your live Momentum workspace. Or connect the live Remote MCP Server in <strong>Settings → Claude.ai &amp; ChatGPT.com Live MCP Bridge</strong> for zero-click real-time WebSocket sync!
+              </p>
+            </div>
+
+            <div className="space-y-2 rounded-2xl bg-white dark:bg-[#151518] p-3.5 border border-black/[0.07] dark:border-white/[0.08]">
+              <label className="block font-mono text-[10px] font-bold uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">
+                Step 1: What should Claude / ChatGPT plan for you?
+              </label>
+              <input
+                type="text"
+                value={bridgeQuery}
+                onChange={(e) => setBridgeQuery(e.target.value)}
+                placeholder="e.g. Schedule my CN, CML & MERN study sprints around my classes this week..."
+                className="w-full px-3 py-2 rounded-xl text-[12px] bg-[#F7F6F2] dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] outline-none focus:border-violet-500"
+              />
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleCopyBridgePrompt}
+                  className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-[12px] font-semibold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[15px]">content_copy</span>
+                  <span>{bridgeCopied ? '✓ Copied Live Workspace Prompt!' : 'Copy Live Workspace Prompt'}</span>
+                </button>
+                <a
+                  href="https://claude.ai/new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleCopyBridgePrompt}
+                  className="px-3 py-2 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.1] text-[11.5px] font-semibold transition"
+                >
+                  Open claude.ai ↗
+                </a>
+                <a
+                  href="https://chatgpt.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleCopyBridgePrompt}
+                  className="px-3 py-2 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.1] text-[11.5px] font-semibold transition"
+                >
+                  Open chatgpt.com ↗
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-2xl bg-white dark:bg-[#151518] p-3.5 border border-black/[0.07] dark:border-white/[0.08]">
+              <label className="block font-mono text-[10px] font-bold uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">
+                Step 2: Paste Claude or ChatGPT JSON Response
+              </label>
+              <textarea
+                rows={5}
+                value={bridgePasteText}
+                onChange={(e) => {
+                  setBridgePasteText(e.target.value);
+                  setBridgeError('');
+                }}
+                placeholder='Paste the JSON reply from Claude.ai or ChatGPT.com here to preview & apply directly onto your calendar...'
+                className="w-full p-2.5 rounded-xl text-[11.5px] font-mono bg-[#F7F6F2] dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] outline-none focus:border-violet-500 resize-y"
+              />
+              {bridgeError && (
+                <p className="text-[11px] text-rose-500 font-medium">{bridgeError}</p>
+              )}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  disabled={!bridgePasteText.trim()}
+                  onClick={handleApplyPastedBridgeJson}
+                  className="px-4 py-2 rounded-xl bg-[#0A84FF] hover:bg-[#0071E3] disabled:opacity-40 text-white text-[12px] font-semibold transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[15px]">calendar_add_on</span>
+                  <span>Preview &amp; Apply to Calendar</span>
+                </button>
+              </div>
+            </div>
+          </div>
         ) : (
           <>
             {/* Message Canvas / Empty State */}

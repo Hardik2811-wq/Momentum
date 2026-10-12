@@ -13,19 +13,24 @@ export default function ConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-md animate-fadeIn"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+    >
       <div 
         onClick={(e) => e.stopPropagation()} 
-        className="w-full max-w-[340px] rounded-3xl bg-white border border-black/[0.06] shadow-[0_20px_60px_rgba(0,0,0,0.12),0_4px_16px_rgba(0,0,0,0.04)] p-6 sm:p-7 flex flex-col items-center text-center transform transition-all animate-scaleIn"
+        className="w-full max-w-[340px] rounded-3xl bg-white dark:bg-[#1C1C20] border border-black/[0.08] dark:border-white/[0.1] shadow-[0_20px_60px_rgba(0,0,0,0.18),0_4px_16px_rgba(0,0,0,0.08)] p-6 sm:p-7 flex flex-col items-center text-center animate-scaleIn transition-colors"
       >
         {/* Playful Illustrated Trash / Icon with Floating Spark Dots */}
         <div className="relative mb-4 flex items-center justify-center">
           {isDanger ? (
             <div className="relative w-16 h-16 flex items-center justify-center">
               {/* Sparkle micro-dots */}
-              <span className="absolute top-1 left-2 w-1.5 h-1.5 rounded-full bg-red-300 animate-pulse"></span>
+              <span className="absolute top-1 left-2 w-1.5 h-1.5 rounded-full bg-red-300 dark:bg-red-400 animate-pulse"></span>
               <span className="absolute top-0 right-3 w-1 h-1 rounded-full bg-red-400"></span>
-              <span className="absolute bottom-2 left-1 w-1 h-1 rounded-full bg-red-300"></span>
+              <span className="absolute bottom-2 left-1 w-1 h-1 rounded-full bg-red-300 dark:bg-red-400"></span>
               <span className="absolute top-4 right-1 w-1.5 h-1.5 rounded-full bg-red-300"></span>
               <span className="absolute bottom-3 right-2 w-1 h-1 rounded-full bg-red-400"></span>
 
@@ -60,19 +65,19 @@ export default function ConfirmModal({
               </svg>
             </div>
           ) : (
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-1">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-[#6495ED] mb-1">
               <span className="material-symbols-outlined text-[30px]">help_outline</span>
             </div>
           )}
         </div>
 
         {/* Modal Title */}
-        <h3 className="text-[17px] sm:text-[18px] font-semibold text-[#1A1B1F] tracking-tight leading-snug mb-2">
+        <h3 className="text-[17px] sm:text-[18px] font-semibold text-[#1A1B1F] dark:text-[#F7F6F2] tracking-tight leading-snug mb-2">
           {title}
         </h3>
 
         {/* Modal Message */}
-        <p className="text-[13px] text-[#71717A] leading-relaxed max-w-[270px] mb-6">
+        <p className="text-[13px] text-[#71717A] dark:text-[#A1A1AA] leading-relaxed max-w-[270px] mb-6">
           {message}
         </p>
 
@@ -81,14 +86,14 @@ export default function ConfirmModal({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-2.5 px-4 rounded-full text-[13px] font-medium text-[#4B4B52] bg-white border border-black/[0.12] hover:bg-black/[0.03] active:scale-[0.98] transition-all"
+            className="flex-1 py-2.5 px-4 rounded-full text-[13px] font-medium text-[#4B4B52] dark:text-[#D4D4D8] bg-white dark:bg-[#252529] border border-black/[0.12] dark:border-white/[0.12] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-[0.98] transition-all cursor-pointer"
           >
             {cancelText}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`flex-1 py-2.5 px-4 rounded-full text-[13px] font-semibold text-white shadow-sm active:scale-[0.98] transition-all ${
+            className={`flex-1 py-2.5 px-4 rounded-full text-[13px] font-semibold text-white shadow-sm active:scale-[0.98] transition-all cursor-pointer ${
               isDanger
                 ? 'bg-[#E5484D] hover:bg-[#D93D42] shadow-red-500/25'
                 : 'bg-[#0A84FF] hover:bg-[#0071E3] shadow-blue-500/25'

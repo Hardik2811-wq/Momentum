@@ -20,7 +20,7 @@ export default function MobileTabBar({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Close speed dial on Escape key
+  // Close action sheet on Escape key
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e) => {
@@ -35,187 +35,170 @@ export default function MobileTabBar({
     setActiveTab(tabId);
   };
 
-  const speedDialItems = [
+  const quickCreateActions = [
     {
-      id: 'ai-copilot',
-      label: 'AI Copilot',
-      icon: 'auto_awesome',
-      bgClass: 'bg-[#0F52BA] text-white',
-      shadow: 'shadow-[0_4px_14px_rgba(15,82,186,0.35)]',
-      animClass: 'animate-in fade-in slide-in-from-bottom-6 duration-200 delay-150',
-      action: onOpenAiCopilot
-    },
-    {
-      id: 'goal',
-      label: 'New Goal',
-      icon: 'flag',
-      bgClass: 'bg-[#C84B31] text-white',
-      shadow: 'shadow-[0_4px_14px_rgba(200,75,49,0.35)]',
-      animClass: 'animate-in fade-in slide-in-from-bottom-5 duration-200 delay-100',
-      action: onOpenNewGoal
+      id: 'task',
+      label: 'New Task',
+      sublabel: 'Action item or schedule block',
+      icon: 'task_alt',
+      iconBg: 'bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618]',
+      action: onOpenQuickAdd
     },
     {
       id: 'habit',
       label: 'New Habit',
+      sublabel: 'Recurring daily sequence',
       icon: 'cached',
-      bgClass: 'bg-[#2E6F40] text-white',
-      shadow: 'shadow-[0_4px_14px_rgba(46,111,64,0.35)]',
-      animClass: 'animate-in fade-in slide-in-from-bottom-4 duration-200 delay-75',
+      iconBg: 'bg-[#2E6F40] text-white',
       action: onOpenNewHabit
     },
     {
-      id: 'task',
-      label: 'New Task',
-      icon: 'task_alt',
-      bgClass: 'bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618]',
-      shadow: 'shadow-[0_4px_14px_rgba(0,0,0,0.25)]',
-      animClass: 'animate-in fade-in slide-in-from-bottom-3 duration-150',
-      action: onOpenQuickAdd
+      id: 'goal',
+      label: 'New Goal',
+      sublabel: 'Horizon target & milestones',
+      icon: 'flag',
+      iconBg: 'bg-[#C84B31] text-white',
+      action: onOpenNewGoal
+    },
+    {
+      id: 'ai-copilot',
+      label: 'AI Copilot',
+      sublabel: 'Generate schedule from syllabus',
+      icon: 'auto_awesome',
+      iconBg: 'bg-[#0F52BA] text-white',
+      action: onOpenAiCopilot
     }
   ];
 
+  const renderTabButton = (item) => {
+    const isActive = activeTab === item.id;
+    return (
+      <button
+        key={item.id}
+        type="button"
+        onClick={() => handleTabClick(item.id)}
+        className={`flex-1 min-w-[60px] min-h-[52px] flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+          isActive
+            ? 'text-[#161618] dark:text-[#F7F6F2] font-bold'
+            : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white font-medium'
+        }`}
+      >
+        {/* Material 3 Active Pill Indicator */}
+        <div
+          className={`w-14 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
+            isActive
+              ? 'bg-[#0F52BA]/14 dark:bg-[#6495ED]/20 text-[#0F52BA] dark:text-[#6495ED]'
+              : 'bg-transparent'
+          }`}
+        >
+          <span
+            className="material-symbols-outlined text-[21px] transition-transform duration-200"
+            style={{ fontVariationSettings: isActive ? '"FILL" 1, "wght" 600' : '"FILL" 0, "wght" 400' }}
+          >
+            {item.icon}
+          </span>
+        </div>
+        <span className="text-[10.5px] tracking-tight mt-0.5 leading-none">
+          {item.label}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <>
-      {/* Background backdrop dismissal */}
+      {/* Android Action Sheet Backdrop & Drawer */}
       {isOpen && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200"
+          className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-[3px] flex items-end justify-center animate-in fade-in duration-150"
           onClick={() => setIsOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Quick create menu"
+        >
+          <div
+            className="w-full max-w-md bg-[#F7F6F2] dark:bg-[#1A1A1E] rounded-t-[28px] border-t border-black/[0.08] dark:border-white/[0.08] px-4 pt-2.5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-16px_48px_rgba(0,0,0,0.28)] animate-androidSheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Android Sheet Drag Handle */}
+            <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mb-3" />
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FBFBFA]/95 dark:bg-[#161619]/95 backdrop-blur-2xl border-t border-black/[0.07] dark:border-white/[0.08] px-3 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center justify-between max-w-md mx-auto relative">
-          
-          {/* Vertical Staggered Speed Dial */}
-          {isOpen && (
-            <div
-              role="menu"
-              aria-label="Create new item"
-              className="absolute bottom-[68px] left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3 select-none"
-            >
-              {speedDialItems.map((item) => (
+            <div className="flex items-center justify-between px-1 mb-3">
+              <div>
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#6B6A72] dark:text-[#8E8E93]">
+                  Quick Capture
+                </span>
+                <h3 className="font-editorial text-[18px] text-[#161618] dark:text-[#F7F6F2] tracking-tight leading-tight">
+                  Create in Momentum
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="w-8 h-8 rounded-full bg-black/[0.05] dark:bg-white/[0.06] flex items-center justify-center text-[#6B6A72] dark:text-[#8E8E93]"
+                aria-label="Close menu"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {quickCreateActions.map((item) => (
                 <button
                   key={item.id}
                   type="button"
-                  role="menuitem"
                   onClick={() => {
                     setIsOpen(false);
                     item.action?.();
                   }}
-                  className={`relative flex items-center justify-center group cursor-pointer focus:outline-none ${item.animClass}`}
+                  className="flex flex-col items-start gap-2 p-3.5 rounded-2xl bg-white dark:bg-[#222227] border border-black/[0.07] dark:border-white/[0.08] shadow-xs active:scale-[0.98] transition-all text-left cursor-pointer"
                 >
-                  {/* Floating Pill Label on the left */}
-                  <div className="absolute right-[54px] whitespace-nowrap">
-                    <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1E1E22] border border-black/[0.07] dark:border-white/[0.08] shadow-double-bezel text-[12px] font-semibold text-[#161618] dark:text-[#F7F6F2] tracking-tight group-hover:scale-105 group-active:scale-95 transition-all">
-                      {item.label}
-                    </span>
+                  <div className={`w-9 h-9 rounded-xl ${item.iconBg} flex items-center justify-center shadow-xs`}>
+                    <span className="material-symbols-outlined text-[19px]">{item.icon}</span>
                   </div>
-
-                  {/* Circular Button aligned vertically with center FAB */}
-                  <div className={`w-11 h-11 rounded-full ${item.bgClass} flex items-center justify-center ${item.shadow} group-hover:scale-105 group-active:scale-95 transition-all`}>
-                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                  <div>
+                    <div className="text-[13px] font-bold text-[#161618] dark:text-[#F7F6F2] tracking-tight">
+                      {item.label}
+                    </div>
+                    <div className="text-[10.5px] text-[#6B6A72] dark:text-[#8E8E93] leading-snug mt-0.5">
+                      {item.sublabel}
+                    </div>
                   </div>
                 </button>
               ))}
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
+      {/* Material 3 Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FBFBFA]/96 dark:bg-[#151518]/96 backdrop-blur-2xl border-t border-black/[0.07] dark:border-white/[0.08] px-2 pt-1 pb-[max(0.45rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between max-w-md mx-auto relative">
           {/* Left 2 Tabs */}
-          {NAV_ITEMS_LEFT.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleTabClick(item.id)}
-                className={`flex-1 min-w-[56px] min-h-[44px] flex flex-col items-center justify-center py-0.5 rounded-xl transition-all duration-200 cursor-pointer ${
-                  isActive
-                    ? 'text-[#161618] dark:text-[#F7F6F2] font-semibold'
-                    : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white font-medium'
-                }`}
-              >
-                <span
-                  className={`material-symbols-outlined text-[22px] transition-colors ${
-                    isActive ? 'text-[#0F52BA] dark:text-[#6495ED]' : ''
-                  }`}
-                  style={{ fontVariationSettings: isActive ? '"FILL" 1, "wght" 500' : '"FILL" 0, "wght" 400' }}
-                >
-                  {item.icon}
-                </span>
-                <span className="text-[10.5px] tracking-tight mt-0.5">
-                  {item.label}
-                </span>
-                {isActive && (
-                  <span className="w-1 h-1 rounded-full bg-[#0F52BA] dark:bg-[#6495ED] mt-0.5" />
-                )}
-              </button>
-            );
-          })}
+          {NAV_ITEMS_LEFT.map(renderTabButton)}
 
-          {/* Center Primary Creation CTA */}
-          <div className="flex items-center justify-center px-1">
+          {/* Center Android Squircle Creation FAB */}
+          <div className="flex items-center justify-center px-1.5">
             <button
               type="button"
-              onClick={() => {
-                if (isOpen) {
-                  setIsOpen(false);
-                  return;
-                }
-                if (activeTab === 'dashboard') {
-                  onOpenQuickAdd?.();
-                } else if (activeTab === 'goals') {
-                  onOpenNewGoal?.();
-                } else if (activeTab === 'habits') {
-                  onOpenNewHabit?.();
-                } else {
-                  setIsOpen(true);
-                }
-              }}
-              aria-label={isOpen ? 'Close creation menu' : 'Open creation menu'}
+              onClick={() => setIsOpen((prev) => !prev)}
+              aria-label={isOpen ? 'Close creation sheet' : 'Open creation sheet'}
               aria-expanded={isOpen}
-              className={`w-11 h-11 rounded-full flex items-center justify-center shadow-double-bezel active:scale-95 transition-all duration-200 -mt-2 cursor-pointer ${
+              className={`w-12 h-11 rounded-2xl flex items-center justify-center shadow-[0_6px_16px_rgba(15,82,186,0.28)] active:scale-92 transition-all duration-200 cursor-pointer ${
                 isOpen
-                  ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-white border border-black/[0.08] dark:border-white/[0.08] rotate-45'
-                  : 'bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] rotate-0'
+                  ? 'bg-white dark:bg-[#242429] text-[#161618] dark:text-white border border-black/[0.1] dark:border-white/[0.12] rotate-45'
+                  : 'bg-[#0F52BA] dark:bg-[#3B82F6] text-white rotate-0'
               }`}
             >
-              <span className="material-symbols-outlined text-[23px]">add</span>
+              <span className="material-symbols-outlined text-[24px]">add</span>
             </button>
           </div>
 
           {/* Right 2 Tabs */}
-          {NAV_ITEMS_RIGHT.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleTabClick(item.id)}
-                className={`flex-1 min-w-[56px] min-h-[44px] flex flex-col items-center justify-center py-0.5 rounded-xl transition-all duration-200 cursor-pointer ${
-                  isActive
-                    ? 'text-[#161618] dark:text-[#F7F6F2] font-semibold'
-                    : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-white font-medium'
-                }`}
-              >
-                <span
-                  className={`material-symbols-outlined text-[22px] transition-colors ${
-                    isActive ? 'text-[#0F52BA] dark:text-[#6495ED]' : ''
-                  }`}
-                  style={{ fontVariationSettings: isActive ? '"FILL" 1, "wght" 500' : '"FILL" 0, "wght" 400' }}
-                >
-                  {item.icon}
-                </span>
-                <span className="text-[10.5px] tracking-tight mt-0.5">
-                  {item.label}
-                </span>
-                {isActive && (
-                  <span className="w-1 h-1 rounded-full bg-[#0F52BA] dark:bg-[#6495ED] mt-0.5" />
-                )}
-              </button>
-            );
-          })}
+          {NAV_ITEMS_RIGHT.map(renderTabButton)}
         </div>
       </nav>
     </>
   );
 }
+

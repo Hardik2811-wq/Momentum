@@ -3,7 +3,12 @@ import ConfirmModal from '../components/ConfirmModal';
 import TimezoneSelect from '../components/TimezoneSelect';
 import ApiKeyModal from '../components/ApiKeyModal';
 import { sendNotification } from '../store/useStore';
-import { getCustomCopilotDirective, setCustomCopilotDirective } from '../lib/groqClient';
+import {
+  generateMcpBridgeToken,
+  getCustomCopilotDirective,
+  getSavedMcpBridgeInfo,
+  setCustomCopilotDirective
+} from '../lib/groqClient';
 import { getNlpInsights, resetNlpMemory } from '../lib/nlpMemory';
 import MobileWidgetsShowcase from '../components/MobileWidgetsShowcase';
 
@@ -67,6 +72,9 @@ export default function SettingsView({
   const [intelligence, setIntelligence] = useState(() => getNlpInsights());
   const [customDirective, setCustomDirective] = useState(() => getCustomCopilotDirective());
   const [directiveSaved, setDirectiveSaved] = useState(false);
+  const [mcpInfo, setMcpInfo] = useState(() => getSavedMcpBridgeInfo());
+  const [mcpCopiedField, setMcpCopiedField] = useState('');
+  const [isGeneratingMcp, setIsGeneratingMcp] = useState(false);
   const fileInputRef = useRef(null);
 
   const inputCls = 'bg-[#F0EFEA] dark:bg-[#202024] border-black/[0.08] dark:border-white/[0.08] text-ink-primary dark:text-[#F7F6F2] focus:border-accent-cobalt';
@@ -78,6 +86,30 @@ export default function SettingsView({
     window.addEventListener('momentum:nlp-learned', refreshIntelligence);
     return () => window.removeEventListener('momentum:nlp-learned', refreshIntelligence);
   }, []);
+
+  const handleGenerateMcpToken = async () => {
+    setIsGeneratingMcp(true);
+    try {
+      const info = await generateMcpBridgeToken();
+      setMcpInfo({ configured: true, ...info });
+      updateSettings?.({
+        mcpBridgeTokenHash: info.tokenHash,
+        mcpBridgeUpdatedAt: new Date().toISOString()
+      });
+      setTimeout(() => cloudSync?.syncNow?.(), 250);
+    } finally {
+      setIsGeneratingMcp(false);
+    }
+  };
+
+  const copyMcpText = async (text, field) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setMcpCopiedField(field);
+      setTimeout(() => setMcpCopiedField(''), 2000);
+    } catch {}
+  };
 
   const [showClearLearningConfirm, setShowClearLearningConfirm] = useState(false);
 
@@ -118,8 +150,8 @@ export default function SettingsView({
   };
 
   return (
-    <main className="w-full pt-16 md:pt-12 min-h-screen transition-colors duration-300 bg-canvas dark:bg-canvas-dark text-ink-primary dark:text-[#F7F6F2]">
-      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-4 sm:py-8 pb-24 space-y-6">
+    <main className="w-full pt-[calc(3.85rem+env(safe-area-inset-top))] md:pt-15 min-h-screen transition-colors duration-300 bg-canvas dark:bg-canvas-dark text-ink-primary dark:text-[#F7F6F2]">
+      <div className="max-w-3xl mx-auto px-3.5 sm:px-8 pb-24 space-y-4 sm:space-y-6">
 
         {/* Page header */}
         <div className="pb-2 border-b border-black/[0.07] dark:border-white/[0.08]">
@@ -128,10 +160,10 @@ export default function SettingsView({
               <span className="material-symbols-outlined text-ink-primary dark:text-white text-[17px]">tune</span>
             </div>
             <div>
-              <h1 className="font-editorial text-[28px] sm:text-[32px] font-normal tracking-tight text-ink-primary dark:text-[#F7F6F2]">
+              <h1 className="font-editorial text-xl sm:text-[32px] font-normal tracking-tight text-ink-primary dark:text-[#F7F6F2]">
                 System Settings
               </h1>
-              <p className="font-mono text-[11px] uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">
+              <p className="font-mono text-[10.5px] sm:text-[11px] uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93]">
                 Preferences, focus engine & cloud sync
               </p>
             </div>
@@ -303,20 +335,20 @@ export default function SettingsView({
             </div>
           </div>
 
-          <div className="mt-5 border-t border-black/[0.06] pt-4">
+          <div className="mt-5 border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[12px] font-semibold text-[#1A1B1F]">Secure Groq BYOK</p>
-                <p className="mt-0.5 text-[11px] leading-4 text-[#8E8E93]">Your key is encrypted server-side. Browser and workspace snapshots never retain it.</p>
+                <p className="text-[12px] font-semibold text-ink-primary dark:text-[#F7F6F2]">Multi-Engine AI Key (Gemini 2.5 / Groq / OpenRouter)</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-[#8E8E93]">Supports free Google Gemini 2.5 Flash (`AIza...`), Groq (`gsk_...` with Kimi-K2 &amp; GPT-OSS-120B), and OpenRouter (`sk-or-...`).</p>
               </div>
-              <button type="button" onClick={() => setShowByokModal(true)} className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#0A84FF] bg-blue-50 hover:bg-blue-100 border border-blue-200/60 transition">Manage key</button>
+              <button type="button" onClick={() => setShowByokModal(true)} className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#0A84FF] bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200/60 dark:border-blue-800/40 transition">Manage key</button>
             </div>
           </div>
 
-          <div className="mt-4 border-t border-black/[0.06] pt-4">
+          <div className="mt-4 border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1A1B1F]">
-                Master Copilot Strategy & Behavior Directive
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-primary dark:text-[#F7F6F2]">
+                Master Copilot Strategy &amp; Behavior Directive
               </label>
               {directiveSaved && (
                 <span className="text-[11px] font-semibold text-emerald-600">Saved to AI memory</span>
@@ -346,16 +378,122 @@ export default function SettingsView({
                   setDirectiveSaved(true);
                   setTimeout(() => setDirectiveSaved(false), 2500);
                 }}
-                className="px-3.5 py-1.5 rounded-xl bg-[#1A1B1F] text-white text-[11px] font-semibold hover:bg-black transition-colors"
+                className="px-3.5 py-1.5 rounded-xl bg-[#1A1B1F] dark:bg-white text-white dark:text-[#1A1B1F] text-[11px] font-semibold hover:opacity-90 transition-colors"
               >
                 Save Strategy Directive
               </button>
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] pt-4">
+          <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
             <p className="text-[11px] text-[#8E8E93]">Accepted AI: {intelligence.aiAccepted} · Discarded AI: {intelligence.aiDismissed}</p>
-            <button type="button" onClick={clearLearning} className="rounded-lg px-2 py-1 text-[11px] font-semibold text-[#5E5E6A] hover:bg-black/[0.04]">Reset learning</button>
+            <button type="button" onClick={clearLearning} className="rounded-lg px-2 py-1 text-[11px] font-semibold text-[#5E5E6A] dark:text-[#9A9AA0] hover:bg-black/[0.04] dark:hover:bg-white/[0.05]">Reset learning</button>
+          </div>
+        </Section>
+
+        {/* ── Claude.ai & ChatGPT.com Live MCP Bridge ── */}
+        <Section
+          title="Claude.ai & ChatGPT.com Live MCP Bridge"
+          badge={
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/25">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+              WEB + ANDROID LIVE SYNC
+            </span>
+          }
+        >
+          <div className="space-y-3.5">
+            <p className="text-[12px] leading-relaxed text-ink-secondary dark:text-[#9A9AA0]">
+              Connect literal <strong>claude.ai</strong> (Remote MCP Connector / Skill) or <strong>chatgpt.com</strong> (Custom GPT Actions) directly to your live Momentum OS workspace. Any task, timetable block, habit, or goal created in Claude or ChatGPT dynamically syncs to your <strong>Android App &amp; Laptop Web</strong> in ~150ms via Supabase Realtime WebSockets.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-xl bg-[#F7F6F2] dark:bg-[#151518] border border-black/[0.07] dark:border-white/[0.08]">
+              <div className="min-w-0">
+                <p className="text-[12px] font-semibold text-ink-primary dark:text-[#F7F6F2]">
+                  {mcpInfo.configured ? 'Personal MCP Bridge Token Active' : 'Step 1: Generate Personal Bridge Token'}
+                </p>
+                <p className="text-[11px] text-[#8E8E93] mt-0.5">
+                  {mcpInfo.configured
+                    ? 'SHA-256 token hash synced to cloud snapshot. Ready for Claude.ai & ChatGPT.com.'
+                    : 'Generates your encrypted mom_<userId>_<secret> bridge token and syncs its hash to cloud.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleGenerateMcpToken}
+                  disabled={isGeneratingMcp}
+                  className="px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[11px] font-semibold hover:bg-[#0071E3] transition cursor-pointer disabled:opacity-50"
+                >
+                  {isGeneratingMcp ? 'Generating…' : mcpInfo.configured ? 'Regenerate Token' : 'Generate Bridge Token'}
+                </button>
+                <a
+                  href="/MOMENTUM_CLAUDE_SKILL.md"
+                  download="MOMENTUM_CLAUDE_SKILL.md"
+                  className="px-3 py-1.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] text-ink-primary dark:text-[#F7F6F2] text-[11px] font-semibold hover:bg-black/[0.1] dark:hover:bg-white/[0.14] transition flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[14px]">download</span>
+                  <span>Skill .MD</span>
+                </a>
+              </div>
+            </div>
+
+            {mcpInfo.configured && (
+              <div className="space-y-2.5 pt-1">
+                <div className="rounded-xl bg-[#F0EFEA] dark:bg-[#202024] p-2.5 border border-black/[0.06] dark:border-white/[0.07]">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                      Claude.ai Remote MCP Server URL (Settings → Integrations → Add MCP)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyMcpText(mcpInfo.mcpUrl, 'mcpUrl')}
+                      className="text-[10.5px] font-semibold text-[#0A84FF] hover:underline shrink-0 cursor-pointer"
+                    >
+                      {mcpCopiedField === 'mcpUrl' ? '✓ Copied' : 'Copy URL'}
+                    </button>
+                  </div>
+                  <p className="font-mono text-[11px] text-ink-primary dark:text-[#E0DFD5] truncate select-all">
+                    {mcpInfo.mcpUrl}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-[#F0EFEA] dark:bg-[#202024] p-2.5 border border-black/[0.06] dark:border-white/[0.07]">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                      ChatGPT.com Custom Action OpenAPI URL (Create GPT → Actions → Import URL)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyMcpText(mcpInfo.openApiUrl, 'openApiUrl')}
+                      className="text-[10.5px] font-semibold text-[#0A84FF] hover:underline shrink-0 cursor-pointer"
+                    >
+                      {mcpCopiedField === 'openApiUrl' ? '✓ Copied' : 'Copy OpenAPI URL'}
+                    </button>
+                  </div>
+                  <p className="font-mono text-[11px] text-ink-primary dark:text-[#E0DFD5] truncate select-all">
+                    {mcpInfo.openApiUrl}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-[#F0EFEA] dark:bg-[#202024] p-2.5 border border-black/[0.06] dark:border-white/[0.07] flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93] block">
+                      Bearer Token (For Claude Desktop / ChatGPT Bearer Auth)
+                    </span>
+                    <p className="font-mono text-[11px] text-ink-primary dark:text-[#E0DFD5] truncate select-all mt-0.5">
+                      {mcpInfo.token}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyMcpText(mcpInfo.token, 'token')}
+                    className="text-[10.5px] font-semibold text-[#0A84FF] hover:underline shrink-0 cursor-pointer"
+                  >
+                    {mcpCopiedField === 'token' ? '✓ Copied' : 'Copy Token'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </Section>
 

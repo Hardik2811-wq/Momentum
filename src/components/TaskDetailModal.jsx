@@ -243,17 +243,22 @@ export default function TaskDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-5 bg-black/50 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/50 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
       <div
-        className="w-full h-[100dvh] max-w-4xl max-h-[100dvh] sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-2xl bg-surface-bone dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col text-ink-primary dark:text-[#F7F6F2] transition-all"
+        className="w-full h-[93dvh] max-w-4xl max-h-[93dvh] sm:h-auto sm:max-h-[90vh] rounded-t-[28px] sm:rounded-2xl bg-surface-bone dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_32px_100px_rgba(0,0,0,0.28)] overflow-hidden flex flex-col text-ink-primary dark:text-[#F7F6F2] transition-all animate-androidSheet"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Android Bottom Sheet Drag Handle (Mobile Only) */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-0.5 bg-[#F7F6F2] dark:bg-[#151518] shrink-0">
+          <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/20" />
+        </div>
+
         {/* ── Refined Bauhaus Linear Header ── */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 border-b border-black/[0.07] dark:border-white/[0.08] bg-[#F7F6F2] dark:bg-[#151518]">
           <div className="flex items-center gap-3">
             <span className={`w-2.5 h-2.5 rounded-full ${IMPACT_CONFIG[formData.impact]?.dot || 'bg-amber-400'}`} />
             <div className="flex items-center gap-2">
@@ -1212,7 +1217,7 @@ export default function TaskDetailModal({
         </div>
 
         {/* ── Refined Footer Bar ── */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-[#F9F9FB] border-t border-black/[0.06]">
+        <div className="flex items-center justify-between px-4 sm:px-6 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:pb-3.5 bg-[#F9F9FB] dark:bg-[#151518] border-t border-black/[0.06] dark:border-white/[0.08] shrink-0">
           <button
             type="button"
             onClick={triggerDelete}

@@ -241,27 +241,27 @@ export default function AnalyticsView({
   }, [tasks]);
 
   return (
-    <main className="w-full pt-16 md:pt-12 px-4 sm:px-6 md:px-margin-desktop py-4 sm:py-gutter-xl min-h-screen bg-canvas dark:bg-canvas-dark text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
-      <div className="flex flex-col w-full space-y-4 sm:space-y-gutter-xl">
+    <main className="w-full pt-[calc(3.85rem+env(safe-area-inset-top))] md:pt-15 pb-24 sm:pb-12 px-3.5 sm:px-6 md:px-margin-desktop min-h-screen bg-canvas dark:bg-canvas-dark text-[#161618] dark:text-[#F7F6F2] transition-colors duration-200">
+      <div className="flex flex-col w-full space-y-3.5 sm:space-y-gutter-xl max-w-[1440px] mx-auto">
         
         {/* Top Navigation & Context Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-gutter-base">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex flex-col">
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">
+            <div className="hidden sm:flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">
               <span>Executive Telemetry</span>
               <span className="w-1 h-1 rounded-full bg-[#8E8E93]" />
               <span className="text-[#0F52BA] dark:text-[#6495ED] font-bold">Updated Live</span>
             </div>
-            <h1 className="font-editorial text-2xl sm:text-3xl font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2] mt-0.5">Focus &amp; Cognitive Flow</h1>
+            <h1 className="font-editorial text-xl sm:text-3xl font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2]">Focus &amp; Cognitive Flow</h1>
           </div>
           
           {/* Segmented Control Bar */}
-          <div className="flex items-center bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.06] p-0.5 rounded-xl self-start md:self-auto shadow-xs">
+          <div className="flex items-center bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.06] p-0.5 rounded-xl shadow-xs">
             {timeframes.map((tf) => (
               <button
                 key={tf}
                 onClick={() => setTimeframe(tf)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
                   timeframe === tf
                     ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs'
                     : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618]'
@@ -274,15 +274,15 @@ export default function AnalyticsView({
         </div>
 
         {/* Row 1: High-Impact Metric Tiles */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
           
           {/* Tile 1: Accuracy */}
-          <div className="group relative overflow-hidden bg-white dark:bg-[#1A1A1E] rounded-2xl p-5 border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] hover:border-black/[0.12] transition-all">
+          <div className="group relative overflow-hidden bg-white dark:bg-[#1A1A1E] rounded-2xl p-4 sm:p-5 border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] hover:border-black/[0.12] transition-all">
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
                 <span className="font-mono text-[10px] uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Execution Accuracy ({timeframe})</span>
-                <div className="flex items-baseline gap-2 mt-1.5">
-                  <span className="font-mono tabular-nums text-[40px] sm:text-[44px] leading-tight text-[#161618] dark:text-[#F7F6F2] font-bold tracking-tight">{displayCompletionRate}%</span>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="font-mono tabular-nums text-[28px] sm:text-[44px] leading-tight text-[#161618] dark:text-[#F7F6F2] font-bold tracking-tight">{displayCompletionRate}%</span>
                   <span className={`inline-flex items-center font-mono text-[10px] px-1.5 py-0.5 rounded-md ${
                     rateDelta >= 0 ? 'text-[#2E6F40] bg-[#2E6F40]/10 border border-[#2E6F40]/20' : 'text-[#C84B31] bg-[#C84B31]/10 border border-[#C84B31]/20'
                   }`}>
@@ -292,11 +292,11 @@ export default function AnalyticsView({
                   </span>
                 </div>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-[#0F52BA]/10 flex items-center justify-center text-[#0F52BA]">
-                <span className="material-symbols-outlined text-[19px]" style={{ fontVariationSettings: '"FILL" 1' }}>timer</span>
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0F52BA]/10 flex items-center justify-center text-[#0F52BA]">
+                <span className="material-symbols-outlined text-[18px] sm:text-[19px]" style={{ fontVariationSettings: '"FILL" 1' }}>timer</span>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-start gap-2 text-[#6B6A72] dark:text-[#8E8E93]">
+            <div className="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-start gap-2 text-[#6B6A72] dark:text-[#8E8E93]">
               <span className="material-symbols-outlined text-[15px] text-[#0F52BA] shrink-0 mt-0.5">lightbulb</span>
               <p className="font-sans text-xs leading-snug">
                 {periodCompleted} of {periodTotal} deliverables verified across {timeframe.toLowerCase()}.
@@ -305,22 +305,22 @@ export default function AnalyticsView({
           </div>
 
           {/* Tile 2: Velocity */}
-          <div className="group relative overflow-hidden bg-white dark:bg-[#1A1A1E] rounded-2xl p-5 border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] hover:border-black/[0.12] transition-all">
+          <div className="group relative overflow-hidden bg-white dark:bg-[#1A1A1E] rounded-2xl p-4 sm:p-5 border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] hover:border-black/[0.12] transition-all">
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
                 <span className="font-mono text-[10px] uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Goal Velocity ({timeframe})</span>
-                <div className="flex items-baseline gap-2 mt-1.5">
-                  <span className="font-mono tabular-nums text-[40px] sm:text-[44px] leading-tight text-[#161618] dark:text-[#F7F6F2] font-bold tracking-tight">{displayVelocity}x</span>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="font-mono tabular-nums text-[28px] sm:text-[44px] leading-tight text-[#161618] dark:text-[#F7F6F2] font-bold tracking-tight">{displayVelocity}x</span>
                   <span className="font-mono text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">cadence</span>
                 </div>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-[#2E6F40]/10 flex items-center justify-center text-[#2E6F40]">
-                <span className="material-symbols-outlined text-[19px]" style={{ fontVariationSettings: '"FILL" 1' }}>speed</span>
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#2E6F40]/10 flex items-center justify-center text-[#2E6F40]">
+                <span className="material-symbols-outlined text-[18px] sm:text-[19px]" style={{ fontVariationSettings: '"FILL" 1' }}>speed</span>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-[#6B6A72] dark:text-[#8E8E93]">
+            <div className="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-[#6B6A72] dark:text-[#8E8E93]">
               <div className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${totalGoals > 0 ? 'bg-[#2E6F40]' : 'bg-[#8E8E93]'}`}></span>
+                <span className={`w-2 h-2 rounded-full ${totalGoals > 0 ? 'bg-[#2E6F40]' : 'bg-[#8E8E93]'}`} />
                 <span className="font-sans text-xs">
                   {totalGoals > 0 ? `${goalsOnTrack} of ${totalGoals} goals active` : 'No active goals'}
                 </span>
@@ -332,25 +332,25 @@ export default function AnalyticsView({
           </div>
 
           {/* Tile 3: Peak Cognitive Slot */}
-          <div className="group relative overflow-hidden bg-surface-container-lowest rounded-2xl p-gutter-lg shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:shadow-md transition-all">
+          <div className="group relative overflow-hidden bg-white dark:bg-[#1A1A1E] rounded-2xl p-4 sm:p-5 border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)] hover:border-black/[0.12] transition-all">
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
-                <span className="font-label-md text-label-md text-on-surface-variant">Peak Cognitive Hours</span>
-                <div className="flex items-baseline gap-gutter-xs mt-1">
-                  <span className="font-title text-[22px] sm:text-[24px] leading-tight text-on-surface font-semibold tracking-tight">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Peak Cognitive Hours</span>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="font-mono text-[20px] sm:text-[24px] leading-tight text-[#161618] dark:text-[#F7F6F2] font-bold tracking-tight">
                     {peakCognitiveWindow.label}
                   </span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-tertiary-fixed flex items-center justify-center text-tertiary">
-                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: '"FILL" 1' }}>neurology</span>
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                <span className="material-symbols-outlined text-[18px] sm:text-[19px]" style={{ fontVariationSettings: '"FILL" 1' }}>neurology</span>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-surface-container/60 flex items-center justify-between text-on-surface-variant">
-              <span className="font-body-sm text-body-sm text-on-surface-variant truncate">
+            <div className="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-[#6B6A72] dark:text-[#8E8E93]">
+              <span className="font-sans text-xs truncate">
                 {totalHabits > 0 ? `${habitsCompletedToday} of ${totalHabits} habits checked today` : peakCognitiveWindow.sub}
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-[11px] font-semibold shrink-0">
+              <span className="px-2 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#161618] dark:text-[#F7F6F2] font-mono text-[10.5px] font-semibold shrink-0">
                 {peakCognitiveWindow.badge}
               </span>
             </div>
