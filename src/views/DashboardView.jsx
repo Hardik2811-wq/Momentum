@@ -546,31 +546,96 @@ const DashboardView = React.memo(function DashboardView({
   const getPillPalette = (item, index) => {
     if (item.isDone) {
       return {
-        bg: 'bg-[#2E7D32] hover:bg-[#1B5E20] text-white shadow-2xs',
-        nodeBorder: 'border-[#2E7D32]',
-        lineColor: 'bg-[#2E7D32]/40'
+        bg: 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-2xs',
+        nodeBorder: 'border-emerald-600',
+        lineColor: 'bg-emerald-600/40'
       };
     }
+
+    const title = (item.title || '').toLowerCase();
     const cat = (item.category || '').toLowerCase();
-    if (item.type === 'schedule' || cat.includes('college') || cat.includes('class')) {
+    const str = `${title} ${cat}`;
+
+    // Academic / College / Class / Work Split
+    if (str.includes('college') || str.includes('class') || str.includes('lecture') || str.includes('study') || str.includes('work') || str.includes('split') || str.includes('meeting')) {
       return {
-        bg: 'bg-[#0D47A1] hover:bg-[#0A387E] text-white shadow-2xs',
-        nodeBorder: 'border-[#0D47A1]',
-        lineColor: 'bg-[#0D47A1]/40'
+        bg: 'bg-[#1E3A8A] hover:bg-[#172554] text-white shadow-2xs',
+        nodeBorder: 'border-[#2563EB]',
+        lineColor: 'bg-[#2563EB]/40'
       };
     }
-    if (item.type === 'habit' || cat.includes('fitness') || cat.includes('gym') || cat.includes('workout')) {
+
+    // High Intensity / HIIT / Sprint
+    if (str.includes('hiit') || str.includes('sprint') || str.includes('interval')) {
       return {
-        bg: 'bg-[#388E3C] hover:bg-[#2E7D32] text-white shadow-2xs',
-        nodeBorder: 'border-[#388E3C]',
-        lineColor: 'bg-[#388E3C]/40'
+        bg: 'bg-[#991B1B] hover:bg-[#7F1D1D] text-white shadow-2xs',
+        nodeBorder: 'border-[#DC2626]',
+        lineColor: 'bg-[#DC2626]/40'
       };
     }
+
+    // Cardio / Zone 2 / Run
+    if (str.includes('zone 2') || str.includes('cardio') || str.includes('run')) {
+      return {
+        bg: 'bg-[#C2410C] hover:bg-[#9A3412] text-white shadow-2xs',
+        nodeBorder: 'border-[#EA580C]',
+        lineColor: 'bg-[#EA580C]/40'
+      };
+    }
+
+    // Strength / Gym / Lifting
+    if (str.includes('strength') || str.includes('gym') || str.includes('lift') || str.includes('workout')) {
+      return {
+        bg: 'bg-[#334155] hover:bg-[#1E293B] text-white shadow-2xs',
+        nodeBorder: 'border-[#475569]',
+        lineColor: 'bg-[#475569]/40'
+      };
+    }
+
+    // Dance / Music / Guitar / Creative
+    if (str.includes('dance') || str.includes('music') || str.includes('guitar') || str.includes('art') || str.includes('creative')) {
+      return {
+        bg: 'bg-[#6B21A8] hover:bg-[#581C87] text-white shadow-2xs',
+        nodeBorder: 'border-[#9333EA]',
+        lineColor: 'bg-[#9333EA]/40'
+      };
+    }
+
+    // Mobility / Yoga / Stretch
+    if (str.includes('mobility') || str.includes('stretch') || str.includes('yoga') || str.includes('recovery')) {
+      return {
+        bg: 'bg-[#0F766E] hover:bg-[#115E59] text-white shadow-2xs',
+        nodeBorder: 'border-[#0D9488]',
+        lineColor: 'bg-[#0D9488]/40'
+      };
+    }
+
+    // Nutrition / Diet / Meals
+    if (str.includes('nutrition') || str.includes('protein') || str.includes('diet') || str.includes('meal')) {
+      return {
+        bg: 'bg-[#15803D] hover:bg-[#166534] text-white shadow-2xs',
+        nodeBorder: 'border-[#16A34A]',
+        lineColor: 'bg-[#16A34A]/40'
+      };
+    }
+
+    // Sleep / Night / Reading
+    if (str.includes('sleep') || str.includes('night') || str.includes('bed') || str.includes('evening') || str.includes('reading')) {
+      return {
+        bg: 'bg-[#312E81] hover:bg-[#1E1B4B] text-white shadow-2xs',
+        nodeBorder: 'border-[#4338CA]',
+        lineColor: 'bg-[#4338CA]/40'
+      };
+    }
+
+    // Fallback rotating executive palettes
     const palettes = [
-      { bg: 'bg-[#283593] hover:bg-[#1A237E] text-white shadow-2xs', nodeBorder: 'border-[#283593]', lineColor: 'bg-[#283593]/40' },
-      { bg: 'bg-[#0288D1] hover:bg-[#0277BD] text-white shadow-2xs', nodeBorder: 'border-[#0288D1]', lineColor: 'bg-[#0288D1]/40' },
-      { bg: 'bg-[#6A1B9A] hover:bg-[#4A148C] text-white shadow-2xs', nodeBorder: 'border-[#6A1B9A]', lineColor: 'bg-[#6A1B9A]/40' },
-      { bg: 'bg-[#00897B] hover:bg-[#00695C] text-white shadow-2xs', nodeBorder: 'border-[#00897B]', lineColor: 'bg-[#00897B]/40' }
+      { bg: 'bg-[#1E3A8A] hover:bg-[#172554] text-white shadow-2xs', nodeBorder: 'border-[#2563EB]', lineColor: 'bg-[#2563EB]/40' },
+      { bg: 'bg-[#0F766E] hover:bg-[#115E59] text-white shadow-2xs', nodeBorder: 'border-[#0D9488]', lineColor: 'bg-[#0D9488]/40' },
+      { bg: 'bg-[#581C87] hover:bg-[#3B0764] text-white shadow-2xs', nodeBorder: 'border-[#7E22CE]', lineColor: 'bg-[#7E22CE]/40' },
+      { bg: 'bg-[#334155] hover:bg-[#1E293B] text-white shadow-2xs', nodeBorder: 'border-[#475569]', lineColor: 'bg-[#475569]/40' },
+      { bg: 'bg-[#C2410C] hover:bg-[#9A3412] text-white shadow-2xs', nodeBorder: 'border-[#EA580C]', lineColor: 'bg-[#EA580C]/40' },
+      { bg: 'bg-[#0284C7] hover:bg-[#0369A1] text-white shadow-2xs', nodeBorder: 'border-[#0EA5E9]', lineColor: 'bg-[#0EA5E9]/40' }
     ];
     return palettes[index % palettes.length];
   };
@@ -682,26 +747,26 @@ const DashboardView = React.memo(function DashboardView({
                       {/* Horizontal Branch Arm */}
                       <div className="absolute left-[17px] w-5 h-[2px] bg-slate-300 dark:bg-slate-700" />
 
-                      {/* Tactile Pill Capsule (Matching Reference Image) */}
+                      {/* Tactile Pill Capsule — Full Width Aligned */}
                       <div
                         onClick={() => {
                           if (item.type === 'schedule') setEditingSchedule(item.raw);
                           else if (item.type === 'task') setEditingTask(item.raw);
                           else handleHabitCheck(item.rawId);
                         }}
-                        className={`inline-flex items-center justify-between gap-3 px-3.5 py-2 rounded-full transition-all cursor-pointer select-none hover:scale-[1.01] active:scale-[0.99] max-w-full ${palette.bg}`}
+                        className={`flex-1 flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl sm:rounded-full transition-all cursor-pointer select-none hover:brightness-105 active:scale-[0.99] shadow-2xs ${palette.bg}`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="font-mono text-xs font-bold tabular-nums shrink-0">
                             {formatTime(item.startTime)}
                           </span>
-                          <span className="opacity-60 text-xs shrink-0">•</span>
-                          <span className={`text-xs font-medium truncate ${isDone ? 'line-through opacity-85' : ''}`}>
+                          <span className="opacity-50 text-xs shrink-0">•</span>
+                          <span className={`text-xs font-semibold truncate ${isDone ? 'line-through opacity-85' : ''}`}>
                             {item.title}
                           </span>
                           {item.category && (
-                            <span className="text-[10px] font-mono opacity-80 uppercase tracking-wider hidden sm:inline-block">
-                              ({item.category})
+                            <span className="text-[9px] font-mono opacity-80 uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-black/15 dark:bg-white/15 shrink-0 hidden sm:inline-block">
+                              {item.category}
                             </span>
                           )}
                         </div>
@@ -753,129 +818,28 @@ const DashboardView = React.memo(function DashboardView({
           </aside>
 
           {/* ══════════════════════════════════════════════════════════
-              PANE 2: DAILY FOCUS QUEUE (Center 42% / 5 Cols)
-              Things 3 Style Tasks + Active Focus Cockpit + Inline Add
+              PANE 2: DAILY FOCUS QUEUE (Center 5 Cols)
+              Unified Executive Workbench (Header, Triage, Active Target, Queue)
               ══════════════════════════════════════════════════════════ */}
-          <section className="lg:col-span-5 space-y-4">
+          <section className="lg:col-span-5 bg-white dark:bg-[#1A1A1E] rounded-2xl border border-black/[0.07] dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.02)] space-y-4">
             
-            {/* ── Active Focus Cockpit (Things 3 / Sunsama Hero Card) ── */}
-            <div data-block-id="dashboard-now-hero" className="rounded-2xl border border-black/[0.07] dark:border-white/[0.08] bg-white dark:bg-[#1A1A1E] p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_32px_rgba(0,0,0,0.04)] relative overflow-hidden">
-              <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-[#0F52BA]/[0.04] blur-2xl pointer-events-none" />
-
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0F52BA] opacity-60"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0F52BA]"></span>
-                  </span>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">
-                    Now Focus Target
-                  </span>
-                </div>
-                {nextTask && (
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
-                    taskImpact(nextTask) === 'high'
-                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/40'
-                      : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40'
-                  }`}>
-                    {IMPACT_LABELS[taskImpact(nextTask)]} Impact
+            {/* ── Workbench Header & Filter Tabs ── */}
+            <div className="flex items-center justify-between pb-2 border-b border-black/[0.05] dark:border-white/[0.06]">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#0F52BA]" />
+                <h2 className="text-sm font-semibold tracking-tight text-[#161618] dark:text-[#F7F6F2]">Focus Workbench</h2>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-black/[0.05] dark:bg-white/[0.08] text-[#6B6A72] dark:text-[#8E8E93]">
+                  {activeQueueTasks.length} queued
+                </span>
+                {missedTasksList.length > 0 && (
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                    {missedTasksList.length} to triage
                   </span>
                 )}
               </div>
 
-              {nextTask ? (
-                <div className="space-y-3">
-                  <div>
-                    <h2
-                      onClick={() => setEditingTask(nextTask)}
-                      className="text-lg sm:text-xl font-editorial font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2] hover:text-[#0F52BA] transition cursor-pointer truncate"
-                    >
-                      {nextTask.title}
-                    </h2>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#6B6A72] dark:text-[#8E8E93]">
-                      <span className="inline-flex items-center gap-1 font-mono tabular-nums text-[#0F52BA] dark:text-[#6495ED]">
-                        <Clock className="w-3.5 h-3.5" />
-                        {nextTask.startTime ? formatTime(nextTask.startTime) : 'Planned today'}
-                      </span>
-                      <span>•</span>
-                      <span className="inline-flex items-center gap-1 font-mono tabular-nums">
-                        <Timer className="w-3.5 h-3.5 text-amber-600" />
-                        {effortLabel(nextTask.durationMinutes)}
-                      </span>
-                      {nextTask.subtasks && nextTask.subtasks.length > 0 && (
-                        <>
-                          <span>•</span>
-                          <span className="inline-flex items-center gap-1 font-mono tabular-nums">
-                            <ListChecks className="w-3.5 h-3.5" />
-                            {nextTask.subtasks.filter(s => s.completed).length}/{nextTask.subtasks.length} subtasks
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => onStartFocus?.(nextTask.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0F52BA] hover:bg-[#0D47A1] text-white text-xs font-semibold shadow-tactile active:scale-95 transition-all cursor-pointer"
-                    >
-                      <Play className="w-3 h-3 fill-current" />
-                      <span>Start 25m Sprint</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleTask(nextTask.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] text-[#161618] dark:text-[#F7F6F2] text-xs font-semibold transition-all cursor-pointer"
-                    >
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                      <span>Done</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingTask(nextTask)}
-                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] transition cursor-pointer ml-auto"
-                    >
-                      Details
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-2">
-                  <p className="text-sm font-semibold text-[#161618] dark:text-[#F7F6F2]">
-                    {missedTasksList.length > 0 ? 'All active tasks complete or time passed.' : 'Zero friction — No pending task right now.'}
-                  </p>
-                  <p className="text-xs text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
-                    {missedTasksList.length > 0
-                      ? 'Review missed items below to reschedule or backlog.'
-                      : 'All caught up! Add a new task below or plan ahead.'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* ── Inline Quick-Add Input (Things 3 Signature Element) ── */}
-            <form onSubmit={handleInlineQuickAdd} className="relative flex items-center">
-              <Plus className="absolute left-3 w-4 h-4 text-[#6B6A72] dark:text-[#8E8E93]" />
-              <input
-                type="text"
-                value={inlineTaskTitle}
-                onChange={(e) => setInlineTaskTitle(e.target.value)}
-                placeholder="Add a task to Today... (Press Enter)"
-                className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-[#1A1A1E] border border-black/[0.08] dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-[#161618] dark:text-[#F7F6F2] placeholder-[#6B6A72]/60 dark:placeholder-[#8E8E93]/60 focus:outline-none focus:ring-1 focus:ring-[#0F52BA] shadow-2xs transition-all"
-              />
-            </form>
-
-            {/* ── Filter Pills Bar ── */}
-            <div className="flex items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-editorial font-semibold text-[#161618] dark:text-[#F7F6F2]">Focus Queue</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-black/[0.05] dark:bg-white/[0.08] text-[#6B6A72] dark:text-[#8E8E93]">
-                  {activeQueueTasks.length}
-                </span>
-              </div>
-
-              <div className="inline-flex rounded-xl bg-black/[0.04] dark:bg-white/[0.06] p-0.5 gap-1 border border-black/[0.04] dark:border-white/[0.06]">
+              {/* Filter Pills */}
+              <div className="inline-flex rounded-lg bg-black/[0.04] dark:bg-white/[0.06] p-0.5 gap-0.5 border border-black/[0.04] dark:border-white/[0.06]">
                 {[
                   ['all', 'All', filterCounts.all],
                   ['high', 'High', filterCounts.high],
@@ -884,9 +848,9 @@ const DashboardView = React.memo(function DashboardView({
                   <button
                     key={id}
                     onClick={() => setFilter(id)}
-                    className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] transition-all cursor-pointer ${
                       filter === id
-                        ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs font-semibold'
+                        ? 'bg-white dark:bg-[#252529] text-[#161618] dark:text-[#F7F6F2] shadow-2xs font-semibold'
                         : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] font-medium'
                     }`}
                   >
@@ -897,74 +861,121 @@ const DashboardView = React.memo(function DashboardView({
               </div>
             </div>
 
-            {/* Drag and drop sortable queue */}
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={activeQueueTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
-                  {activeQueueTasks.length ? (
-                    activeQueueTasks.map(task => (
-                      <SortableTaskItem key={task.id} id={task.id}>
-                        <TaskCard
-                          task={task}
-                          onToggleTask={handleToggleTask}
-                          onDeleteTask={onDeleteTask}
-                          onUpdateTask={onUpdateTask}
-                          onToggleSubtask={onToggleSubtask}
-                          onEditTask={setEditingTask}
-                          goals={goals}
-                          habits={habits}
-                        />
-                      </SortableTaskItem>
-                    ))
-                  ) : (
-                    <div className="rounded-3xl border border-dashed border-outline-variant/30 bg-surface-container-lowest p-8 text-center">
-                      <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2 mx-auto" />
-                      <p className="text-sm font-semibold text-on-surface">
-                        {nextTask ? 'All queue tasks complete!' : 'All today tasks completed!'}
-                      </p>
-                      <p className="text-xs text-on-surface-variant mt-1">
-                        {nextTask ? 'Focus on your active target above.' : 'Add new tasks or plan tomorrow.'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </SortableContext>
-            </DndContext>
+            {/* ── Inline Quick-Add Input (Clean Integrated Bar) ── */}
+            <form onSubmit={handleInlineQuickAdd} className="relative flex items-center">
+              <Plus className="absolute left-3 w-4 h-4 text-[#6B6A72] dark:text-[#8E8E93]" />
+              <input
+                type="text"
+                value={inlineTaskTitle}
+                onChange={(e) => setInlineTaskTitle(e.target.value)}
+                placeholder="Add a task to Today... (Press Enter)"
+                className="w-full pl-9 pr-4 py-2.5 bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-[#161618] dark:text-[#F7F6F2] placeholder-[#6B6A72]/60 dark:placeholder-[#8E8E93]/60 focus:outline-none focus:ring-1 focus:ring-[#0F52BA] transition-all"
+              />
+            </form>
 
-            {/* ── MISSED TASKS WINDOW & RESCHEDULE ZONE ── */}
-            {(missedTasksList.length > 0 || dayClassification.totallyMissedTasks.length > 0) && (
-              <section id="missed-window-section" className="rounded-3xl border border-amber-500/25 bg-amber-500/[0.03] dark:bg-amber-500/[0.05] p-5 sm:p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                      <Clock className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base font-display font-bold text-on-surface">Missed Tasks Window</h3>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full font-mono font-bold tabular-nums bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                          {missedTasksList.length} missed
-                        </span>
-                      </div>
-                      <p className="text-xs text-on-surface-variant">
-                        Designated task time passed. Reschedule with AI recommendation or allocate to backlog.
-                      </p>
-                    </div>
+            {/* ── 1. ACTIVE FOCUS TARGET (If present) ── */}
+            {nextTask && (
+              <div data-block-id="dashboard-now-hero" className="rounded-xl border border-[#0F52BA]/25 bg-[#0F52BA]/[0.03] dark:bg-[#0F52BA]/[0.06] p-4 space-y-3 relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0F52BA] opacity-60"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0F52BA]"></span>
+                    </span>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">
+                      Now Focus Target
+                    </span>
                   </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
+                    taskImpact(nextTask) === 'high'
+                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/40'
+                      : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40'
+                  }`}>
+                    {IMPACT_LABELS[taskImpact(nextTask)]} Impact
+                  </span>
+                </div>
 
+                <div>
+                  <h3
+                    onClick={() => setEditingTask(nextTask)}
+                    className="text-base sm:text-lg font-editorial font-medium tracking-tight text-[#161618] dark:text-[#F7F6F2] hover:text-[#0F52BA] transition cursor-pointer truncate"
+                  >
+                    {nextTask.title}
+                  </h3>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#6B6A72] dark:text-[#8E8E93]">
+                    <span className="inline-flex items-center gap-1 font-mono tabular-nums text-[#0F52BA] dark:text-[#6495ED]">
+                      <Clock className="w-3.5 h-3.5" />
+                      {nextTask.startTime ? formatTime(nextTask.startTime) : 'Planned today'}
+                    </span>
+                    <span>•</span>
+                    <span className="inline-flex items-center gap-1 font-mono tabular-nums">
+                      <Timer className="w-3.5 h-3.5 text-amber-600" />
+                      {effortLabel(nextTask.durationMinutes)}
+                    </span>
+                    {nextTask.subtasks && nextTask.subtasks.length > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1 font-mono tabular-nums">
+                          <ListChecks className="w-3.5 h-3.5" />
+                          {nextTask.subtasks.filter(s => s.completed).length}/{nextTask.subtasks.length} subtasks
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
+                  <button
+                    type="button"
+                    onClick={() => onStartFocus?.(nextTask.id)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F52BA] hover:bg-[#0D47A1] text-white text-xs font-semibold shadow-tactile active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>Start Sprint</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTask(nextTask.id)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] text-[#161618] dark:text-[#F7F6F2] text-xs font-semibold transition-all cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Done</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask(nextTask)}
+                    className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] transition cursor-pointer ml-auto"
+                  >
+                    Details
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── 2. TRIAGE ZONE: MISSED TASKS (Elevated when actions needed) ── */}
+            {missedTasksList.length > 0 && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] dark:bg-amber-500/[0.07] p-3.5 sm:p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                    <Clock className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Missed Schedule Window</span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/20">
+                      {missedTasksList.length}
+                    </span>
+                  </div>
                   {dayClassification.totallyMissedTasks.length > 0 && (
                     <button
                       type="button"
                       onClick={handleSweepTotallyMissed}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-200 text-xs font-semibold transition-all self-start sm:self-auto cursor-pointer"
+                      className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 hover:underline cursor-pointer flex items-center gap-1"
                     >
-                      <Inbox className="w-3.5 h-3.5" />
-                      <span>Sweep {dayClassification.totallyMissedTasks.length} past to Backlog</span>
+                      <Inbox className="w-3 h-3" />
+                      <span>Sweep to Backlog</span>
                     </button>
                   )}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {missedTasksList.map(item => {
                     const rec = findIntelligentRecoverySlot({
                       item,
@@ -978,66 +989,54 @@ const DashboardView = React.memo(function DashboardView({
 
                     return (
                       <div
-                        key={`task-${item.id}`}
-                        className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-surface-container-lowest p-4 sm:p-4.5 space-y-3 shadow-[0_2px_12px_rgba(0,0,0,0.02)]"
+                        key={`missed-task-${item.id}`}
+                        className="rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1E1E22] p-3 space-y-2 shadow-2xs"
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-300">
-                                Task
-                              </span>
-                              <span className="text-xs font-mono font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                <span>Window passed ({startFormatted} – {endFormatted})</span>
-                              </span>
-                            </div>
-                            <h4 className="text-sm sm:text-base font-bold text-on-surface truncate">{item.title}</h4>
-                            <div className="mt-1 flex items-center gap-3 text-xs text-on-surface-variant font-mono">
-                              <span>{effortLabel(item.durationMinutes)}</span>
-                              {item.category && <span>• {item.category}</span>}
-                            </div>
+                            <h4 className="text-xs sm:text-sm font-semibold text-[#161618] dark:text-[#F7F6F2] truncate">
+                              {item.title}
+                            </h4>
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-mono mt-0.5">
+                              Window passed ({startFormatted} – {endFormatted}) • {effortLabel(item.durationMinutes)}
+                            </p>
                           </div>
                         </div>
 
-                        {/* Intelligent AI Recovery Suggestion */}
                         {rec && (
-                          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-primary/[0.05] border border-primary/15 text-xs text-on-surface">
-                            <Sparkles className="w-4 h-4 text-primary shrink-0" />
-                            <span className="font-medium flex-1">
-                              <span className="font-bold text-primary">AI Suggestion:</span> {rec.explanation}
+                          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[#0F52BA]/[0.06] text-[11px] text-[#161618] dark:text-[#F7F6F2]">
+                            <Sparkles className="w-3.5 h-3.5 text-[#0F52BA] dark:text-[#6495ED] shrink-0" />
+                            <span className="truncate">
+                              <span className="font-bold text-[#0F52BA] dark:text-[#6495ED]">AI Suggestion:</span> {rec.explanation}
                             </span>
                           </div>
                         )}
 
-                        {/* Action Row */}
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
                           {rec && (
                             <button
                               type="button"
                               onClick={() => handleSmartReschedule(item, rec)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-semibold shadow-2xs hover:shadow-xs active:scale-95 transition-all cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#0F52BA] hover:bg-[#0D47A1] text-white text-[11px] font-semibold transition cursor-pointer"
                             >
-                              <Calendar className="w-3.5 h-3.5" />
+                              <Calendar className="w-3 h-3" />
                               <span>Reschedule: {rec.dateLabel} {rec.formattedTime}</span>
                             </button>
                           )}
-
                           <button
                             type="button"
                             onClick={() => handleMoveToBacklog(item.id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold border border-black/[0.05] transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] text-xs font-semibold transition cursor-pointer text-[#6B6A72] dark:text-[#8E8E93]"
                           >
-                            <Inbox className="w-3.5 h-3.5 text-on-surface-variant" />
+                            <Inbox className="w-3 h-3" />
                             <span>To Backlog</span>
                           </button>
-
                           <button
                             type="button"
                             onClick={() => handleToggleTask(item.id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition-all ml-auto cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold transition ml-auto cursor-pointer"
                           >
-                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <Check className="w-3 h-3 stroke-[3]" />
                             <span>Mark Done</span>
                           </button>
                         </div>
@@ -1045,22 +1044,56 @@ const DashboardView = React.memo(function DashboardView({
                     );
                   })}
                 </div>
-              </section>
+              </div>
             )}
 
-            {/* Completed Tasks Accordion — Keeps canvas spacious and clutter-free */}
+            {/* ── 3. FOCUS QUEUE TASKS ── */}
+            {activeQueueTasks.length > 0 ? (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={activeQueueTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2 max-h-[calc(100vh-360px)] overflow-y-auto pr-1 scrollbar-thin">
+                    {activeQueueTasks.map(task => (
+                      <SortableTaskItem key={task.id} id={task.id}>
+                        <TaskCard
+                          task={task}
+                          onToggleTask={handleToggleTask}
+                          onDeleteTask={onDeleteTask}
+                          onUpdateTask={onUpdateTask}
+                          onToggleSubtask={onToggleSubtask}
+                          onEditTask={setEditingTask}
+                          goals={goals}
+                          habits={habits}
+                        />
+                      </SortableTaskItem>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : !nextTask && missedTasksList.length === 0 ? (
+              <div className="py-8 px-4 text-center rounded-xl border border-dashed border-black/[0.08] dark:border-white/[0.08]">
+                <CheckCircle2 className="w-7 h-7 text-emerald-500 mb-1.5 mx-auto" />
+                <p className="text-xs font-semibold text-[#161618] dark:text-[#F7F6F2]">
+                  All focus queue tasks completed!
+                </p>
+                <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
+                  Great momentum. Add a new task above or plan tomorrow.
+                </p>
+              </div>
+            ) : null}
+
+            {/* ── 4. COMPLETED ACCORDION ── */}
             {completedQueueTasks.length > 0 && (
-              <div className="pt-2">
+              <div className="pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
                 <button
                   type="button"
                   onClick={() => setShowCompleted(!showCompleted)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface py-2 px-1 cursor-pointer transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] py-1 cursor-pointer transition-colors"
                 >
-                  {showCompleted ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  {showCompleted ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                   <span>Completed ({completedQueueTasks.length})</span>
                 </button>
                 {showCompleted && (
-                  <div className="space-y-2.5 mt-2 animate-fadeIn">
+                  <div className="space-y-2 mt-2 animate-fadeIn max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
                     {completedQueueTasks.map(task => (
                       <TaskCard
                         key={task.id}
