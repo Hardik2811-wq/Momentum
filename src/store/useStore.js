@@ -166,207 +166,552 @@ export function sendNotification(title, options = {}) {
   }
 }
 
-const DEFAULT_TASKS = [
-  {
-    id: 1,
-    title: 'Refine Q4 Product Roadmap',
-    priority: 'high',
-    category: 'Deep Work',
-    goalId: 'g1',
-    completed: false,
-    dueDate: 'Today',
-    startTime: '09:30',
-    durationMinutes: 75,
-    areas: ['Career & Craft', 'Deep Focus'],
-    energy: 'High',
-    notes: 'Prioritize feature matrix for mobile offline capability and sync protocol.',
-    subtasks: [
-      { id: 's1', title: 'Audit engineering backlog', completed: true },
-      { id: 's2', title: 'Draft RFC document', completed: false }
-    ],
-    createdAt: Date.now() - 86400000
-  },
-  {
-    id: 2,
-    title: 'Sync with Engineering Leads on API migration',
-    priority: 'high',
-    category: 'Meetings',
-    goalId: 'g4',
-    completed: true,
-    dueDate: 'Today',
-    startTime: '11:15',
-    durationMinutes: 45,
-    areas: ['Career & Craft'],
-    energy: 'Medium',
-    notes: 'Discuss GraphQL vs REST gateway latency.',
-    subtasks: [
-      { id: 's21', title: 'Review latency metrics', completed: true },
-      { id: 's22', title: 'Confirm fallback strategy', completed: true }
-    ],
-    createdAt: Date.now() - 172800000
-  },
-  {
-    id: 3,
-    title: 'Review Stitch AI design system tokens',
-    priority: 'normal',
-    category: 'Deep Work',
-    goalId: 'g1',
-    completed: false,
-    dueDate: 'Today',
-    startTime: '14:00',
-    durationMinutes: 90,
-    areas: ['Career & Craft', 'Creative & Expression'],
-    energy: 'High',
-    notes: 'Harmonize secondary fixed and container tokens.',
-    subtasks: [
-      { id: 's3', title: 'Color contrast check', completed: false },
-      { id: 's4', title: 'Fix hero heading layout', completed: false }
-    ],
-    createdAt: Date.now() - 50000
-  },
-  {
-    id: 4,
-    title: 'Run tempo 5km cardio interval',
-    priority: 'normal',
-    category: 'Habits',
-    goalId: 'g2',
-    completed: false,
-    dueDate: 'Today',
-    startTime: '16:30',
-    durationMinutes: 45,
-    areas: ['Health & Vitality', 'Habit Consistency'],
-    energy: 'High',
-    notes: 'Heart rate target ~145 bpm.',
-    subtasks: [
-      { id: 's5', title: '10 min warm up dynamic stretches', completed: false },
-      { id: 's6', title: '5km steady pace interval', completed: false }
-    ],
-    createdAt: Date.now() - 40000
-  },
-  {
-    id: 5,
-    title: 'Practice Fernando Sor Study in B minor',
-    priority: 'low',
-    category: 'Personal',
-    goalId: 'g3',
-    completed: false,
-    dueDate: 'Tomorrow',
-    startTime: '18:30',
-    durationMinutes: 30,
-    areas: ['Creative & Expression', 'Personal & Life'],
-    energy: 'Low',
-    notes: 'Tactile fingerstyle phrasing, 60 bpm.',
-    subtasks: [
-      { id: 's7', title: 'Tuning and posture check', completed: false },
-      { id: 's8', title: 'Measure 1-16 fingering drill', completed: false }
-    ],
-    createdAt: Date.now() - 30000
-  },
-  {
-    id: 6,
-    title: 'Pick up running nutrition gel supplies',
-    priority: 'low',
-    category: 'Personal',
-    goalId: 'g2',
-    completed: false,
-    dueDate: 'This Week',
-    startTime: '17:00',
-    durationMinutes: 25,
-    areas: ['Personal & Life', 'Health & Vitality'],
-    energy: 'Low',
-    notes: 'Visit marathon store before Saturday long run.',
-    subtasks: [],
-    createdAt: Date.now() - 20000
-  }
-];
+function getOffsetDateKey(baseDateStr, offsetDays) {
+  const [y, m, d] = (baseDateStr || todayKey()).split('-').map(Number);
+  const date = new Date(y, m - 1, d + offsetDays);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
-const DEFAULT_GOALS = [
-  {
-    id: 'g1', title: 'Ship Portfolio Website v3', category: 'career',
-    why: 'To establish independent creative authority and ship craft at the highest level.',
-    progress: 50, daysLeft: 14, targetDate: 'May 12',
-    keyResults: 3, tasksActive: 2, velocity: 'ahead',
-    icon: 'lightbulb', color: 'primary',
-  },
-  {
-    id: 'g2', title: 'Run a Sub-1:45 Half Marathon', category: 'health',
-    why: 'Build unbreakable physical stamina and mental endurance.',
-    progress: 40, daysLeft: 38, targetDate: 'Jun 15',
-    keyResults: 2, tasksActive: 1, velocity: 'on-track',
-    icon: 'favorite', color: 'secondary',
-  },
-  {
-    id: 'g3', title: 'Master Grade 3 Classical Guitar', category: 'creative',
-    why: 'Anchor evenings in tactile, acoustic expression away from screens.',
-    progress: 25, daysLeft: 58, targetDate: 'Jul 20',
-    keyResults: 4, tasksActive: 1, velocity: 'behind',
-    icon: 'music_note', color: 'tertiary',
-  },
-  {
-    id: 'g4', title: 'Launch Personal Knowledge System', category: 'career',
-    why: 'Build a second brain that compounds learning into leverage.',
-    progress: 60, daysLeft: 22, targetDate: 'May 28',
-    keyResults: 5, tasksActive: 0, velocity: 'on-track',
-    icon: 'auto_stories', color: 'primary',
-  },
-  {
-    id: 'g5', title: 'Complete Spanish B1 Certification', category: 'creative',
-    why: 'Unlock travel fluency and cultural empathy across Latin America.',
-    progress: 35, daysLeft: 45, targetDate: 'Jun 30',
-    keyResults: 3, tasksActive: 0, velocity: 'behind',
-    icon: 'translate', color: 'tertiary',
-  },
-];
+export function generateRichSampleWorkspace(todayStr = todayKey()) {
+  const yesterday = getOffsetDateKey(todayStr, -1);
+  const twoDaysAgo = getOffsetDateKey(todayStr, -2);
+  const threeDaysAgo = getOffsetDateKey(todayStr, -3);
+  const fourDaysAgo = getOffsetDateKey(todayStr, -4);
+  const fiveDaysAgo = getOffsetDateKey(todayStr, -5);
+  const sixDaysAgo = getOffsetDateKey(todayStr, -6);
+  const tomorrow = getOffsetDateKey(todayStr, 1);
+  const dayAfterTomorrow = getOffsetDateKey(todayStr, 2);
 
-const DEFAULT_HABITS = [
-  {
-    id: 'h1', title: 'Morning Deep Work', duration: '90 mins', durationMinutes: 90, startTime: '07:30', isTimeBlocked: true, icon: 'terminal',
-    linkedGoal: 'Ship Portfolio', description: 'Autonomous creative focus before notification windows unlock.',
-    completedDays: [], graceDays: 1, colorToken: 'primary',
-  },
-  {
-    id: 'h2', title: 'Zone 2 Cardio / Running', duration: '45 mins', durationMinutes: 45, startTime: '16:30', isTimeBlocked: true, icon: 'directions_run',
-    linkedGoal: 'Half Marathon', description: 'Sub-lactate threshold endurance builder at ~138 bpm.',
-    completedDays: [], graceDays: 0, colorToken: 'secondary',
-  },
-  {
-    id: 'h3', title: 'Evening Reading', duration: '30 mins', durationMinutes: 30, startTime: '21:30', isTimeBlocked: true, icon: 'auto_stories',
-    linkedGoal: 'Knowledge System', description: 'Non-fiction synthesis and spaced repetition review.',
-    completedDays: [], graceDays: 2, colorToken: 'tertiary',
-  },
-  {
-    id: 'h4', title: 'Guitar Practice', duration: '25 mins', durationMinutes: 25, startTime: '18:30', isTimeBlocked: true, icon: 'music_note',
-    linkedGoal: 'Classical Guitar', description: 'Deliberate fingerstyle etude practice with metronome.',
-    completedDays: [], graceDays: 1, colorToken: 'secondary',
-  },
-];
-
-const DEFAULT_REFLECTIONS = {
-  currentWeek: '2026-W37',
-  moodRatings: { 0: 4, 1: 5, 2: 4, 3: 3, 4: 5, 5: 4, 6: 4 }, // 0=Sun..6=Sat (1-5 scale)
-  workedWell: 'Morning deep work block before 11 AM has been 90% reliable.',
-  pushedBack: 'Guitar fingerstyle practice got rescheduled 3x due to late evening spillover.',
-  pushedBackReason: 'Low Energy',
-  onePriority: 'Finalize and launch the Portfolio Website v3 live release.',
-  targetGoalId: 'g1',
-  frictionTask: 'Syncing engineering team API migration schemas',
-  history: [
+  const goals = [
     {
-      id: 'ref-w36',
-      week: '2026-W36',
-      title: 'Week 36 Review — High Velocity',
-      dateRange: 'Aug 31 – Sep 6, 2026',
-      completedRate: 85,
-      tasksDone: 17,
-      tasksTotal: 20,
-      momentumScore: 88,
-      workedWell: 'Kept consistent 45m workout intervals every alternate evening.',
-      pushedBack: 'Book reading backlog.',
-      onePriority: 'Complete Stitch design tokens review.',
-      targetGoal: 'Ship Portfolio Website v3'
+      id: 'g1',
+      title: 'Ship Portfolio Website v3 & AI Copilot',
+      category: 'career',
+      why: 'To establish independent creative authority and ship craft at the highest level.',
+      progress: 72,
+      daysLeft: 10,
+      targetDate: getOffsetDateKey(todayStr, 10),
+      keyResults: 4,
+      tasksActive: 2,
+      velocity: 'ahead',
+      icon: 'lightbulb',
+      color: 'primary',
+      linkedHabitIds: ['h4']
+    },
+    {
+      id: 'g2',
+      title: 'Run a Sub-1:45 Half Marathon',
+      category: 'health',
+      why: 'Build unbreakable physical stamina and mental endurance.',
+      progress: 55,
+      daysLeft: 32,
+      targetDate: getOffsetDateKey(todayStr, 32),
+      keyResults: 3,
+      tasksActive: 1,
+      velocity: 'on-track',
+      icon: 'favorite',
+      color: 'secondary',
+      linkedHabitIds: ['h2', 'h5']
+    },
+    {
+      id: 'g3',
+      title: 'Master Grade 3 Classical Guitar Repertoire',
+      category: 'creative',
+      why: 'Anchor evenings in tactile, acoustic expression away from screens.',
+      progress: 20,
+      daysLeft: 14,
+      targetDate: getOffsetDateKey(todayStr, 14),
+      keyResults: 4,
+      tasksActive: 1,
+      velocity: 'behind',
+      icon: 'music_note',
+      color: 'tertiary',
+      linkedHabitIds: ['h3']
+    },
+    {
+      id: 'g4',
+      title: 'Launch Personal Knowledge OS & Zettelkasten',
+      category: 'career',
+      why: 'Build a second brain that compounds learning into compounding intellectual leverage.',
+      progress: 45,
+      daysLeft: 24,
+      targetDate: getOffsetDateKey(todayStr, 24),
+      keyResults: 3,
+      tasksActive: 0,
+      velocity: 'on-track',
+      icon: 'auto_stories',
+      color: 'primary',
+      linkedHabitIds: ['h6']
+    },
+    {
+      id: 'g5',
+      title: 'Complete Spanish B1 Fluency Certification',
+      category: 'creative',
+      why: 'Unlock travel fluency and cultural empathy across Latin America.',
+      progress: 30,
+      daysLeft: 45,
+      targetDate: getOffsetDateKey(todayStr, 45),
+      keyResults: 3,
+      tasksActive: 0,
+      velocity: 'behind',
+      icon: 'translate',
+      color: 'tertiary',
+      linkedHabitIds: []
     }
-  ]
-};
+  ];
+
+  const habits = [
+    {
+      id: 'h1',
+      title: 'Daily Mobility & Morning Reset',
+      duration: '25 mins',
+      durationMinutes: 25,
+      startTime: '06:30',
+      isTimeBlocked: true,
+      icon: 'self_improvement',
+      linkedGoal: 'Half Marathon',
+      description: 'Hip flexor, thoracic spine, and ankle mobility flow.',
+      completedDays: [sixDaysAgo, fiveDaysAgo, fourDaysAgo, threeDaysAgo, twoDaysAgo, yesterday, todayStr],
+      graceDays: 2,
+      colorToken: 'primary'
+    },
+    {
+      id: 'h2',
+      title: 'Zone 2 Cardio / Aerobic Base',
+      duration: '45 mins',
+      durationMinutes: 45,
+      startTime: '16:30',
+      isTimeBlocked: true,
+      icon: 'directions_run',
+      linkedGoal: 'Half Marathon',
+      description: 'Sub-lactate threshold endurance builder at 138-142 bpm.',
+      completedDays: [fourDaysAgo, threeDaysAgo],
+      graceDays: 0,
+      colorToken: 'secondary'
+    },
+    {
+      id: 'h3',
+      title: 'Classical Guitar Fingerstyle Drill',
+      duration: '30 mins',
+      durationMinutes: 30,
+      startTime: '18:30',
+      isTimeBlocked: true,
+      icon: 'music_note',
+      linkedGoal: 'Classical Guitar',
+      description: 'Fernando Sor studies with metronome at 60 bpm.',
+      completedDays: [threeDaysAgo, twoDaysAgo, yesterday],
+      graceDays: 1,
+      colorToken: 'tertiary'
+    },
+    {
+      id: 'h4',
+      title: 'Autonomous Deep Work Sprint',
+      duration: '90 mins',
+      durationMinutes: 90,
+      startTime: '07:30',
+      isTimeBlocked: true,
+      icon: 'terminal',
+      linkedGoal: 'Ship Portfolio',
+      description: 'High-cognitive creative focus before notification windows open.',
+      completedDays: [fourDaysAgo, threeDaysAgo, twoDaysAgo, yesterday, todayStr],
+      graceDays: 1,
+      colorToken: 'primary'
+    },
+    {
+      id: 'h5',
+      title: 'Daily Nutrition: 160g Protein & Hydration',
+      duration: '20 mins',
+      durationMinutes: 20,
+      startTime: '13:00',
+      isTimeBlocked: false,
+      icon: 'restaurant',
+      linkedGoal: 'Half Marathon',
+      description: 'Lean nutrition fueling daily endurance output and recovery.',
+      completedDays: [todayStr, yesterday, twoDaysAgo],
+      graceDays: 2,
+      colorToken: 'primary'
+    },
+    {
+      id: 'h6',
+      title: 'Evening Non-fiction Reading & Synthesis',
+      duration: '30 mins',
+      durationMinutes: 30,
+      startTime: '21:30',
+      isTimeBlocked: true,
+      icon: 'auto_stories',
+      linkedGoal: 'Knowledge System',
+      description: 'Deep non-fiction reading and spaced repetition markdown notes.',
+      completedDays: [twoDaysAgo, threeDaysAgo],
+      graceDays: 1,
+      colorToken: 'tertiary'
+    },
+    {
+      id: 'h7',
+      title: 'Sleep Discipline (Wind down & Sleep Prep)',
+      duration: '15 mins',
+      durationMinutes: 15,
+      startTime: '22:45',
+      isTimeBlocked: true,
+      icon: 'bedtime',
+      linkedGoal: 'Half Marathon',
+      description: 'Screens off, blue-light block, room at 19°C for restorative REM cycle.',
+      completedDays: [yesterday, twoDaysAgo, threeDaysAgo, fourDaysAgo],
+      graceDays: 2,
+      colorToken: 'secondary'
+    }
+  ];
+
+  const schedules = [
+    {
+      id: 'sched-1',
+      title: 'CS301 Distributed Systems & Cloud Mesh',
+      category: 'College',
+      startTime: '09:00',
+      endTime: '10:15',
+      durationMinutes: 75,
+      recurrence: 'daily',
+      completed: true,
+      completedDates: [todayStr],
+      notes: 'Lecture Hall B4 — Raft Consensus, Paxos & Byzantine Fault Tolerance',
+      type: 'schedule',
+      createdAt: Date.now() - 3600000 * 24
+    },
+    {
+      id: 'sched-2',
+      title: 'EE210 Circuit Lab & Resonance Analysis',
+      category: 'College',
+      startTime: '11:30',
+      endTime: '13:00',
+      durationMinutes: 90,
+      recurrence: 'daily',
+      completed: false,
+      completedDates: [],
+      notes: 'Hardware bench 8 — Oscilloscope frequency resonance test',
+      type: 'schedule',
+      createdAt: Date.now() - 3600000 * 20
+    },
+    {
+      id: 'sched-3',
+      title: 'Product Architecture RFC & Sync',
+      category: 'Deep Work',
+      startTime: '14:30',
+      endTime: '15:30',
+      durationMinutes: 60,
+      recurrence: 'daily',
+      completed: false,
+      completedDates: [],
+      notes: 'Coordinate with lead maintainers on SQLite offline sync protocol',
+      type: 'schedule',
+      createdAt: Date.now() - 3600000 * 15
+    },
+    {
+      id: 'sched-4',
+      title: 'Strength Training: Heavy Pull & Posterior Chain',
+      category: 'Fitness',
+      startTime: '17:30',
+      endTime: '18:45',
+      durationMinutes: 75,
+      recurrence: 'daily',
+      completed: false,
+      completedDates: [],
+      notes: 'Deadlifts 4x5 @ 140kg, Weighted Pullups, Face pulls',
+      type: 'schedule',
+      createdAt: Date.now() - 3600000 * 10
+    }
+  ];
+
+  const tasks = [
+    {
+      id: 1,
+      title: 'Write GraphQL Schema Gateway v3 with Rust WASM',
+      priority: 'high',
+      impact: 'high',
+      category: 'Deep Work',
+      goalId: 'g1',
+      completed: false,
+      dueDate: 'Today',
+      plannedDate: todayStr,
+      startTime: '10:30',
+      durationMinutes: 45,
+      areas: ['Career & Craft', 'Deep Focus'],
+      energy: 'High',
+      notes: 'Resolve latency regression between HTTP/2 and GraphQL federated mesh.',
+      subtasks: [
+        { id: 's1', title: 'Audit token validation headers', completed: true },
+        { id: 's2', title: 'Benchmark serialization latency', completed: false }
+      ],
+      createdAt: Date.now() - 86400000
+    },
+    {
+      id: 2,
+      title: 'Review Stitch AI Design Tokens & Color Harmony Matrix',
+      priority: 'high',
+      impact: 'high',
+      category: 'Design',
+      goalId: 'g1',
+      completed: false,
+      dueDate: 'Today',
+      plannedDate: todayStr,
+      startTime: '08:00',
+      durationMinutes: 45,
+      areas: ['Creative & Expression', 'Career & Craft'],
+      energy: 'Medium',
+      notes: 'Examine contrast ratios on dark mode container tokens and card surfaces.',
+      subtasks: [
+        { id: 's3', title: 'Verify contrast on dark mode container tokens', completed: false }
+      ],
+      createdAt: Date.now() - 172800000
+    },
+    {
+      id: 3,
+      title: 'Submit Bi-weekly Lab Instrumentation Report PDF',
+      priority: 'normal',
+      impact: 'medium',
+      category: 'College',
+      completed: false,
+      dueDate: 'Today',
+      plannedDate: todayStr,
+      startTime: null,
+      durationMinutes: 15,
+      areas: ['Career & Craft'],
+      energy: 'Low',
+      notes: 'Export PDF from Overleaf and attach to university canvas portal.',
+      subtasks: [],
+      createdAt: Date.now() - 50000
+    },
+    {
+      id: 4,
+      title: 'Deploy Supabase Auth Sync Proxy Hotfix to Vercel',
+      priority: 'high',
+      impact: 'high',
+      category: 'Deep Work',
+      goalId: 'g4',
+      completed: true,
+      completedAt: Date.now() - 3600000,
+      completedDates: [todayStr],
+      dueDate: 'Today',
+      plannedDate: todayStr,
+      startTime: '07:00',
+      durationMinutes: 30,
+      areas: ['Career & Craft'],
+      energy: 'High',
+      notes: 'Verify Web & Android real-time WebSocket handshake under latency.',
+      subtasks: [
+        { id: 's4', title: 'Run automated end-to-end test suite', completed: true }
+      ],
+      createdAt: Date.now() - 120000
+    },
+    {
+      id: 5,
+      title: 'Morning Inbox Zero & Standup Communication Protocol',
+      priority: 'normal',
+      impact: 'low',
+      category: 'Routine',
+      recurrence: 'daily',
+      completed: false,
+      completedDates: [yesterday],
+      dueDate: 'Today',
+      plannedDate: todayStr,
+      startTime: '09:45',
+      durationMinutes: 20,
+      areas: ['Personal & Life'],
+      energy: 'Low',
+      notes: 'Clear notifications and post async standup blockers in Slack.',
+      subtasks: [],
+      createdAt: Date.now() - 40000
+    },
+    {
+      id: 6,
+      title: 'Zone 2 Cardio Interval (Heart rate ~142 bpm)',
+      priority: 'normal',
+      impact: 'medium',
+      category: 'Habits',
+      goalId: 'g2',
+      linkedHabitId: 'h2',
+      completed: false,
+      dueDate: 'Today',
+      plannedDate: todayStr,
+      startTime: '16:30',
+      durationMinutes: 45,
+      areas: ['Health & Vitality', 'Habit Consistency'],
+      energy: 'High',
+      notes: '5km steady aerobic progression followed by 10 min dynamic stretching.',
+      subtasks: [],
+      createdAt: Date.now() - 30000
+    },
+    {
+      id: 7,
+      title: 'Practice Fernando Sor Study in B minor (Etude No. 5)',
+      priority: 'normal',
+      impact: 'medium',
+      category: 'Creative',
+      goalId: 'g3',
+      completed: false,
+      dueDate: 'Tomorrow',
+      plannedDate: tomorrow,
+      startTime: '19:00',
+      durationMinutes: 35,
+      areas: ['Creative & Expression'],
+      energy: 'Medium',
+      notes: 'Deliberate fingerstyle right-hand alternating thumb independence drill.',
+      subtasks: [
+        { id: 's7', title: 'Tuning and posture check', completed: false },
+        { id: 's8', title: 'Measure 1-16 fingering drill', completed: false }
+      ],
+      createdAt: Date.now() - 25000
+    },
+    {
+      id: 8,
+      title: 'Audit Postgres Index Usage & Query Execution Plan',
+      priority: 'normal',
+      impact: 'high',
+      category: 'Deep Work',
+      completed: false,
+      dueDate: 'This Week',
+      durationMinutes: 60,
+      areas: ['Career & Craft'],
+      energy: 'High',
+      notes: 'Check pg_stat_user_indexes for dead tuples and redundant composite indexes.',
+      subtasks: [],
+      createdAt: Date.now() - 20000
+    },
+    {
+      id: 9,
+      title: 'Explore WebAssembly Rust Media Parser for Audio Chimes',
+      priority: 'low',
+      impact: 'low',
+      category: 'Personal',
+      isBacklog: true,
+      dueDate: 'Someday',
+      durationMinutes: 90,
+      areas: ['Creative & Expression', 'Career & Craft'],
+      energy: 'High',
+      notes: 'Compile minimal Rust synthesis crate to wasm32-unknown-unknown.',
+      subtasks: [],
+      createdAt: Date.now() - 15000
+    },
+    {
+      id: 10,
+      title: 'Order Marathon Energy Gels & Electrolyte Electrolysis Tablets',
+      priority: 'normal',
+      impact: 'low',
+      category: 'Personal',
+      goalId: 'g2',
+      completed: false,
+      dueDate: 'Past',
+      plannedDate: threeDaysAgo,
+      startTime: '15:00',
+      durationMinutes: 20,
+      areas: ['Health & Vitality'],
+      energy: 'Low',
+      notes: 'Replenish marathon racing fuel box before 18km long run weekend.',
+      subtasks: [],
+      createdAt: Date.now() - 86400000 * 3
+    }
+  ];
+
+  const focusSessions = [
+    {
+      id: 'fs-1',
+      taskId: 4,
+      duration: 30,
+      timestamp: Date.now() - 3600000 * 2,
+      type: 'focus',
+      completed: true
+    },
+    {
+      id: 'fs-2',
+      taskId: 1,
+      duration: 45,
+      timestamp: Date.now() - 3600000 * 4,
+      type: 'focus',
+      completed: true
+    },
+    {
+      id: 'fs-3',
+      taskId: 2,
+      duration: 50,
+      timestamp: Date.now() - 86400000 - 3600000 * 3,
+      type: 'focus',
+      completed: true
+    },
+    {
+      id: 'fs-4',
+      taskId: 8,
+      duration: 60,
+      timestamp: Date.now() - 86400000 - 3600000 * 6,
+      type: 'focus',
+      completed: true
+    },
+    {
+      id: 'fs-5',
+      taskId: 1,
+      duration: 45,
+      timestamp: Date.now() - 86400000 * 2 - 3600000 * 2,
+      type: 'focus',
+      completed: true
+    },
+    {
+      id: 'fs-6',
+      taskId: 3,
+      duration: 25,
+      timestamp: Date.now() - 86400000 * 2 - 3600000 * 5,
+      type: 'focus',
+      completed: true
+    }
+  ];
+
+  const reflections = {
+    currentWeek: '2026-W42',
+    moodRatings: { 0: 4, 1: 5, 2: 4, 3: 5, 4: 4, 5: 5, 6: 4 },
+    workedWell: 'Morning deep work blocks before 11 AM achieved 92% reliability with zero distraction.',
+    pushedBack: 'Guitar fingerstyle practice got rescheduled due to late evening team RFC review.',
+    pushedBackReason: 'Low Energy',
+    onePriority: 'Finalize and launch the Portfolio Website v3 & AI Copilot live production release.',
+    targetGoalId: 'g1',
+    frictionTask: 'Auditing complex database index execution plans under peak IOPS load',
+    history: [
+      {
+        id: 'ref-w41',
+        week: '2026-W41',
+        title: 'Week 41 Review — Exceptional Flow & Execution',
+        dateRange: 'Oct 5 – Oct 11, 2026',
+        completedRate: 88,
+        tasksDone: 19,
+        tasksTotal: 22,
+        momentumScore: 91,
+        workedWell: 'Maintained 45m workout intervals every alternate evening with strict sleep discipline.',
+        pushedBack: 'Book reading backlog.',
+        onePriority: 'Complete Stitch design tokens and mobile widget integration.',
+        targetGoal: 'Ship Portfolio Website v3'
+      },
+      {
+        id: 'ref-w40',
+        week: '2026-W40',
+        title: 'Week 40 Review — Solid Consistency',
+        dateRange: 'Sep 28 – Oct 4, 2026',
+        completedRate: 82,
+        tasksDone: 16,
+        tasksTotal: 20,
+        momentumScore: 84,
+        workedWell: 'Consistent morning mobility routine prevented lower back tightness.',
+        pushedBack: 'Weekend long run got shifted due to rain.',
+        onePriority: 'Deliver compiler WASM prototype.',
+        targetGoal: 'Ship Portfolio Website v3'
+      }
+    ]
+  };
+
+  return { goals, habits, schedules, tasks, focusSessions, reflections };
+}
+
+const INITIAL_SAMPLE = generateRichSampleWorkspace(todayKey());
+export const DEFAULT_TASKS = INITIAL_SAMPLE.tasks;
+export const DEFAULT_GOALS = INITIAL_SAMPLE.goals;
+export const DEFAULT_HABITS = INITIAL_SAMPLE.habits;
+export const DEFAULT_SCHEDULES = INITIAL_SAMPLE.schedules;
+export const DEFAULT_REFLECTIONS = INITIAL_SAMPLE.reflections;
+export const DEFAULT_FOCUS_SESSIONS = INITIAL_SAMPLE.focusSessions;
 
 const DEFAULT_SETTINGS = {
   focusLength: 45,
@@ -376,8 +721,8 @@ const DEFAULT_SETTINGS = {
   soundEffects: true,
   showFocusBar: true,
   profile: {
-    name: '',
-    role: '',
+    name: 'Hardik',
+    role: 'Principal Systems Architect',
     timezone: (typeof Intl !== 'undefined' && Intl.DateTimeFormat) ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
   },
   customUiLayout: {},
@@ -390,8 +735,8 @@ export default function useStore() {
   const [habits, setHabits] = useLocalStorage('momentum_habits', DEFAULT_HABITS);
   const [reflections, setReflections] = useLocalStorage('momentum_reflections', DEFAULT_REFLECTIONS);
   const [settings, setSettings] = useLocalStorage('momentum_settings', DEFAULT_SETTINGS);
-  const [focusSessions, setFocusSessions] = useLocalStorage('momentum_focus_sessions', []);
-  const [schedules, setSchedules] = useLocalStorage('momentum_schedules', []);
+  const [focusSessions, setFocusSessions] = useLocalStorage('momentum_focus_sessions', DEFAULT_FOCUS_SESSIONS);
+  const [schedules, setSchedules] = useLocalStorage('momentum_schedules', DEFAULT_SCHEDULES);
   const [cloudUserId, setCloudUserId] = useState(null);
   const [cloudUserEmail, setCloudUserEmail] = useState('');
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
@@ -1398,14 +1743,16 @@ export default function useStore() {
 
   /* Reset & Clean Slate */
   const resetAllData = useCallback(() => {
-    setTasks(DEFAULT_TASKS);
-    setGoals(DEFAULT_GOALS);
-    setHabits(DEFAULT_HABITS);
-    setSchedules([]);
-    setReflections(DEFAULT_REFLECTIONS);
+    const today = todayKey();
+    const sample = generateRichSampleWorkspace(today);
+    setTasks(sample.tasks);
+    setGoals(sample.goals);
+    setHabits(sample.habits);
+    setSchedules(sample.schedules);
+    setReflections(sample.reflections);
     setSettings(DEFAULT_SETTINGS);
-    setFocusSessions([]);
-    showToast('All data reset to initial baseline');
+    setFocusSessions(sample.focusSessions);
+    showToast('All data reset to initial baseline with all edge features');
   }, [setTasks, setGoals, setHabits, setSchedules, setReflections, setSettings, setFocusSessions, showToast]);
 
   const clearAllData = useCallback(() => {
@@ -1433,12 +1780,16 @@ export default function useStore() {
   }, [setTasks, setGoals, setHabits, setReflections, setFocusSessions, showToast]);
 
   const loadDemoData = useCallback(() => {
-    setTasks(DEFAULT_TASKS);
-    setGoals(DEFAULT_GOALS);
-    setHabits(DEFAULT_HABITS);
-    setReflections(DEFAULT_REFLECTIONS);
-    showToast('Sample demo workspace restored');
-  }, [setTasks, setGoals, setHabits, setReflections, showToast]);
+    const today = todayKey();
+    const sample = generateRichSampleWorkspace(today);
+    setTasks(sample.tasks);
+    setGoals(sample.goals);
+    setHabits(sample.habits);
+    setSchedules(sample.schedules);
+    setReflections(sample.reflections);
+    setFocusSessions(sample.focusSessions);
+    showToast('Sample demo workspace restored with all edge features');
+  }, [setTasks, setGoals, setHabits, setSchedules, setReflections, setFocusSessions, showToast]);
 
   /* ── Focus Timer Engine ── */
   const defaultFocusSeconds = (settings.focusLength || 45) * 60;
