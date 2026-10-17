@@ -8,3 +8,5 @@ graphify-out/
 *.ps1
 patch_dashboard*.py
 test_ollama.js
+__pycache__/
+*.pyc

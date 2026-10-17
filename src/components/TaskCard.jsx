@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Check,
@@ -11,9 +11,12 @@ import {
   Trash2,
   AlertCircle,
   Infinity as InfinityIcon,
-  Repeat
+  Repeat,
+  Lock,
+  Link2
 } from 'lucide-react';
 import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanLabel, taskPlanDate, todayPlanDate } from '../lib/taskMetadata';
+import { getBlockingPrerequisites, getAllPrerequisites } from '../lib/taskDependencies';
 import DeleteRecurringModal from './DeleteRecurringModal';
 import ConfirmModal from './ConfirmModal';
 
@@ -25,7 +28,8 @@ const TaskCard = React.memo(function TaskCard({
   onToggleSubtask,
   onEditTask,
   goals = [],
-  habits = []
+  habits = [],
+  allTasks = []
 }) {
   const [showDeleteRecurring, setShowDeleteRecurring] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -35,6 +39,12 @@ const TaskCard = React.memo(function TaskCard({
   const impact = taskImpact(task);
   const plannedLabel = taskPlanLabel(task);
   const deadline = deadlineStatus(task);
+
+  // Compute Dependency & Prerequisite Lock State
+  const allPrereqs = useMemo(() => getAllPrerequisites(task, allTasks, goals), [task, allTasks, goals]);
+  const blockers = useMemo(() => getBlockingPrerequisites(task, allTasks, goals), [task, allTasks, goals]);
+  const isBlocked = !task.completed && blockers.length > 0;
+  const metPrereqsCount = allPrereqs.length - blockers.length;
 
   const formatTimeStr = (time) => {
     if (!time) return '';
@@ -145,6 +155,15 @@ const TaskCard = React.memo(function TaskCard({
               >
                 {task.title}
               </span>
+              {isBlocked && (
+                <span
+                  title={`Waiting on: ${blockers.map(b => b.title).join(', ')}`}
+                  className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25 shrink-0"
+                >
+                  <Lock className="w-2.5 h-2.5" />
+                  {allPrereqs.length > 1 ? `${metPrereqsCount}/${allPrereqs.length}` : (blockers[0]?.title ? `After: ${blockers[0].title}` : 'Prerequisite')}
+                </span>
+              )}
               {linkedGoal && (
                 <span className="hidden md:inline-flex items-center text-[10px] font-medium text-[#0F52BA] dark:text-[#6495ED] bg-[#0F52BA]/5 dark:bg-[#0F52BA]/15 px-1.5 py-0.2 rounded shrink-0 truncate max-w-[130px]">
                   {linkedGoal.title}

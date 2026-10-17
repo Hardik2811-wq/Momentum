@@ -660,3 +660,28 @@ export function harvestCopilotPlan(plan) {
 
   return { learnedCount };
 }
+
+const PREREQ_AFFINITY_KEY = 'momentum_prereq_affinity';
+
+export function getPrerequisiteAffinities() {
+  const storage = getStorage();
+  if (!storage) return {};
+  try {
+    const raw = storage.getItem(PREREQ_AFFINITY_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function recordPrerequisiteAffinity(prereqTitle, dependentTitle) {
+  if (!prereqTitle || !dependentTitle) return;
+  const storage = getStorage();
+  if (!storage) return;
+  try {
+    const affinities = getPrerequisiteAffinities();
+    const key = `${prereqTitle.trim().toLowerCase()}->${dependentTitle.trim().toLowerCase()}`;
+    affinities[key] = (affinities[key] || 0) + 1;
+    storage.setItem(PREREQ_AFFINITY_KEY, JSON.stringify(affinities));
+  } catch {}
+}

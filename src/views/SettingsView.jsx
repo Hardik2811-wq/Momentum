@@ -5,6 +5,7 @@ import ApiKeyModal from '../components/ApiKeyModal';
 import { sendNotification } from '../store/useStore';
 import {
   generateMcpBridgeToken,
+  getByokStatus,
   getCustomCopilotDirective,
   getSavedMcpBridgeInfo,
   setCustomCopilotDirective
@@ -64,7 +65,9 @@ export default function SettingsView({
   onCheckInHabit,
   onOpenQuickAdd,
   onOpenNewGoal,
-  onOpenNewHabit
+  onOpenNewHabit,
+  agentControls = null,
+  onOpenAgentStudio = null
 }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -80,9 +83,18 @@ export default function SettingsView({
   const inputCls = 'bg-[#F0EFEA] dark:bg-[#202024] border-black/[0.08] dark:border-white/[0.08] text-ink-primary dark:text-[#F7F6F2] focus:border-accent-cobalt';
   const profile = settings?.profile || {};
 
+  const [byokStatus, setByokStatus] = useState(null);
+  const loadByokStatus = async () => {
+    try {
+      const res = await getByokStatus();
+      if (res && res.success) setByokStatus(res);
+    } catch {}
+  };
+
   const refreshIntelligence = () => setIntelligence(getNlpInsights());
 
   useEffect(() => {
+    loadByokStatus();
     window.addEventListener('momentum:nlp-learned', refreshIntelligence);
     return () => window.removeEventListener('momentum:nlp-learned', refreshIntelligence);
   }, []);
@@ -266,6 +278,138 @@ export default function SettingsView({
           </div>
         </Section>
 
+        {/* ── Autonomous Background AI Copilot Agent ── */}
+        <Section
+          title="Autonomous Background Copilot Agent"
+          badge={
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 font-semibold border border-violet-500/30">
+              {agentControls?.agentState?.mode === 'FULL_AUTOPILOT' ? 'Autopilot Active' : 'Proactive Approval'}
+            </span>
+          }
+        >
+          <p className="text-[12px] leading-5 text-ink-secondary dark:text-[#9A9AA0] mb-3">
+            Audits your entire Momentum OS in the background. Understands human fatigue, protects streaks from evening decay, detects somatic clashes (e.g. gym before deep coding), and surfaces visual timeline diffs with multi-perspective benefit analysis.
+          </p>
+
+          <Row
+            label="Background Agent Enablement"
+            hint="Continuously monitor and harmonize schedule friction in background"
+          >
+            <input
+              type="checkbox"
+              checked={agentControls?.agentState?.enabled ?? true}
+              onChange={(e) => agentControls?.updateAgentSettings?.({ enabled: e.target.checked })}
+              className="w-4 h-4 accent-violet-600 cursor-pointer"
+            />
+          </Row>
+
+          <Row
+            label="Operating Agency Level"
+            hint={agentControls?.agentState?.mode === 'FULL_AUTOPILOT'
+              ? 'Full Autopilot: auto-shifts slipped tasks & inserts buffers with 1-tap Undo'
+              : 'Proactive Approval: asks for 1-tap approval with visual timeline diff'}
+          >
+            <select
+              value={agentControls?.agentState?.mode || 'PROACTIVE_APPROVAL'}
+              onChange={(e) => agentControls?.updateAgentSettings?.({ mode: e.target.value })}
+              className="px-2.5 py-1 text-[12px] rounded-lg bg-[#F7F6F2] dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] text-ink-primary dark:text-[#F7F6F2] outline-none cursor-pointer"
+            >
+              <option value="PROACTIVE_APPROVAL">Proactive Approval (1-Tap Review)</option>
+              <option value="FULL_AUTOPILOT">Full Autopilot (Background Harmony)</option>
+            </select>
+          </Row>
+
+          <Row
+            label="Background Heartbeat Frequency"
+            hint="How frequently the autonomous engine audits and harmonizes your day"
+          >
+            <select
+              value={agentControls?.agentState?.auditIntervalMinutes || 5}
+              onChange={(e) => agentControls?.updateAgentSettings?.({ auditIntervalMinutes: Number(e.target.value) })}
+              className="px-2.5 py-1 text-[12px] rounded-lg bg-[#F7F6F2] dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] text-ink-primary dark:text-[#F7F6F2] outline-none cursor-pointer"
+            >
+              <option value={1}>Every 1 minute (Aggressive)</option>
+              <option value={5}>Every 5 minutes (Recommended)</option>
+              <option value={15}>Every 15 minutes (Balanced)</option>
+              <option value={30}>Every 30 minutes (Quiet)</option>
+            </select>
+          </Row>
+
+          <Row
+            label="Circadian Biological Profile"
+            hint="Calibrate peak focus and trough windows to your biological chronotype"
+          >
+            <select
+              value={agentControls?.agentState?.circadianProfile || 'STANDARD'}
+              onChange={(e) => {
+                const profile = e.target.value;
+                const offset = profile === 'NIGHT_OWL' ? 3 : profile === 'EARLY_BIRD' ? -2 : 0;
+                agentControls?.updateAgentSettings?.({ circadianProfile: profile, circadianOffset: offset });
+              }}
+              className="px-2.5 py-1 text-[12px] rounded-lg bg-[#F7F6F2] dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] text-ink-primary dark:text-[#F7F6F2] outline-none cursor-pointer"
+            >
+              <option value="STANDARD">Standard (Peak 08:00–12:00, Dip 13:30–15:30)</option>
+              <option value="NIGHT_OWL">Night Owl (+3h: Peak 11:00–15:00, Dip 16:30–18:30)</option>
+              <option value="EARLY_BIRD">Early Bird (-2h: Peak 06:00–10:00, Dip 12:00–13:30)</option>
+            </select>
+          </Row>
+
+          <Row
+            label="Daily Deep Work Budget"
+            hint="Maximum sustainable minutes of high-intensity prefrontal logic synthesis"
+          >
+            <select
+              value={agentControls?.agentState?.deepWorkBudgetMinutes || 240}
+              onChange={(e) => agentControls?.updateAgentSettings?.({ deepWorkBudgetMinutes: Number(e.target.value) })}
+              className="px-2.5 py-1 text-[12px] rounded-lg bg-[#F7F6F2] dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] text-ink-primary dark:text-[#F7F6F2] outline-none cursor-pointer"
+            >
+              <option value={120}>2 hours (Light focus capacity)</option>
+              <option value={180}>3 hours (Moderate focus)</option>
+              <option value={240}>4 hours (Recommended: Newport Deep Work ceiling)</option>
+              <option value={300}>5 hours (High cognitive stamina)</option>
+              <option value={360}>6 hours (Extreme intensity)</option>
+            </select>
+          </Row>
+
+          <Row
+            label="Audio Chimes & Sound Effects"
+            hint="Crisp harmonic audio chime when actions are harmonized"
+          >
+            <input
+              type="checkbox"
+              checked={agentControls?.agentState?.soundEffects ?? true}
+              onChange={(e) => agentControls?.updateAgentSettings?.({ soundEffects: e.target.checked })}
+              className="w-4 h-4 accent-violet-600 cursor-pointer"
+            />
+          </Row>
+
+          <Row
+            label="Autonomous Mission Studio"
+            hint="Launch interactive time-lapse video player, holographic radar & decision matrix"
+            noBorder
+          >
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => agentControls?.triggerAudit?.(true)}
+                className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[12px] font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[14px]">explore</span>
+                <span>Run Forensic Audit</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenAgentStudio}
+                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-[12px] font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+                <span>Open Agent Studio</span>
+              </button>
+            </div>
+          </Row>
+        </Section>
+
         <Section
           title="Local Intelligence & Groq AI"
           badge={<span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-600/15">LOCAL-FIRST</span>}
@@ -338,10 +482,27 @@ export default function SettingsView({
           <div className="mt-5 border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[12px] font-semibold text-ink-primary dark:text-[#F7F6F2]">Multi-Engine AI Key (Gemini 2.5 / Groq / OpenRouter)</p>
-                <p className="mt-0.5 text-[11px] leading-4 text-[#8E8E93]">Supports free Google Gemini 2.5 Flash (`AIza...`), Groq (`gsk_...` with Kimi-K2 &amp; GPT-OSS-120B), and OpenRouter (`sk-or-...`).</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-[12px] font-semibold text-ink-primary dark:text-[#F7F6F2]">Multi-Engine AI Key (Gemini 2.5 / Groq / OpenRouter)</p>
+                  {byokStatus?.groqKeyCount > 0 && (
+                    <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
+                      {byokStatus.groqKeyCount} Groq Key{byokStatus.groqKeyCount > 1 ? 's' : ''} (Failover Pool)
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-[11px] leading-4 text-[#8E8E93]">
+                  {byokStatus?.groqKeyCount > 1
+                    ? `Round-robin load distribution across ${byokStatus.groqKeyCount} Groq keys with automatic 429 rate limit failover.`
+                    : 'Supports free Google Gemini 2.5 Flash (`AIza...`), multiple Groq keys (`gsk_...`), and OpenRouter (`sk-or-...`).'}
+                </p>
               </div>
-              <button type="button" onClick={() => setShowByokModal(true)} className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#0A84FF] bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200/60 dark:border-blue-800/40 transition">Manage key</button>
+              <button
+                type="button"
+                onClick={() => setShowByokModal(true)}
+                className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#0A84FF] bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200/60 dark:border-blue-800/40 transition"
+              >
+                {byokStatus?.groqKeyCount > 0 ? 'Manage keys' : 'Add keys'}
+              </button>
             </div>
           </div>
 
@@ -530,6 +691,9 @@ export default function SettingsView({
           </Row>
           <Row label="Auto-start Recovery Breaks" hint="Transition to 5-minute break automatically when sprint concludes.">
             <Toggle checked={settings?.autoBreaks ?? true} onChange={(v) => updateSettings({ autoBreaks: v })} />
+          </Row>
+          <Row label="Auto-Chain Series (CN Lecture 1 → 2 → 3)" hint="Automatically enforce sequence for numbered lectures and parts. Turn off to manage all dependencies manually.">
+            <Toggle checked={settings?.autoSeriesChaining ?? true} onChange={(v) => updateSettings({ autoSeriesChaining: v })} />
           </Row>
           <Row label="Desktop Notifications" hint="System alerts when focus timer finishes or cycle changes.">
             <div className="flex items-center gap-2">
@@ -742,7 +906,14 @@ export default function SettingsView({
         }}
         onCancel={() => setShowClearLearningConfirm(false)}
       />
-      <ApiKeyModal isOpen={showByokModal} onClose={() => setShowByokModal(false)} />
+      <ApiKeyModal
+        isOpen={showByokModal}
+        onClose={() => {
+          setShowByokModal(false);
+          loadByokStatus();
+        }}
+        onSuccess={loadByokStatus}
+      />
     </main>
   );
 }

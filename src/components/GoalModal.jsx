@@ -40,6 +40,7 @@ export default function GoalModal({
     why: '',
     dateType: 'open', // 'open' | 'week' | 'month' | 'year' | 'custom'
     targetDate: '',
+    isSequential: false,
     initialTasks: [''],
     linkedHabitIds: []
   });
@@ -124,6 +125,7 @@ export default function GoalModal({
         why: newGoalForm.why.trim() || '',
         dateType: newGoalForm.dateType,
         targetDate: computedDate,
+        isSequential: Boolean(newGoalForm.isSequential),
         initialTasks: newGoalForm.initialTasks.filter(t => t.trim().length > 0),
         linkedHabitIds: newGoalForm.linkedHabitIds,
         color: newGoalForm.categories[0] === 'health' ? 'secondary' : newGoalForm.categories[0] === 'creative' ? 'tertiary' : 'primary'
@@ -239,15 +241,35 @@ export default function GoalModal({
                     <span className="material-symbols-outlined text-[15px] text-[#0A84FF]">checklist</span>
                     <span>Kick-off Deliverables</span>
                   </span>
-                  <span className="text-[10px] text-[#8E8E93] font-normal normal-case">
-                    Auto-creates tasks in Planner
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setNewGoalForm(prev => ({ ...prev, isSequential: !prev.isSequential }))}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition border cursor-pointer ${
+                      newGoalForm.isSequential
+                        ? 'bg-amber-500/15 text-amber-800 border-amber-500/30'
+                        : 'bg-black/[0.04] text-slate-500 border-black/[0.05] hover:text-slate-800'
+                    }`}
+                    title="Sequential Waterfall: Step 2 stays locked until Step 1 is completed."
+                  >
+                    <span className="material-symbols-outlined text-[12px]">{newGoalForm.isSequential ? 'lock' : 'route'}</span>
+                    <span>{newGoalForm.isSequential ? 'Sequential (Waterfall)' : 'Flexible Flow'}</span>
+                  </button>
                 </div>
 
                 <div className="space-y-2">
                   {newGoalForm.initialTasks.map((taskText, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <span className="text-[12px] font-mono text-[#8E8E93] w-4 text-right">{idx + 1}.</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[12px] font-mono text-[#8E8E93] w-4 text-right">{idx + 1}.</span>
+                        {newGoalForm.isSequential && idx > 0 && (
+                          <span
+                            title={`Locked until Step ${idx} completed`}
+                            className="inline-flex items-center text-amber-600 bg-amber-500/15 px-1 py-0.5 rounded text-[9px] font-mono font-bold"
+                          >
+                            <span className="material-symbols-outlined text-[11px]">lock</span>
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="text"
                         value={taskText}

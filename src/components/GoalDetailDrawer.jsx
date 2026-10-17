@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { todayPlanDate } from '../lib/taskMetadata';
+import { getBlockingPrerequisites, isTaskBlocked, getAllPrerequisites } from '../lib/taskDependencies';
 
 const CATEGORY_MAP = {
   career:   { label: 'Career & Craft', color: 'primary', icon: 'terminal' },
@@ -203,6 +204,7 @@ export default function GoalDetailDrawer({
   const [dateType, setDateType] = useState('open');
   const [targetDate, setTargetDate] = useState('');
   const [status, setStatus] = useState('active'); // 'active' | 'completed' | 'paused'
+  const [isSequential, setIsSequential] = useState(false);
   const [linkedHabitIds, setLinkedHabitIds] = useState([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
@@ -216,6 +218,7 @@ export default function GoalDetailDrawer({
       setDateType(goal.dateType || (goal.targetDate ? 'custom' : 'open'));
       setTargetDate(goal.targetDate || '');
       setStatus(goal.status || ((goal.workProgress ?? goal.progress) === 100 ? 'completed' : 'active'));
+      setIsSequential(Boolean(goal.isSequential));
       const derivedIds = Array.isArray(goal.linkedHabits) && goal.linkedHabits.length > 0
         ? goal.linkedHabits.map(h => h.id)
         : (goal.linkedHabitIds || []);
@@ -267,6 +270,7 @@ export default function GoalDetailDrawer({
       dateType,
       targetDate: computedDate,
       status,
+      isSequential,
       linkedHabitIds
     });
     onClose();
@@ -410,17 +414,33 @@ export default function GoalDetailDrawer({
                     ({completedTasks.length}/{linkedTasks.length})
                   </span>
                 </span>
-                {linkedTasks.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
-                      <div
-                        className="h-full bg-[#0A84FF] rounded-full transition-all duration-300"
-                        style={{ width: `${progressPercent}%` }}
-                      />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsSequential(!isSequential)}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition border cursor-pointer ${
+                      isSequential
+                        ? 'bg-amber-500/15 text-amber-800 border-amber-500/30'
+                        : 'bg-black/[0.04] text-slate-500 border-black/[0.05] hover:text-slate-800'
+                    }`}
+                    title="Sequential Waterfall: Steps must be completed in order. Step 2 stays locked until Step 1 is done."
+                  >
+                    <span className="material-symbols-outlined text-[12px]">{isSequential ? 'lock' : 'route'}</span>
+                    <span>{isSequential ? 'Sequential (Waterfall)' : 'Flexible Flow'}</span>
+                  </button>
+
+                  {linkedTasks.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-16 h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
+                        <div
+                          className="h-full bg-[#0A84FF] rounded-full transition-all duration-300"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-semibold">{progressPercent}%</span>
                     </div>
-                    <span className="text-[10px] text-slate-400 font-semibold">{progressPercent}%</span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Quick Inline Task Creator */}
@@ -443,43 +463,62 @@ export default function GoalDetailDrawer({
 
               {/* Open Deliverables Checklist */}
               <div className="space-y-1.5">
-                {openTasks.map(task => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-black/[0.06] shadow-3xs hover:border-black/[0.12] transition"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => onToggleTask?.(task.id)}
-                        className="text-[#8E8E93] hover:text-[#0A84FF] transition shrink-0"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">check_box_outline_blank</span>
-                      </button>
-                      <span className="text-[12px] font-medium text-[#1A1B1F] truncate">
-                        {task.title}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {task.dueDate && (
-                        <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-[#F8F8FC] text-[#64748B]">
-                          {task.dueDate}
-                        </span>
-                      )}
-                      {onStartFocus && (
+                {openTasks.map(task => {
+                  const currentGoalObj = { ...goal, isSequential };
+                  const blockers = getBlockingPrerequisites(task, tasks, [currentGoalObj]);
+                  const allPrereqs = getAllPrerequisites(task, tasks, [currentGoalObj]);
+                  const blocked = blockers.length > 0;
+                  return (
+                    <div
+                      key={task.id}
+                      className={`flex items-center justify-between p-2.5 rounded-xl border transition ${
+                        blocked
+                          ? 'bg-black/[0.015] border-black/[0.04] opacity-75'
+                          : 'bg-white border-black/[0.06] shadow-3xs hover:border-black/[0.12]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <button
                           type="button"
-                          onClick={() => onStartFocus(task.id)}
-                          className="p-1 rounded text-[#8E8E93] hover:text-[#0A84FF]"
-                          title="Start Pomodoro focus on this deliverable"
+                          onClick={() => onToggleTask?.(task.id)}
+                          className="text-[#8E8E93] hover:text-[#0A84FF] transition shrink-0"
                         >
-                          <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                          <span className="material-symbols-outlined text-[18px]">check_box_outline_blank</span>
                         </button>
-                      )}
+                        <span className="text-[12px] font-medium text-[#1A1B1F] truncate">
+                          {task.title}
+                        </span>
+                        {blocked && (
+                          <span
+                            title={`Waiting on: ${blockers.map(b => b.title).join(', ')}`}
+                            className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-800 border border-amber-500/25 shrink-0"
+                          >
+                            <span className="material-symbols-outlined text-[11px]">lock</span>
+                            {allPrereqs.length > 1 ? `${allPrereqs.length - blockers.length}/${allPrereqs.length}` : 'Prerequisite'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {task.dueDate && (
+                          <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-[#F8F8FC] text-[#64748B]">
+                            {task.dueDate}
+                          </span>
+                        )}
+                        {onStartFocus && !blocked && (
+                          <button
+                            type="button"
+                            onClick={() => onStartFocus(task.id)}
+                            className="p-1 rounded text-[#8E8E93] hover:text-[#0A84FF]"
+                            title="Start Pomodoro focus on this deliverable"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {openTasks.length === 0 && (
                   <p className="text-[12px] text-[#8E8E93] italic py-3 text-center bg-[#F8F8FC] rounded-xl border border-black/[0.03]">

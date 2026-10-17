@@ -38,6 +38,7 @@ export default function TaskDetailModal({
   onDeleteTask,
   goals = [],
   habits = [],
+  tasks = [],
   onStartFocus
 }) {
   const [formData, setFormData] = useState({
@@ -57,7 +58,8 @@ export default function TaskDetailModal({
     recurrence: 'none',
     repeatDays: [1, 2, 3, 4, 5],
     notes: '',
-    subtasks: []
+    subtasks: [],
+    dependsOn: []
   });
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [activeDatePicker, setActiveDatePicker] = useState(false);
@@ -93,7 +95,8 @@ export default function TaskDetailModal({
         recurrence: task.recurrence || 'none',
         repeatDays: Array.isArray(task.repeatDays) ? task.repeatDays : [1, 2, 3, 4, 5],
         notes: task.notes || '',
-        subtasks: task.subtasks || []
+        subtasks: task.subtasks || [],
+        dependsOn: Array.isArray(task.dependsOn) ? task.dependsOn : (task.dependsOn ? [task.dependsOn] : [])
       });
       setShowDeadline(Boolean(task.deadlineDate));
       setActiveDatePicker(false);
@@ -193,7 +196,8 @@ export default function TaskDetailModal({
       recurrence: formData.recurrence && formData.recurrence !== 'none' ? formData.recurrence : null,
       repeatDays: formData.recurrence === 'custom' ? formData.repeatDays : null,
       notes: formData.notes,
-      subtasks: formData.subtasks
+      subtasks: formData.subtasks,
+      dependsOn: formData.dependsOn || []
     });
     onClose();
   };
@@ -1168,6 +1172,55 @@ export default function TaskDetailModal({
                         );
                       })}
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Prerequisites & Dependencies (Blocked By) Selector */}
+              <div className="space-y-1 pt-2 border-t border-black/[0.05]">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px] text-amber-600">lock</span>
+                    Prerequisites (Must Complete First)
+                  </span>
+                  <span className="text-[9px] font-mono text-slate-400">
+                    {(formData.dependsOn || []).length} linked
+                  </span>
+                </label>
+
+                {/* Candidate tasks selector */}
+                <div className="max-h-32 overflow-y-auto space-y-1 p-1 rounded-xl bg-[#F5F4FA] border border-black/[0.04]">
+                  {tasks.filter(t => String(t.id) !== String(task?.id)).length === 0 ? (
+                    <p className="text-[11px] text-slate-400 italic p-1.5 text-center">No other tasks in workspace</p>
+                  ) : (
+                    tasks
+                      .filter(t => String(t.id) !== String(task?.id))
+                      .map(otherTask => {
+                        const isDep = (formData.dependsOn || []).map(String).includes(String(otherTask.id));
+                        return (
+                          <button
+                            key={otherTask.id}
+                            type="button"
+                            onClick={() => {
+                              const current = (formData.dependsOn || []).map(String);
+                              const next = isDep
+                                ? current.filter(id => id !== String(otherTask.id))
+                                : [...current, String(otherTask.id)];
+                              setFormData({ ...formData, dependsOn: next });
+                            }}
+                            className={`w-full text-left px-2 py-1.5 rounded-lg text-[11px] flex items-center justify-between transition cursor-pointer ${
+                              isDep
+                                ? 'bg-amber-500/15 text-amber-900 border border-amber-500/30 font-semibold'
+                                : 'text-slate-700 hover:bg-black/[0.04]'
+                            }`}
+                          >
+                            <span className="truncate flex-1">{otherTask.title}</span>
+                            <span className="material-symbols-outlined text-[14px] shrink-0 text-amber-600">
+                              {isDep ? 'check_box' : 'check_box_outline_blank'}
+                            </span>
+                          </button>
+                        );
+                      })
                   )}
                 </div>
               </div>

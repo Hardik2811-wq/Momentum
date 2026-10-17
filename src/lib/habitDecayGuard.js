@@ -134,18 +134,43 @@ export function computeHabitDecayMetrics(habit = {}, todayDateStr = '') {
 }
 
 /**
- * Formulates the 2-minute Minimum Viable Recovery (MVR) for a habit
+ * Formulates the Minimum Viable Recovery (MVR) for a habit
  */
-function generateMinimumViableRecovery(habit = {}) {
+export function generateMinimumViableRecovery(habit = {}) {
   const t = (habit.title || '').toLowerCase();
-  if (/read/i.test(t)) return 'Read just 1 page or 1 paragraph';
-  if (/run|cardio|walk|jog/i.test(t)) return 'Put on running shoes and walk 2 minutes';
-  if (/workout|gym|fitness|lift/i.test(t)) return 'Do 5 pushups or 30 seconds of stretching';
-  if (/guitar|piano|music/i.test(t)) return 'Play 1 single chord or 60 seconds metronome drill';
-  if (/deep work|code|program/i.test(t)) return 'Open editor and write 1 line or review 1 commit';
-  if (/meditat|mindful/i.test(t)) return 'Take 3 deep conscious breaths';
-  if (/journal|write/i.test(t)) return 'Jot down 1 sentence in notes';
-  return 'Complete a 2-minute micro-rep to preserve neural momentum';
+  let prescription = 'Complete a 2-minute micro-rep to preserve neural momentum';
+  let reducedMinutes = 2;
+
+  if (/read/i.test(t)) {
+    prescription = 'Read just 1 page or 1 paragraph';
+    reducedMinutes = 3;
+  } else if (/run|cardio|walk|jog/i.test(t)) {
+    prescription = 'Put on running shoes and walk 2 minutes';
+    reducedMinutes = 5;
+  } else if (/workout|gym|fitness|lift/i.test(t)) {
+    prescription = 'Do 5 pushups or 30 seconds of stretching';
+    reducedMinutes = 5;
+  } else if (/guitar|piano|music/i.test(t)) {
+    prescription = 'Play 1 single chord or 60 seconds metronome drill';
+    reducedMinutes = 3;
+  } else if (/deep work|code|program/i.test(t)) {
+    prescription = 'Open editor and write 1 line or review 1 commit';
+    reducedMinutes = 5;
+  } else if (/meditat|mindful/i.test(t)) {
+    prescription = 'Take 3 deep conscious breaths';
+    reducedMinutes = 2;
+  } else if (/journal|write/i.test(t)) {
+    prescription = 'Jot down 1 sentence in notes';
+    reducedMinutes = 3;
+  }
+
+  return {
+    recoveryPrescription: prescription,
+    reducedMinutes,
+    toString() {
+      return this.recoveryPrescription;
+    }
+  };
 }
 
 /**

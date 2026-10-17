@@ -17,8 +17,15 @@ import {
   Sparkles,
   Inbox,
   RotateCcw,
-  Pencil
+  Pencil,
+  Lock,
+  Link2
 } from 'lucide-react';
+import {
+  isTaskBlocked,
+  getBlockingPrerequisites,
+  calculateCascadeReschedule
+} from '../lib/taskDependencies';
 import {
   DndContext,
   closestCenter,
@@ -251,6 +258,26 @@ const DashboardView = React.memo(function DashboardView({
         isBacklog: false
       });
     }
+  };
+
+  const handleCascadeReschedule = (rootTask, rec) => {
+    if (!rootTask || !rec) return;
+    const patches = calculateCascadeReschedule({
+      rootTask,
+      newStartTime: rec.startTime || '18:00',
+      newDate: rec.date,
+      allTasks: tasks,
+      goals
+    });
+    patches.forEach(patch => {
+      onUpdateTask?.(patch.id, {
+        plannedDate: patch.plannedDate,
+        startTime: patch.startTime,
+        dueDate: patch.plannedDate === todayPlan ? 'Today' : 'Tomorrow',
+        date: patch.plannedDate === todayPlan ? 'Today' : 'Tomorrow',
+        isBacklog: false
+      });
+    });
   };
 
   const handleMoveToBacklog = (taskId) => {
@@ -935,24 +962,42 @@ const DashboardView = React.memo(function DashboardView({
 
             {/* ── 1. ACTIVE FOCUS TARGET (If present) ── */}
             {nextTask && (
-              <div data-block-id="dashboard-now-hero" className="rounded-xl border border-[#0F52BA]/25 bg-[#0F52BA]/[0.03] dark:bg-[#0F52BA]/[0.06] p-4 space-y-3 relative overflow-hidden">
+              <div data-block-id="dashboard-now-hero" className={`rounded-xl border ${
+                nextTask.isDependencyBottleneck
+                  ? 'border-amber-500/40 bg-amber-500/[0.05] dark:bg-amber-500/[0.08]'
+                  : 'border-[#0F52BA]/25 bg-[#0F52BA]/[0.03] dark:bg-[#0F52BA]/[0.06]'
+              } p-4 space-y-3 relative overflow-hidden`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0F52BA] opacity-60"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0F52BA]"></span>
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${
+                        nextTask.isDependencyBottleneck ? 'bg-amber-500' : 'bg-[#0F52BA]'
+                      } opacity-60`}></span>
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                        nextTask.isDependencyBottleneck ? 'bg-amber-500' : 'bg-[#0F52BA]'
+                      }`}></span>
                     </span>
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-bold">
-                      Now Focus Target
+                    <span className={`text-[10px] font-mono uppercase tracking-widest font-bold ${
+                      nextTask.isDependencyBottleneck ? 'text-amber-700 dark:text-amber-400' : 'text-[#0F52BA] dark:text-[#6495ED]'
+                    }`}>
+                      {nextTask.isDependencyBottleneck ? '⚡ Priority Prerequisite Unblock' : 'Now Focus Target'}
                     </span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
-                    taskImpact(nextTask) === 'high'
-                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/40'
-                      : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40'
-                  }`}>
-                    {IMPACT_LABELS[taskImpact(nextTask)]} Impact
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {nextTask.isDependencyBottleneck && nextTask.blocksTaskTitle && (
+                      <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/20">
+                        <Link2 className="w-2.5 h-2.5" />
+                        Unblocks: {nextTask.blocksTaskTitle}
+                      </span>
+                    )}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
+                      taskImpact(nextTask) === 'high'
+                        ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/40'
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40'
+                    }`}>
+                      {IMPACT_LABELS[taskImpact(nextTask)]} Impact
+                    </span>
+                  </div>
                 </div>
 
                 <div>
@@ -1085,6 +1130,17 @@ const DashboardView = React.memo(function DashboardView({
                               <span>Reschedule: {rec.dateLabel} {rec.formattedTime}</span>
                             </button>
                           )}
+                          {rec && (
+                            <button
+                              type="button"
+                              title="Reschedule this task and shift all its downstream dependent lectures/tasks in order"
+                              onClick={() => handleCascadeReschedule(item, rec)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold transition cursor-pointer"
+                            >
+                              <Link2 className="w-3 h-3" />
+                              <span>Cascade Chain</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleMoveToBacklog(item.id)}
@@ -1125,6 +1181,7 @@ const DashboardView = React.memo(function DashboardView({
                           onEditTask={setEditingTask}
                           goals={goals}
                           habits={habits}
+                          allTasks={tasks}
                         />
                       </SortableTaskItem>
                     ))}
@@ -1377,7 +1434,7 @@ const DashboardView = React.memo(function DashboardView({
         </div>
       </div>
 
-      <TaskDetailModal task={editingTask} isOpen={!!editingTask} onClose={() => setEditingTask(null)} onUpdateTask={onUpdateTask} onDeleteTask={onDeleteTask} goals={goals} habits={habits} onStartFocus={onStartFocus} />
+      <TaskDetailModal task={editingTask} isOpen={!!editingTask} onClose={() => setEditingTask(null)} onUpdateTask={onUpdateTask} onDeleteTask={onDeleteTask} goals={goals} habits={habits} tasks={tasks} onStartFocus={onStartFocus} />
       <ScheduleDetailModal
         schedule={editingSchedule}
         isOpen={Boolean(editingSchedule)}

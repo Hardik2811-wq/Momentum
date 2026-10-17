@@ -26,9 +26,12 @@ import {
   Move,
   Maximize2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Lock,
+  Link2
 } from 'lucide-react';
 import { triggerCelebration } from '../lib/celebrate';
+import { getBlockingPrerequisites, getAllPrerequisites } from '../lib/taskDependencies';
 import TaskDetailModal from '../components/TaskDetailModal';
 import ScheduleDetailModal from '../components/ScheduleDetailModal';
 import HabitModal from '../components/HabitModal';
@@ -2868,6 +2871,12 @@ const TodayView = React.memo(function TodayView({
                           const matchedGoal = goals.find(g => g.id === task.goalId);
                           const isTaskDone = isTaskCompletedForDate(task, colDate);
 
+                          // Dependency & Prerequisite Status
+                          const allPrereqs = getAllPrerequisites(task, tasks, goals);
+                          const blockers = getBlockingPrerequisites(task, tasks, goals, colDate);
+                          const isBlocked = !isTaskDone && blockers.length > 0;
+                          const metPrereqsCount = allPrereqs.length - blockers.length;
+
                           // Card size tiers
                           const isUltraCompact = heightPx < 48;
                           const isCompact = heightPx >= 48 && heightPx < 78;
@@ -2968,6 +2977,16 @@ const TodayView = React.memo(function TodayView({
                                       {task.title}
                                     </span>
 
+                                    {isBlocked && (
+                                      <span
+                                        title={`Waiting on prerequisite: ${blockers.map(b => b.title).join(', ')}`}
+                                        className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[8px] font-mono font-bold shrink-0"
+                                      >
+                                        <Lock className="w-2.5 h-2.5" />
+                                        {allPrereqs.length > 1 ? `${metPrereqsCount}/${allPrereqs.length}` : 'Locked'}
+                                      </span>
+                                    )}
+
                                     {areaInfo && !hasOverlap && (
                                       <span className={`hidden sm:inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.2 rounded-full border ${areaInfo.badgeClass} shrink-0`}>
                                         <span className={`w-1.5 h-1.5 rounded-full ${areaInfo.dotClass}`} />
@@ -3047,6 +3066,16 @@ const TodayView = React.memo(function TodayView({
                                       <span className={`text-[12px] font-bold tracking-tight truncate text-slate-900 dark:text-slate-100 ${isTaskDone ? 'line-through opacity-60' : ''}`}>
                                         {task.title}
                                       </span>
+
+                                      {isBlocked && (
+                                        <span
+                                          title={`Waiting on prerequisite: ${blockers.map(b => b.title).join(', ')}`}
+                                          className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[8.5px] font-mono font-bold shrink-0"
+                                        >
+                                          <Lock className="w-2.5 h-2.5" />
+                                          {allPrereqs.length > 1 ? `${metPrereqsCount}/${allPrereqs.length} Met` : 'Locked'}
+                                        </span>
+                                      )}
 
                                       {areaInfo && (
                                         <span className={`hidden sm:inline-flex items-center gap-1 text-[8.5px] font-bold px-1.5 py-0.2 rounded-full border ${areaInfo.badgeClass} shrink-0`}>
@@ -3140,6 +3169,16 @@ const TodayView = React.memo(function TodayView({
                                         <span className={`text-[13px] font-bold tracking-tight truncate text-slate-900 dark:text-slate-100 ${isTaskDone ? 'line-through opacity-70' : ''}`}>
                                           {task.title}
                                         </span>
+
+                                        {isBlocked && (
+                                          <span
+                                            title={`Waiting on prerequisite: ${blockers.map(b => b.title).join(', ')}`}
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[9px] font-mono font-bold shrink-0"
+                                          >
+                                            <Lock className="w-2.5 h-2.5" />
+                                            {allPrereqs.length > 1 ? `${metPrereqsCount}/${allPrereqs.length} Met` : (blockers[0]?.title ? `After: ${blockers[0].title}` : 'Locked')}
+                                          </span>
+                                        )}
 
                                         {task.impact && (
                                           <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider bg-white/70 dark:bg-white/10 opacity-80 shrink-0">
@@ -3354,6 +3393,7 @@ const TodayView = React.memo(function TodayView({
           onDeleteTask={onDeleteTask}
           goals={goals}
           habits={habits}
+          tasks={tasks}
           onStartFocus={onStartFocus}
         />
       )}

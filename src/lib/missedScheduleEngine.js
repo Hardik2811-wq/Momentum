@@ -17,6 +17,11 @@ import {
 } from './taskMetadata.js';
 
 import {
+  isTaskBlocked,
+  findRootBottleneck
+} from './taskDependencies.js';
+
+import {
   timeToMinutes,
   minutesToTime,
   detectScheduleCollisions
@@ -233,9 +238,34 @@ export function classifyDayItems({
 
   // Determine current active focus target (Excludes missed items!)
   // Strictly for TASKS (next or ongoing tasks). Schedules are highlighted in Today's Schedule.
-  const activeTask = activeNow.find(item => item.itemType === 'task');
-  const upcomingTask = upcoming.find(item => item.itemType === 'task');
-  const focusTarget = activeTask || upcomingTask || null;
+  // CRITICAL DEPENDENCY RULE: If a task has incomplete prerequisites, it cannot be the focus target.
+  // Instead, elevate its unblocked root prerequisite bottleneck!
+  const candidateTask = activeNow.find(item => item.itemType === 'task') || upcoming.find(item => item.itemType === 'task');
+  
+  let focusTarget = null;
+  if (candidateTask) {
+    if (isTaskBlocked(candidateTask, tasks, [], targetDate)) {
+      // Find the root prerequisite causing the blockage
+      const bottleneck = findRootBottleneck(candidateTask, tasks, [], targetDate);
+      if (bottleneck) {
+        // Enriched bottleneck task
+        const isBottleneckMissed = missed.some(m => String(m.id) === String(bottleneck.id));
+        focusTarget = {
+          ...bottleneck,
+          itemType: 'task',
+          isDependencyBottleneck: true,
+          blocksTaskTitle: candidateTask.title,
+          isMissedPrerequisite: isBottleneckMissed
+        };
+      } else {
+        // Find next task in upcoming that is NOT blocked
+        const unblockedTask = upcoming.find(t => t.itemType === 'task' && !isTaskBlocked(t, tasks, [], targetDate));
+        focusTarget = unblockedTask || candidateTask;
+      }
+    } else {
+      focusTarget = candidateTask;
+    }
+  }
 
   const missedTasks = missed.filter(item => item.itemType === 'task');
   const missedSchedules = missed.filter(item => item.itemType === 'schedule');

@@ -24,6 +24,9 @@ import AiCopilotModal from './components/AiCopilotModal';
 import ApiKeyModal from './components/ApiKeyModal';
 import AndroidWidgetSync from './components/AndroidWidgetSync';
 import { requestNotificationPermissions, setupNotificationChannels, setupListeners, syncDailyBriefing, syncScheduleReminders } from './lib/notifications';
+import { useAutonomousAgent } from './hooks/useAutonomousAgent';
+import AgentFlowDiffModal from './components/agent/AgentFlowDiffModal';
+import AgentForensicReport from './components/agent/AgentForensicReport';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -33,10 +36,17 @@ export default function App() {
   const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
   const [editingGlobalHabit, setEditingGlobalHabit] = useState(null);
   const [isAiCopilotOpen, setIsAiCopilotOpen] = useState(false);
+  const [copilotInitialView, setCopilotInitialView] = useState('chat');
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [quickAddProps, setQuickAddProps] = useState({});
   const [isUniversalEditorMode, setIsUniversalEditorMode] = useState(false);
   const store = useStore();
+  const agent = useAutonomousAgent(store);
+
+  const openAiCopilot = (view = 'chat') => {
+    setCopilotInitialView(view);
+    setIsAiCopilotOpen(true);
+  };
 
   const openHabitEditor = (habit = null) => {
     setEditingGlobalHabit(habit);
@@ -212,6 +222,8 @@ export default function App() {
             onOpenQuickAdd={openQuickAdd}
             onOpenNewGoal={() => setIsGoalModalOpen(true)}
             onOpenNewHabit={() => openHabitEditor(null)}
+            agentControls={agent}
+            onOpenAgentStudio={() => openAiCopilot('agent')}
           />
         );
       default:
@@ -256,7 +268,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickAdd={openQuickAdd}
-        onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
+        onOpenAiCopilot={() => openAiCopilot('chat')}
         settings={store.settings}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(v => !v)}
@@ -271,10 +283,12 @@ export default function App() {
           setActiveTab={setActiveTab}
           isUniversalEditorMode={isUniversalEditorMode}
           onToggleUniversalEditor={() => setIsUniversalEditorMode(v => !v)}
-          onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
+          onOpenAiCopilot={() => openAiCopilot('chat')}
+          onOpenAgentStudio={() => openAiCopilot('agent')}
           onOpenQuickAdd={openQuickAdd}
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebar={() => setIsSidebarCollapsed(v => !v)}
+          agentControls={agent}
         />
         <div className="flex-1 w-full">
           {renderView()}
@@ -298,13 +312,15 @@ export default function App() {
         onOpenQuickAdd={openQuickAdd}
         onOpenNewGoal={() => setIsGoalModalOpen(true)}
         onOpenNewHabit={() => openHabitEditor(null)}
-        onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
+        onOpenAiCopilot={() => openAiCopilot('chat')}
       />
 
       {/* AI Executive Copilot Modal */}
       <AiCopilotModal
         isOpen={isAiCopilotOpen}
         onClose={() => setIsAiCopilotOpen(false)}
+        initialView={copilotInitialView}
+        agentControls={agent}
         goals={store.goals}
         habits={store.habits}
         tasks={store.tasks}
@@ -323,6 +339,28 @@ export default function App() {
         focusTimer={store.focusTimer}
         activeTab={activeTab}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+      />
+
+      {/* Autonomous Flow Comparison Diff Modal */}
+      <AgentFlowDiffModal
+        isOpen={agent.activeDiffModal}
+        onClose={() => agent.setActiveDiffModal(false)}
+        auditResult={agent.agentState?.latestAuditResult}
+        proposals={agent.agentState?.pendingProposals || []}
+        onApplyProposal={agent.applyProposal}
+        onApplyAll={agent.applyAll}
+        onDismissProposal={agent.dismissProposal}
+      />
+
+      {/* Autonomous Forensic Audit Report Modal */}
+      <AgentForensicReport
+        isOpen={agent.activeForensicModal}
+        onClose={() => agent.setActiveForensicModal(false)}
+        forensicReport={agent.agentState?.forensicReport}
+        proposals={agent.agentState?.pendingProposals || []}
+        onApplyProposal={agent.applyProposal}
+        onApplyAll={agent.applyAll}
+        onOpenDiffModal={() => agent.setActiveDiffModal(true)}
       />
 
       {/* Groq API Key Configuration Modal */}

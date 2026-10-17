@@ -21,9 +21,26 @@ import {
   harvestApiResult,
   recordAiSuccess,
   recordAiFailure,
-  recordLocalHit
+  recordLocalHit,
+  getPrerequisiteAffinities,
+  recordPrerequisiteAffinity
 } from '../lib/nlpMemory';
+import { inferSemanticPrerequisites } from '../lib/semanticPrerequisites';
+import { isLocalAiAvailable, promptOnDeviceAi } from '../lib/onDeviceAi';
 import { LIFE_AREAS, DEFAULT_LIFE_AREAS, getGoalAreas, saveGoalAreas } from '../lib/lifeAreas';
+import {
+  Lock,
+  Sparkles,
+  Search,
+  Calendar,
+  Target,
+  Flame,
+  Layers,
+  Check,
+  X,
+  ChevronDown,
+  Plus
+} from 'lucide-react';
 import ApiKeyModal from './ApiKeyModal';
 
 const EFFORT_OPTIONS = [15, 30, 45, 60, 90, 120, 180, 240, 360];
@@ -356,13 +373,70 @@ export default function QuickAddModal({
   const [subtasks, setSubtasks] = useState([]);
   const [showSubtasks, setShowSubtasks] = useState(false);
   const [newSubtaskInput, setNewSubtaskInput] = useState('');
+  const [dependsOn, setDependsOn] = useState([]);
+  const [prereqSearch, setPrereqSearch] = useState('');
+  const [prereqFilter, setPrereqFilter] = useState('suggested'); // 'suggested' | 'today' | 'goal' | 'priority' | 'all'
+  const [dismissedPrereqId, setDismissedPrereqId] = useState(null);
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [aiFeedback, setAiFeedback] = useState(null); // { type: 'success' | 'error', message: string }
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
+  // Active uncompleted tasks for prerequisite selection (strictly filters out past completed tasks)
+  const activeUncompletedTasks = useMemo(() => {
+    return tasks.filter(t => !t.completed);
+  }, [tasks]);
+
+  // Infer semantic causal prerequisites in real time based on task essence
+  const semanticPrereqSuggestions = useMemo(() => {
+    if (!title || !title.trim()) return [];
+    const affinities = getPrerequisiteAffinities();
+    return inferSemanticPrerequisites(title, activeUncompletedTasks, {
+      currentGoalId: goalId,
+      learnedAffinity: affinities
+    });
+  }, [title, activeUncompletedTasks, goalId]);
+
+  const topSuggestion = semanticPrereqSuggestions.length > 0 && String(semanticPrereqSuggestions[0].id) !== String(dismissedPrereqId)
+    ? semanticPrereqSuggestions[0]
+    : null;
+
+  const todayTasksCount = useMemo(() => {
+    const today = todayPlanDate();
+    return activeUncompletedTasks.filter(t => t.plannedDate === today || t.dueDate === 'Today').length;
+  }, [activeUncompletedTasks]);
+
+  const priorityTasksCount = useMemo(() => {
+    return activeUncompletedTasks.filter(t => t.impact === 'high' || t.priority === 'high').length;
+  }, [activeUncompletedTasks]);
+
+  // Filter candidates for the curated popover
+  const filteredPrereqCandidates = useMemo(() => {
+    let pool = activeUncompletedTasks;
+
+    if (prereqFilter === 'suggested') {
+      const suggestedIds = new Set(semanticPrereqSuggestions.map(s => String(s.id)));
+      pool = activeUncompletedTasks.filter(t => suggestedIds.has(String(t.id)));
+    } else if (prereqFilter === 'today') {
+      const today = todayPlanDate();
+      pool = activeUncompletedTasks.filter(t => t.plannedDate === today || t.dueDate === 'Today');
+    } else if (prereqFilter === 'goal') {
+      pool = activeUncompletedTasks.filter(t => goalId && String(t.goalId) === String(goalId));
+    } else if (prereqFilter === 'priority') {
+      pool = activeUncompletedTasks.filter(t => t.impact === 'high' || t.priority === 'high');
+    }
+
+    if (prereqSearch.trim()) {
+      const query = prereqSearch.trim().toLowerCase();
+      pool = pool.filter(t => t.title?.toLowerCase().includes(query));
+    }
+
+    return pool;
+  }, [activeUncompletedTasks, prereqFilter, prereqSearch, semanticPrereqSuggestions, goalId]);
+
   // Active micro-popover menu
-  const [activeMenu, setActiveMenu] = useState(null); // 'date' | 'time' | 'effort' | 'impact' | 'areas' | 'energy' | 'goal' | 'habit' | 'repeat'
+  const [activeMenu, setActiveMenu] = useState(null); // 'date' | 'time' | 'effort' | 'impact' | 'areas' | 'energy' | 'goal' | 'habit' | 'prereq' | 'repeat'
   const menuRef = useRef(null);
+  const prereqMenuRef = useRef(null);
 
   const parsed = useMemo(() => parseNaturalTask(title, goals, habits), [title, goals, habits]);
 
@@ -463,6 +537,10 @@ export default function QuickAddModal({
     setSubtasks([]);
     setShowSubtasks(false);
     setNewSubtaskInput('');
+    setDependsOn([]);
+    setPrereqSearch('');
+    setPrereqFilter('suggested');
+    setDismissedPrereqId(null);
     setActiveMenu(null);
     setAiFeedback(null);
     setShowApiKeyModal(false);
@@ -481,7 +559,13 @@ export default function QuickAddModal({
   // Click outside to close popovers
   useEffect(() => {
     const handleOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+      if (activeMenu === 'prereq') {
+        if (prereqMenuRef.current && !prereqMenuRef.current.contains(e.target)) {
+          if (!e.target.closest('[data-prereq-trigger]')) {
+            setActiveMenu(null);
+          }
+        }
+      } else if (menuRef.current && !menuRef.current.contains(e.target)) {
         setActiveMenu(null);
       }
     };
@@ -569,6 +653,12 @@ export default function QuickAddModal({
       })));
       setShowSubtasks(true);
     }
+    if (Array.isArray(data.suggestedPrerequisites) && data.suggestedPrerequisites.length > 0) {
+      const prereqIds = data.suggestedPrerequisites.map(p => String(p.taskId)).filter(Boolean);
+      if (prereqIds.length > 0) {
+        setDependsOn(prev => Array.from(new Set([...prev, ...prereqIds])));
+      }
+    }
   };
 
   const handleTitleChange = (val) => {
@@ -582,26 +672,47 @@ export default function QuickAddModal({
   const handleAiBreakdown = async () => {
     if (!title.trim() || isAiParsing) return;
 
-    if (!hasAiService()) {
-      setShowApiKeyModal(true);
-      return;
-    }
-
     setAiFeedback(null);
     setIsAiParsing(true);
     try {
-      const res = await parseWithGroq(title, goals, { mode });
+      // Tier 2: Check On-Device Small LLM / Gemini Nano first
+      const localAiReady = await isLocalAiAvailable();
+      if (localAiReady) {
+        const localResult = await promptOnDeviceAi(title, activeUncompletedTasks);
+        if (localResult && Array.isArray(localResult.suggestedPrerequisites) && localResult.suggestedPrerequisites.length > 0) {
+          applyExtractedDetails(localResult, false);
+          setAiFeedback({
+            type: 'success',
+            message: 'Causal prerequisite linked via On-Device AI (Gemini Nano)'
+          });
+          setIsAiParsing(false);
+          return;
+        }
+      }
+
+      // Tier 3: Cloud AI Fallback (Groq / Gemini)
+      if (!hasAiService()) {
+        setShowApiKeyModal(true);
+        setIsAiParsing(false);
+        return;
+      }
+
+      const candidateContext = activeUncompletedTasks.map(t => ({ id: t.id, title: t.title }));
+      const res = await parseWithGroq(title, goals, {
+        mode,
+        candidateTasks: candidateContext
+      });
       if (res.success && res.data) {
         applyExtractedDetails(res.data, true);
         harvestApiResult(title, res.data, { alreadyCounted: true });
         recordAiSuccess(title.trim(), res.model);
-        const modelName = res.model ? res.model.split('/').pop() : 'Groq';
+        const modelName = res.model ? res.model.split('/').pop() : 'Cloud AI';
         setAiFeedback({
           type: 'success',
-          message: mode === 'schedule' ? `Class/schedule extracted via Groq (${modelName})` : `Auto-filled via Groq (${modelName})`
+          message: mode === 'schedule' ? `Class/schedule extracted via Cloud AI (${modelName})` : `Auto-filled via Cloud AI (${modelName})`
         });
       } else {
-        const errorMsg = res.error || 'Groq request failed';
+        const errorMsg = res.error || 'Cloud AI request failed';
         recordAiFailure(title.trim(), errorMsg);
         setAiFeedback({
           type: 'error',
@@ -705,12 +816,26 @@ export default function QuickAddModal({
       recurrenceEndDate: recurrenceEndDate || null,
       recurrenceUntil: untilExclusive,
       completed: false,
+      dependsOn: dependsOn.length > 0 ? dependsOn : null,
       subtasks: subtasks.map((st, i) => ({ id: st.id || `${Date.now()}-${i}`, title: st.title, completed: false }))
     });
+
+    if (dependsOn.length > 0 && title.trim()) {
+      dependsOn.forEach(prereqId => {
+        const prereqTask = tasks.find(t => String(t.id) === String(prereqId));
+        if (prereqTask?.title) {
+          recordPrerequisiteAffinity(prereqTask.title, title.trim());
+        }
+      });
+    }
 
     setTitle('');
     setSubtasks([]);
     setShowSubtasks(false);
+    setDependsOn([]);
+    setPrereqSearch('');
+    setPrereqFilter('suggested');
+    setDismissedPrereqId(null);
     setAiFeedback(null);
     setShowApiKeyModal(false);
     onClose();
@@ -1184,6 +1309,49 @@ export default function QuickAddModal({
               </div>
             </div>
           </div>
+          )}
+
+          {/* Smart AI Causal Prerequisite Recommendation Card */}
+          {topSuggestion && !dependsOn.map(String).includes(String(topSuggestion.id)) && (
+            <div className="flex items-center justify-between p-2.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 shadow-3xs gap-2 animate-fadeIn">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-slate-800 truncate flex items-center gap-1.5">
+                    <span className="text-slate-500">Suggested:</span>
+                    <span className="font-semibold text-slate-900 underline underline-offset-2">"{topSuggestion.title}"</span>
+                    <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono font-medium">
+                      {topSuggestion.badge}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">
+                    {topSuggestion.reason}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDependsOn(prev => [...prev, String(topSuggestion.id)]);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold shadow-xs active:scale-95 transition cursor-pointer"
+                >
+                  <Plus className="w-3 h-3 stroke-[2.5]" />
+                  <span>Link</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDismissedPrereqId(topSuggestion.id)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  title="Dismiss suggestion"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           )}
 
           {/* ── Lively & Mature Smart Pills Toolbar ── */}
@@ -1713,6 +1881,247 @@ export default function QuickAddModal({
                 </div>
               )}
             </div>
+
+            {/* Prerequisites Pill (Amber Hue) */}
+              <div className="relative">
+                <button
+                  type="button"
+                  data-prereq-trigger
+                  onClick={() => setActiveMenu(activeMenu === 'prereq' ? null : 'prereq')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium transition border shadow-xs ${
+                    dependsOn.length > 0
+                      ? 'bg-amber-50 text-amber-800 border-amber-200/80 font-semibold'
+                      : 'bg-white text-[#64748B] border-black/[0.08] hover:bg-[#F5F4FA]'
+                  }`}
+                  title="Tasks that must be completed before this task can start"
+                >
+                  <Lock className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="truncate">
+                    {dependsOn.length > 0 ? `${dependsOn.length} Prereq${dependsOn.length > 1 ? 's' : ''}` : 'Prereqs'}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${activeMenu === 'prereq' ? 'rotate-180' : ''}`} />
+                </button>
+
+                {activeMenu === 'prereq' && (
+                  <div
+                    ref={prereqMenuRef}
+                    className="fixed inset-x-0 bottom-0 z-[70] max-h-[85dvh] flex flex-col rounded-t-[28px] border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1A1A1E] shadow-[0_-16px_56px_rgba(0,0,0,0.2)] animate-fadeIn sm:absolute sm:left-0 sm:right-auto sm:bottom-full sm:top-auto sm:z-40 sm:mb-2 sm:w-[400px] sm:max-h-[460px] sm:rounded-2xl sm:shadow-[0_24px_64px_rgba(0,0,0,0.22),0_4px_16px_rgba(0,0,0,0.08)] sm:border sm:border-black/[0.08] dark:sm:border-white/10 overflow-hidden"
+                  >
+                    {/* Header (Pinned) */}
+                    <div className="flex items-center justify-between p-3.5 pb-2.5 border-b border-slate-100 dark:border-white/10 shrink-0 bg-white dark:bg-[#1A1A1E]">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
+                          <Lock className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-slate-900 dark:text-white tracking-tight">Prerequisites</div>
+                          <div className="text-[10px] text-slate-400">Tasks that must finish first</div>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/40 shrink-0">
+                        <span className="font-semibold">{dependsOn.length}</span>
+                        <span>linked</span>
+                      </span>
+                    </div>
+
+                    {/* Live Search Input (Pinned) */}
+                    <div className="p-3.5 pt-2.5 pb-2 shrink-0 bg-white dark:bg-[#1A1A1E]">
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={prereqSearch}
+                          onChange={(e) => setPrereqSearch(e.target.value)}
+                          placeholder="Search active tasks..."
+                          className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/10 text-[11px] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:bg-white dark:focus:bg-[#151518] focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition"
+                        />
+                        {prereqSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setPrereqSearch('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Filter Chips Bar (Pinned) */}
+                    <div className="px-3.5 pb-2.5 shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-white dark:bg-[#1A1A1E]">
+                      {[
+                        { id: 'suggested', label: 'Suggested', count: semanticPrereqSuggestions.length, icon: Sparkles, iconColor: 'text-amber-500' },
+                        { id: 'today', label: 'Today', count: todayTasksCount, icon: Calendar, iconColor: 'text-blue-500' },
+                        ...(goalId ? [{ id: 'goal', label: 'Goal', icon: Target, iconColor: 'text-purple-500' }] : []),
+                        { id: 'priority', label: 'Priority', count: priorityTasksCount, icon: Flame, iconColor: 'text-rose-500' },
+                        { id: 'all', label: 'All', count: activeUncompletedTasks.length, icon: Layers, iconColor: 'text-slate-400' }
+                      ].map(chip => {
+                        const Icon = chip.icon;
+                        const isActive = prereqFilter === chip.id;
+                        return (
+                          <button
+                            key={chip.id}
+                            type="button"
+                            onClick={() => setPrereqFilter(chip.id)}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] whitespace-nowrap font-medium transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold shadow-xs'
+                                : 'bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-white/[0.1]'
+                            }`}
+                          >
+                            <Icon className={`w-3 h-3 ${isActive ? 'text-white dark:text-slate-900' : chip.iconColor}`} />
+                            <span>{chip.label}</span>
+                            {chip.count !== undefined && (
+                              <span className={`text-[9.5px] font-mono px-1 py-0.2 rounded ${
+                                isActive
+                                  ? 'bg-white/20 dark:bg-slate-900/20 text-white dark:text-slate-900'
+                                  : 'bg-black/5 dark:bg-white/10 text-slate-500 dark:text-slate-400'
+                              }`}>
+                                {chip.count}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Scrollable Tasks Body */}
+                    <div className="px-3.5 flex-1 min-h-0 overflow-y-auto space-y-3 pb-3 pr-2.5">
+                      {/* Top Suggestions Section */}
+                      {semanticPrereqSuggestions.length > 0 && (prereqFilter === 'suggested' || !prereqSearch) && (
+                        <div className="space-y-1.5 pt-1.5 border-t border-slate-100 dark:border-white/10">
+                          <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                            <span className="flex items-center gap-1.5">
+                              <Sparkles className="w-3 h-3 text-amber-600" />
+                              <span>Recommended by Context</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                              Top {Math.min(4, semanticPrereqSuggestions.length)}
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            {semanticPrereqSuggestions.slice(0, 4).map(sugg => {
+                              const isSelected = dependsOn.includes(String(sugg.id));
+                              return (
+                                <div
+                                  key={sugg.id}
+                                  onClick={() => {
+                                    setDependsOn(prev =>
+                                      isSelected
+                                        ? prev.filter(id => id !== String(sugg.id))
+                                        : [...prev, String(sugg.id)]
+                                    );
+                                  }}
+                                  className={`p-2 rounded-xl border flex items-center justify-between text-[11px] transition cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-200 font-medium'
+                                      : 'bg-white dark:bg-white/[0.02] border-slate-200/70 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/[0.05]'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                    <span className="truncate">{sugg.title}</span>
+                                    <span className="text-[9px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded font-mono font-medium shrink-0">
+                                      {sugg.badge}
+                                    </span>
+                                  </div>
+                                  <div className="shrink-0 ml-2">
+                                    {isSelected ? (
+                                      <div className="w-4 h-4 rounded bg-amber-600 text-white flex items-center justify-center">
+                                        <Check className="w-3 h-3 stroke-[3]" />
+                                      </div>
+                                    ) : (
+                                      <div className="w-4 h-4 rounded border border-slate-300 dark:border-white/20 hover:border-slate-400 bg-white dark:bg-white/5" />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Active Candidate Tasks */}
+                      <div className="space-y-1.5 pt-1.5 border-t border-slate-100 dark:border-white/10">
+                        <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          <span>
+                            {prereqFilter === 'today' ? "Today's Tasks" :
+                             prereqFilter === 'goal' ? 'Goal Deliverables' :
+                             prereqFilter === 'priority' ? 'High Priority Tasks' :
+                             'Active Tasks'}
+                          </span>
+                          <span className="font-mono">{filteredPrereqCandidates.length}</span>
+                        </div>
+
+                        <div className="space-y-1">
+                          {filteredPrereqCandidates.length === 0 ? (
+                            <div className="py-4 text-center">
+                              <Layers className="w-5 h-5 mx-auto text-slate-300 dark:text-slate-600 mb-1" />
+                              <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                                No matching active tasks found
+                              </p>
+                            </div>
+                          ) : (
+                            filteredPrereqCandidates.map(cand => {
+                              const isSelected = dependsOn.includes(String(cand.id));
+                              return (
+                                <button
+                                  key={cand.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setDependsOn(prev =>
+                                      isSelected
+                                        ? prev.filter(id => id !== String(cand.id))
+                                        : [...prev, String(cand.id)]
+                                    );
+                                  }}
+                                  className={`w-full text-left px-2.5 py-1.5 rounded-xl text-[11px] flex items-center justify-between gap-2 transition cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-amber-500/10 text-amber-950 dark:text-amber-200 border border-amber-500/30 font-medium'
+                                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/[0.05] border border-slate-200/60 dark:border-white/10'
+                                  }`}
+                                >
+                                  <span className="truncate flex-1">{cand.title}</span>
+                                  <div className="shrink-0">
+                                    {isSelected ? (
+                                      <div className="w-4 h-4 rounded bg-amber-600 text-white flex items-center justify-center">
+                                        <Check className="w-3 h-3 stroke-[3]" />
+                                      </div>
+                                    ) : (
+                                      <div className="w-4 h-4 rounded border border-slate-300 dark:border-white/20 hover:border-slate-400 bg-white dark:bg-white/5" />
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions (Pinned) */}
+                    <div className="p-3.5 pt-2.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between shrink-0 bg-white dark:bg-[#1A1A1E]">
+                      <button
+                        type="button"
+                        onClick={() => setDependsOn([])}
+                        className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium cursor-pointer"
+                      >
+                        Clear all
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenu(null)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-semibold text-[11px] shadow-xs cursor-pointer active:scale-95 transition"
+                      >
+                        <span>Apply</span>
+                        <span className="font-mono text-[10px] px-1 py-0.2 bg-white/20 dark:bg-black/10 rounded">
+                          {dependsOn.length}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
             )}
 
@@ -1737,7 +2146,7 @@ export default function QuickAddModal({
               </button>
 
               {activeMenu === 'repeat' && (
-                <div className="fixed inset-x-0 bottom-0 z-[70] max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-t-[28px] border border-black/[0.08] bg-white p-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-16px_56px_rgba(0,0,0,0.2)] space-y-1 animate-fadeIn sm:absolute sm:left-0 sm:right-auto sm:top-full sm:bottom-auto sm:z-30 sm:mt-1.5 sm:w-64 sm:max-h-80 sm:rounded-2xl sm:p-2 sm:shadow-2xl">
+                <div className="fixed inset-x-0 bottom-0 z-[70] max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-t-[28px] border border-black/[0.08] bg-white p-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-16px_56px_rgba(0,0,0,0.2)] space-y-1 animate-fadeIn sm:absolute sm:left-auto sm:right-0 sm:bottom-full sm:top-auto sm:z-30 sm:mb-2 sm:w-64 sm:max-h-80 sm:rounded-2xl sm:p-2 sm:shadow-2xl">
                   {/* Option: Doesn't repeat */}
                   <button
                     type="button"

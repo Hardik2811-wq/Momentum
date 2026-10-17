@@ -11,6 +11,7 @@ import { todayPlanDate, calculateEndTime, parseCompoundDuration, calculateNextAr
 import { resolveLocalCopilotIntent } from '../lib/copilotIntentRouter';
 import { harvestCopilotPlan } from '../lib/nlpMemory';
 import LifeGraphVisualizer from './LifeGraphVisualizer';
+import AgentMissionStudio from './agent/AgentMissionStudio';
 
 const QUICK_CHIPS = [
   { label: 'Schedule from document', prompt: 'I have attached a project document. Analyze the deliverables, milestones, and schedule them into my Planner.' },
@@ -38,10 +39,18 @@ export default function AiCopilotModal({
   checkInHabit,
   focusTimer = null,
   activeTab = '',
-  onOpenApiKeyModal
+  onOpenApiKeyModal,
+  initialView = 'chat',
+  agentControls = null
 }) {
-  const [copilotView, setCopilotView] = useState('chat'); // 'chat' | 'graph' | 'bridge'
+  const [copilotView, setCopilotView] = useState(initialView || 'chat');
   const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    if (isOpen && initialView) {
+      setCopilotView(initialView);
+    }
+  }, [isOpen, initialView]);
   const [input, setInput] = useState('');
   const [attachedDoc, setAttachedDoc] = useState(null);
   const [isParsingDoc, setIsParsingDoc] = useState(false);
@@ -809,7 +818,7 @@ export default function AiCopilotModal({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* View Mode Toggle: Chat vs Claude/GPT Bridge vs Graphify */}
+            {/* View Mode Toggle: Chat vs Claude/GPT Bridge vs Graphify vs Agent */}
             <div className="flex items-center p-0.5 bg-black/[0.05] dark:bg-white/[0.07] rounded-lg border border-black/[0.06] dark:border-white/[0.08]">
               <button
                 type="button"
@@ -823,6 +832,19 @@ export default function AiCopilotModal({
               >
                 <span className="material-symbols-outlined text-[13px]">chat</span>
                 <span>Chat</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopilotView('agent')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                  copilotView === 'agent'
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
+                    : 'text-ink-secondary dark:text-[#8E8E93] hover:text-ink-primary dark:hover:text-[#F7F6F2]'
+                }`}
+                title="Autonomous Agent Mission Control & Replay Studio"
+              >
+                <span className="material-symbols-outlined text-[13px]">smart_toy</span>
+                <span>Agent Studio</span>
               </button>
               <button
                 type="button"
@@ -862,7 +884,21 @@ export default function AiCopilotModal({
           </div>
         </header>
 
-        {copilotView === 'graph' ? (
+        {copilotView === 'agent' ? (
+          <AgentMissionStudio
+            agentState={agentControls?.agentState}
+            isScanning={agentControls?.isScanning}
+            scanPhase={agentControls?.scanPhase}
+            onTriggerScan={agentControls?.triggerAudit}
+            onApplyProposal={agentControls?.applyProposal}
+            onDismissProposal={agentControls?.dismissProposal}
+            onUndoAction={agentControls?.undoAction}
+            onOpenDiffModal={() => agentControls?.setActiveDiffModal(true)}
+            onUpdateSettings={agentControls?.updateAgentSettings}
+            timelineItems={tasks}
+            harmonizedItems={agentControls?.agentState?.latestAuditResult?.harmonizedFlow}
+          />
+        ) : copilotView === 'graph' ? (
           <LifeGraphVisualizer
             tasks={tasks}
             goals={goals}

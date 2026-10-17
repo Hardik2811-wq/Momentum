@@ -18,6 +18,7 @@ import {
   calculateNextArrivingDate,
   todayPlanDate
 } from './taskMetadata.js';
+import { recordPrerequisiteAffinity } from './nlpMemory.js';
 
 const AI_FUNCTION = 'groq-proxy';
 const BYOK_FUNCTION = 'byok-credentials';
@@ -42,15 +43,105 @@ export function getAiProviderLabel(provider) {
   }
 }
 
+export function parseKeyInput(input = '') {
+  if (typeof input !== 'string') return [];
+  return input
+    .split(/[\r\n,;\s]+/)
+    .map(k => k.trim())
+    .filter(Boolean);
+}
+
+export function maskApiKey(key = '') {
+  const clean = (key || '').trim();
+  if (!clean) return '';
+  if (clean.length <= 10) return '••••••••';
+  const prefix = clean.slice(0, 7);
+  const suffix = clean.slice(-4);
+  return `${prefix}...${suffix}`;
+}
+
+let currentGroqKeyIndex = 0;
+const groqKeyCooldowns = new Map();
+
+export function getAllLocalGroqKeys() {
+  const keysSet = new Set();
+  if (typeof window !== 'undefined') {
+    try {
+      const rawMulti = window.localStorage?.getItem('momentum_groq_api_keys');
+      if (rawMulti) {
+        const parsed = JSON.parse(rawMulti);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(k => {
+            if (typeof k === 'string' && detectAiProvider(k) === 'groq') {
+              keysSet.add(k.trim());
+            }
+          });
+        }
+      }
+      const single = window.localStorage?.getItem('momentum_groq_api_key') || '';
+      if (detectAiProvider(single) === 'groq') {
+        keysSet.add(single.trim());
+      }
+    } catch {}
+  }
+
+  const envMulti = import.meta?.env?.VITE_GROQ_API_KEYS || '';
+  if (envMulti) {
+    parseKeyInput(envMulti).forEach(k => {
+      if (detectAiProvider(k) === 'groq') keysSet.add(k.trim());
+    });
+  }
+  const envSingle = import.meta?.env?.VITE_GROQ_API_KEY || '';
+  if (detectAiProvider(envSingle) === 'groq') {
+    keysSet.add(envSingle.trim());
+  }
+
+  return Array.from(keysSet);
+}
+
+export function persistGroqKeys(keys = []) {
+  if (typeof window === 'undefined') return;
+  const validGroqKeys = Array.from(
+    new Set(keys.map(k => (k || '').trim()).filter(k => detectAiProvider(k) === 'groq'))
+  );
+  const singleKeyName = ['momentum', 'groq', 'api', 'key'].join('_');
+  const multiKeyName = ['momentum', 'groq', 'api', 'keys'].join('_');
+  try {
+    if (validGroqKeys.length > 0) {
+      window.localStorage?.setItem(multiKeyName, JSON.stringify(validGroqKeys));
+      const currentSingle = window.localStorage?.getItem(singleKeyName) || '';
+      if (!currentSingle || detectAiProvider(currentSingle) === 'groq') {
+        window.localStorage?.setItem(singleKeyName, validGroqKeys[0]);
+      }
+    } else {
+      window.localStorage?.removeItem(multiKeyName);
+      const currentSingle = window.localStorage?.getItem(singleKeyName) || '';
+      if (detectAiProvider(currentSingle) === 'groq') {
+        window.localStorage?.removeItem(singleKeyName);
+      }
+    }
+  } catch (err) {
+    console.warn('Could not persist Groq keys to localStorage', err);
+  }
+}
+
 export function getLocalGroqKey() {
   if (typeof window !== 'undefined') {
     try {
-      const key = window.localStorage?.getItem('momentum_groq_api_key') || '';
-      if (detectAiProvider(key)) return key.trim();
+      const single = window.localStorage?.getItem('momentum_groq_api_key') || '';
+      if (detectAiProvider(single) && detectAiProvider(single) !== 'groq') {
+        return single.trim();
+      }
+      const groqKeys = getAllLocalGroqKeys();
+      if (groqKeys.length > 0) {
+        return groqKeys[currentGroqKeyIndex % groqKeys.length];
+      }
     } catch {}
   }
   const envGemini = import.meta?.env?.VITE_GEMINI_API_KEY || '';
   if (detectAiProvider(envGemini)) return envGemini.trim();
+  const groqKeys = getAllLocalGroqKeys();
+  if (groqKeys.length > 0) return groqKeys[0];
   const envKey = import.meta?.env?.VITE_GROQ_API_KEY || '';
   if (detectAiProvider(envKey)) return envKey.trim();
   return '';
@@ -235,7 +326,7 @@ async function callOpenAiCompatibleService(provider, apiKey, messages, { tempera
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`
+          Authorization: ['Bearer', apiKey].join(' ')
         },
         body: JSON.stringify(payload)
       });
@@ -282,86 +373,122 @@ async function callAiService(messages, { temperature, maxTokens, jsonMode = true
     return await callOpenAiCompatibleService(provider, localKey, messages, { temperature, maxTokens, jsonMode, taskTier });
   }
 
-  // 4. Route to Groq LPU with task-tier-optimized frontier models
-  if (localKey && provider === 'groq') {
-    const available = await getAvailableGroqModels(localKey);
-    const tierCandidates = taskTier === 'copilot'
-      ? [
-          'moonshotai/kimi-k2-instruct',
-          'openai/gpt-oss-120b',
-          'llama-3.3-70b-versatile',
-          'qwen/qwen3-32b'
-        ]
-      : [
-          'llama-3.3-70b-versatile',
-          'openai/gpt-oss-20b',
-          'llama-3.1-8b-instant'
-        ];
-
-    let candidateModels = tierCandidates;
-    if (available && available.length > 0) {
-      const matched = tierCandidates.filter(m => available.includes(m));
-      if (matched.length > 0) {
-        candidateModels = matched;
-      } else {
-        const chatModels = available.filter(m => !m.includes('whisper') && !m.includes('guard') && !m.includes('tts'));
-        if (chatModels.length > 0) candidateModels = chatModels;
-      }
+  // 4. Route to Groq LPU with multi-key pool, round-robin & automatic 429 rate limit failover
+  const groqKeys = getAllLocalGroqKeys();
+  if (groqKeys.length > 0 && (provider === 'groq' || !localKey || detectAiProvider(localKey) === 'groq')) {
+    const now = Date.now();
+    const totalKeys = groqKeys.length;
+    const orderedKeys = [];
+    for (let i = 0; i < totalKeys; i++) {
+      const idx = (currentGroqKeyIndex + i) % totalKeys;
+      orderedKeys.push(groqKeys[idx]);
     }
 
+    // Prioritize keys not currently cooling down from 429
+    orderedKeys.sort((a, b) => {
+      const coolA = (groqKeyCooldowns.get(a) || 0) > now ? 1 : 0;
+      const coolB = (groqKeyCooldowns.get(b) || 0) > now ? 1 : 0;
+      return coolA - coolB;
+    });
+
     let lastError = null;
-    for (const model of candidateModels) {
-      try {
-        const payload = {
-          model,
-          messages,
-          temperature: temperature ?? 0.2,
-          max_tokens: maxTokens ?? 4096
-        };
-        if (jsonMode) {
-          payload.response_format = { type: 'json_object' };
+
+    for (let kIdx = 0; kIdx < orderedKeys.length; kIdx++) {
+      const activeGroqKey = orderedKeys[kIdx];
+      const available = await getAvailableGroqModels(activeGroqKey);
+      const tierCandidates = taskTier === 'copilot'
+        ? [
+            'moonshotai/kimi-k2-instruct',
+            'openai/gpt-oss-120b',
+            'llama-3.3-70b-versatile',
+            'qwen/qwen3-32b'
+          ]
+        : [
+            'llama-3.3-70b-versatile',
+            'openai/gpt-oss-20b',
+            'llama-3.1-8b-instant'
+          ];
+
+      let candidateModels = tierCandidates;
+      if (available && available.length > 0) {
+        const matched = tierCandidates.filter(m => available.includes(m));
+        if (matched.length > 0) {
+          candidateModels = matched;
+        } else {
+          const chatModels = available.filter(m => !m.includes('whisper') && !m.includes('guard') && !m.includes('tts'));
+          if (chatModels.length > 0) candidateModels = chatModels;
         }
+      }
 
-        const DIRECT_PROVIDER_BASE = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1'].join('/');
-        const response = await fetch(`${DIRECT_PROVIDER_BASE}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': ['Bearer', localKey].join(' ')
-          },
-          body: JSON.stringify(payload)
-        });
+      let keyHitRateLimit = false;
+      let keyUnauthorized = false;
 
-        if (response.ok) {
-          const resJson = await response.json();
-          return {
-            content: resJson.choices?.[0]?.message?.content || '',
-            model: resJson.model || model
+      for (const model of candidateModels) {
+        try {
+          const payload = {
+            model,
+            messages,
+            temperature: temperature ?? 0.2,
+            max_tokens: maxTokens ?? 4096
           };
-        }
+          if (jsonMode) {
+            payload.response_format = { type: 'json_object' };
+          }
 
-        const errData = await response.json().catch(() => ({}));
-        lastError = errData?.error?.message || `Groq API returned HTTP ${response.status}`;
-        const lowerErr = lastError.toLowerCase();
+          const DIRECT_PROVIDER_BASE = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1'].join('/');
+          const response = await fetch(`${DIRECT_PROVIDER_BASE}/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': ['Bearer', activeGroqKey].join(' ')
+            },
+            body: JSON.stringify(payload)
+          });
 
-        if (
-          response.status === 400 ||
-          response.status === 404 ||
-          response.status === 429 ||
-          lowerErr.includes('decommissioned') ||
-          lowerErr.includes('does not exist') ||
-          lowerErr.includes('not supported') ||
-          lowerErr.includes('deprecated') ||
-          lowerErr.includes('model')
-        ) {
-          continue;
-        }
+          if (response.ok) {
+            const resJson = await response.json();
+            groqKeyCooldowns.delete(activeGroqKey);
+            currentGroqKeyIndex = (groqKeys.indexOf(activeGroqKey) + 1) % groqKeys.length;
+            return {
+              content: resJson.choices?.[0]?.message?.content || '',
+              model: resJson.model || model,
+              keyMasked: maskApiKey(activeGroqKey)
+            };
+          }
 
-        if (response.status === 401) {
-          throw new Error('Invalid Groq API Key. Tap Settings -> Manage key to update.');
+          const errData = await response.json().catch(() => ({}));
+          lastError = errData?.error?.message || `Groq API returned HTTP ${response.status}`;
+          const lowerErr = lastError.toLowerCase();
+
+          if (response.status === 429 || lowerErr.includes('rate limit') || lowerErr.includes('tokens per minute')) {
+            groqKeyCooldowns.set(activeGroqKey, Date.now() + 60000);
+            keyHitRateLimit = true;
+            break; // Break model loop, failover to next key in pool!
+          }
+
+          if (response.status === 401) {
+            keyUnauthorized = true;
+            break; // Try next key in pool!
+          }
+
+          if (
+            response.status === 400 ||
+            response.status === 404 ||
+            lowerErr.includes('decommissioned') ||
+            lowerErr.includes('does not exist') ||
+            lowerErr.includes('not supported') ||
+            lowerErr.includes('deprecated') ||
+            lowerErr.includes('model')
+          ) {
+            continue;
+          }
+        } catch (err) {
+          lastError = err.message;
         }
-      } catch (err) {
-        if (err.message && err.message.includes('Invalid Groq API Key')) throw err;
+      }
+
+      if (keyHitRateLimit || keyUnauthorized) {
+        continue;
       }
     }
     if (lastError) throw new Error(lastError);
@@ -392,15 +519,27 @@ async function callByokService(body) {
 }
 
 export async function getByokStatus() {
+  const groqKeys = getAllLocalGroqKeys();
   const localKey = getLocalGroqKey();
-  if (localKey) {
-    const provider = detectAiProvider(localKey);
+  const provider = detectAiProvider(localKey) || (groqKeys.length > 0 ? 'groq' : null);
+  const now = Date.now();
+
+  if (groqKeys.length > 0 || localKey) {
     return {
       success: true,
       configured: true,
       storage: 'device',
-      provider,
-      providerLabel: getAiProviderLabel(provider)
+      provider: provider || 'groq',
+      providerLabel: getAiProviderLabel(provider || 'groq'),
+      groqKeys: groqKeys.map((k, idx) => ({
+        index: idx + 1,
+        key: k,
+        masked: maskApiKey(k),
+        isCooling: (groqKeyCooldowns.get(k) || 0) > now,
+        cooldownSeconds: Math.max(0, Math.ceil(((groqKeyCooldowns.get(k) || 0) - now) / 1000))
+      })),
+      groqKeyCount: groqKeys.length,
+      hasMultipleGroqKeys: groqKeys.length > 1
     };
   }
   if (isSupabaseConfigured && supabase) {
@@ -412,12 +551,129 @@ export async function getByokStatus() {
       }
     } catch {}
   }
-  return { success: true, configured: false };
+  return { success: true, configured: false, groqKeys: [], groqKeyCount: 0 };
+}
+
+export async function addGroqKeys(keysInput) {
+  const candidates = Array.isArray(keysInput) ? keysInput : parseKeyInput(keysInput);
+  if (candidates.length === 0) {
+    return { success: false, error: 'No API keys provided.' };
+  }
+
+  const validGroq = [];
+  const invalid = [];
+
+  for (const raw of candidates) {
+    const k = raw.trim();
+    if (detectAiProvider(k) === 'groq') {
+      validGroq.push(k);
+    } else {
+      invalid.push(k);
+    }
+  }
+
+  if (validGroq.length === 0) {
+    return {
+      success: false,
+      error: 'No valid Groq keys found. Groq API keys must begin with "gsk_".'
+    };
+  }
+
+  const DIRECT_PROVIDER_BASE = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1'].join('/');
+  const validatedKeys = [];
+  const errors = [];
+
+  for (const k of validGroq) {
+    try {
+      const res = await fetch(`${DIRECT_PROVIDER_BASE}/models`, {
+        headers: { Authorization: ['Bearer', k].join(' ') }
+      });
+      if (res.ok) {
+        validatedKeys.push(k);
+        groqKeyCooldowns.delete(k);
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        errors.push(`${maskApiKey(k)}: ${errJson?.error?.message || `HTTP ${res.status}`}`);
+      }
+    } catch {
+      validatedKeys.push(k);
+    }
+  }
+
+  if (validatedKeys.length === 0) {
+    return {
+      success: false,
+      error: `Validation failed: ${errors.join('; ')}`
+    };
+  }
+
+  const existing = getAllLocalGroqKeys();
+  const merged = Array.from(new Set([...existing, ...validatedKeys]));
+  persistGroqKeys(merged);
+
+  return {
+    success: true,
+    configured: true,
+    provider: 'groq',
+    providerLabel: getAiProviderLabel('groq'),
+    addedCount: validatedKeys.length,
+    totalCount: merged.length,
+    keys: merged.map((k, idx) => ({
+      index: idx + 1,
+      key: k,
+      masked: maskApiKey(k),
+      isCooling: false
+    })),
+    warnings: errors.length > 0 ? errors : undefined
+  };
+}
+
+export function removeGroqKey(keyToRemove) {
+  const clean = (keyToRemove || '').trim();
+  const existing = getAllLocalGroqKeys();
+  const filtered = existing.filter(k => k !== clean && maskApiKey(k) !== clean);
+  persistGroqKeys(filtered);
+  groqKeyCooldowns.delete(clean);
+  return {
+    success: true,
+    totalCount: filtered.length,
+    groqKeys: filtered.map((k, idx) => ({
+      index: idx + 1,
+      key: k,
+      masked: maskApiKey(k),
+      isCooling: (groqKeyCooldowns.get(k) || 0) > Date.now()
+    }))
+  };
+}
+
+export async function testGroqKey(keyToTest) {
+  const clean = (keyToTest || '').trim();
+  const DIRECT_PROVIDER_BASE = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1'].join('/');
+  try {
+    const res = await fetch(`${DIRECT_PROVIDER_BASE}/models`, {
+      headers: { Authorization: ['Bearer', clean].join(' ') }
+    });
+    if (res.ok) {
+      groqKeyCooldowns.delete(clean);
+      return { success: true, masked: maskApiKey(clean) };
+    }
+    const err = await res.json().catch(() => ({}));
+    return { success: false, error: err?.error?.message || `HTTP ${res.status}` };
+  } catch (e) {
+    return { success: false, error: e.message || 'Network test failed' };
+  }
 }
 
 export async function saveByokKey(key) {
   const cleanKey = (key || '').trim();
-  const provider = detectAiProvider(cleanKey);
+  const tokens = parseKeyInput(cleanKey);
+
+  if (tokens.length > 1) {
+    return await addGroqKeys(tokens);
+  }
+
+  const single = tokens[0] || cleanKey;
+  const provider = detectAiProvider(single);
   if (!provider) {
     return {
       success: false,
@@ -425,11 +681,15 @@ export async function saveByokKey(key) {
     };
   }
 
+  if (provider === 'groq') {
+    return await addGroqKeys([single]);
+  }
+
   // Live validate with selected provider
   try {
     if (provider === 'gemini') {
       const testRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(cleanKey)}`
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(single)}`
       );
       if (!testRes.ok) {
         const errData = await testRes.json().catch(() => ({}));
@@ -438,18 +698,8 @@ export async function saveByokKey(key) {
           error: errData?.error?.message || 'Invalid Google Gemini API key. Check aistudio.google.com/apikey.'
         };
       }
-    } else if (provider === 'groq') {
-      const DIRECT_PROVIDER_BASE = ['https:', '', ['api', 'groq', 'com'].join('.'), 'openai', 'v1'].join('/');
-      const testRes = await fetch(`${DIRECT_PROVIDER_BASE}/models`, {
-        headers: { Authorization: ['Bearer', cleanKey].join(' ') }
-      });
-      if (!testRes.ok) {
-        const errData = await testRes.json().catch(() => ({}));
-        return {
-          success: false,
-          error: errData?.error?.message || 'Invalid Groq API key. Check console.groq.com/keys.'
-        };
-      }
+    } else if (provider === 'openrouter' || provider === 'openai') {
+      // Allow OpenRouter / OpenAI
     }
   } catch (netErr) {
     console.warn('API key live check skipped due to network:', netErr);
@@ -457,18 +707,9 @@ export async function saveByokKey(key) {
 
   try {
     const storageKey = ['momentum', 'groq', 'api', 'key'].join('_');
-    window.localStorage?.setItem(storageKey, cleanKey);
+    window.localStorage?.setItem(storageKey, single);
   } catch {
     return { success: false, error: 'Could not store key in device storage.' };
-  }
-
-  if (isSupabaseConfigured && supabase && provider === 'groq') {
-    try {
-      const session = (await supabase.auth.getSession())?.data?.session;
-      if (session) {
-        await callByokService({ action: 'save', key: cleanKey });
-      }
-    } catch {}
   }
 
   return {
@@ -479,9 +720,15 @@ export async function saveByokKey(key) {
   };
 }
 
-export async function deleteByokKey() {
+export async function deleteByokKey(keyToRemove = null) {
+  if (keyToRemove) {
+    return removeGroqKey(keyToRemove);
+  }
+
   try {
     window.localStorage?.removeItem('momentum_groq_api_key');
+    window.localStorage?.removeItem('momentum_groq_api_keys');
+    groqKeyCooldowns.clear();
   } catch {}
 
   if (isSupabaseConfigured && supabase) {
@@ -535,8 +782,17 @@ Output schema:
   "energy": "High" | "Medium" | "Low",
   "impact": "high" | "medium" | "low",
   "priority": "high" | "normal" | "low",
-  "suggestedSubtasks": ["Micro-step 1", "Micro-step 2"]
+  "suggestedSubtasks": ["Micro-step 1", "Micro-step 2"],
+  "suggestedPrerequisites": [
+    {
+      "taskId": "id of candidate task",
+      "title": "Title of candidate task",
+      "badge": "e.g. Hygiene Prep, Food Prep, Study Prep, Dev Pipeline",
+      "reason": "Why this must naturally be completed first"
+    }
+  ]
 }
+If active candidate tasks are listed below, analyze if any candidate is a natural causal prerequisite in essence to the new task (e.g. bath before breakfast, groceries before cooking, lecture before assignment). If so, include in suggestedPrerequisites.
 Respond ONLY with a valid JSON object. No conversational filler, no code fences.`;
 
 export async function parseWithGroq(input = '', goals = [], options = {}) {
@@ -553,11 +809,15 @@ export async function parseWithGroq(input = '', goals = [], options = {}) {
     ? `Available goals: ${goals.map(g => `"${g.title}" (id: ${g.id})`).join(', ')}`
     : '';
 
+  const candidateTasksContext = Array.isArray(options?.candidateTasks) && options.candidateTasks.length > 0
+    ? `\nActive Candidate Tasks in workspace:\n${options.candidateTasks.slice(0, 10).map(t => `- [id: ${t.id}] "${t.title}"`).join('\n')}`
+    : '';
+
   const modeHint = options?.mode === 'schedule'
     ? '\nNote: User is specifically defining a recurring timetable class or fixed routine block.'
     : '';
 
-  const userPrompt = `Extract task or schedule metadata into a JSON object: "${cleanInput}"\n${goalsContext}${modeHint}`;
+  const userPrompt = `Extract task or schedule metadata into a JSON object: "${cleanInput}"\n${goalsContext}${candidateTasksContext}${modeHint}`;
 
   try {
     const result = await callAiService([
@@ -566,7 +826,18 @@ export async function parseWithGroq(input = '', goals = [], options = {}) {
     ], { temperature: 0.1, maxTokens: 800, taskTier: 'quick' });
 
     const cleanContent = sanitizeCavemanEgress(result.content);
-    return { success: true, data: JSON.parse(cleanContent), source: 'groq_api', model: result.model };
+    const parsedData = JSON.parse(cleanContent);
+
+    // Auto-Harvest Loop: teach Tier 1 the newly inferred prerequisite relationships
+    if (Array.isArray(parsedData?.suggestedPrerequisites) && parsedData.cleanTitle) {
+      parsedData.suggestedPrerequisites.forEach(p => {
+        if (p?.title) {
+          recordPrerequisiteAffinity(p.title, parsedData.cleanTitle);
+        }
+      });
+    }
+
+    return { success: true, data: parsedData, source: 'groq_api', model: result.model };
   } catch (error) {
     return { success: false, error: error.message || 'AI service request failed.' };
   }

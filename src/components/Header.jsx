@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import AgentAmbientOrb from './agent/AgentAmbientOrb';
 
 const TITLE_MAP = {
   dashboard:   'Today',
@@ -22,7 +23,9 @@ export default function Header({
   onOpenAiCopilot,
   onOpenQuickAdd,
   isSidebarCollapsed = false,
-  onToggleSidebar
+  onToggleSidebar,
+  agentControls = null,
+  onOpenAgentStudio = null
 }) {
   const searchRef = useRef(null);
   const notifRef = useRef(null);
@@ -228,6 +231,17 @@ export default function Header({
 
       {/* ── Right Controls ── */}
       <div className="flex items-center gap-2">
+
+        {/* Autonomous Copilot Living Ambient Orb */}
+        {agentControls && (
+          <AgentAmbientOrb
+            agentState={agentControls.agentState}
+            isScanning={agentControls.isScanning}
+            onOpenStudio={onOpenAgentStudio || onOpenAiCopilot}
+            onOpenDiffModal={() => agentControls.setActiveDiffModal(true)}
+            onTriggerScan={agentControls.triggerAudit}
+          />
+        )}
 
         {/* AI Executive Copilot Pill */}
         <button

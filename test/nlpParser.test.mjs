@@ -23,12 +23,12 @@ test('parseNaturalTask parses full natural language task string with Life Areas'
 });
 
 test('parseNaturalTask parses specific calendar date (Month Day)', () => {
-  const input = 'Review budget on Oct 15 at 3pm 30m';
+  const input = 'Review budget on Nov 15 at 3pm 30m';
   const result = parseNaturalTask(input, mockGoals);
 
   assert.equal(result.cleanTitle, 'Review budget');
-  assert.equal(result.extracted.plannedDate, '2026-10-15');
-  assert.equal(result.extracted.dueDate, 'Oct 15');
+  assert.equal(result.extracted.plannedDate, '2026-11-15');
+  assert.equal(result.extracted.dueDate, 'Nov 15');
   assert.equal(result.extracted.startTime, '15:00');
   assert.equal(result.extracted.durationMinutes, 30);
 });
