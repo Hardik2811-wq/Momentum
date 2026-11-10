@@ -355,11 +355,44 @@ const TodayView = React.memo(function TodayView({
   }, [isEditorMode, selectedTransformTaskId]);
 
   const slotMenuRef = useRef(null);
+  const todayRef = useRef(todayPlanDate());
 
-  // Live ticker for time ruler
+  // Live ticker for time ruler & automatic midnight calendar rollover
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
+    const checkRollover = () => {
+      const now = new Date();
+      setCurrentTime(now);
+      const freshToday = todayPlanDate();
+      if (freshToday !== todayRef.current) {
+        const prevToday = todayRef.current;
+        todayRef.current = freshToday;
+        // If user was viewing "Today", roll forward to the new calendar date automatically
+        setViewDate(currentViewDate => {
+          if (currentViewDate === prevToday) {
+            return freshToday;
+          }
+          return currentViewDate;
+        });
+      }
+    };
+
+    const timer = setInterval(checkRollover, 60000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkRollover();
+      }
+    };
+    const onFocus = () => checkRollover();
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   // Close slot menu on outside click
@@ -1457,7 +1490,9 @@ const TodayView = React.memo(function TodayView({
                       {habitsAtRiskList[0].title}
                     </p>
                     <p className="hidden sm:block text-[11px] text-[#6B6A72] dark:text-[#8E8E93] truncate">
-                      {habitsAtRiskList[0].mvrSuggestion}
+                      {typeof habitsAtRiskList[0].mvrSuggestion === 'object'
+                        ? (habitsAtRiskList[0].mvrSuggestion?.recoveryPrescription || '')
+                        : String(habitsAtRiskList[0].mvrSuggestion || '')}
                     </p>
                   </div>
                 </div>
@@ -1662,51 +1697,51 @@ const TodayView = React.memo(function TodayView({
                   placeholder={viewRangeTitle.isToday ? "+ Add deliverable to slot..." : `+ Add deliverable for ${viewRangeTitle.short}...`}
                   value={newTrayTaskTitle}
                   onChange={(e) => setNewTrayTaskTitle(e.target.value)}
-                  className="w-full pl-3 pr-8 py-1.5 rounded-xl text-[11px] bg-[#F5F4FA] border border-black/[0.06] text-[#1A1B1F] placeholder:text-[#94A3B8] outline-none focus:bg-white focus:border-[#0A84FF] transition"
+                  className="w-full pl-3 pr-8 py-1.5 rounded-xl text-[11px] bg-[#F0EFEA] dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] text-[#161618] dark:text-[#F7F6F2] placeholder:text-[#8E8E93] outline-none focus:bg-white dark:focus:bg-[#1E1E22] focus:border-[#0F52BA] transition"
                 />
                 {newTrayTaskTitle.trim() && (
                   <button
                     type="submit"
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md bg-[#0A84FF] text-white flex items-center justify-center text-[11px]"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md bg-[#0F52BA] hover:bg-[#003EA8] text-white flex items-center justify-center text-[11px] cursor-pointer"
                   >
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
                 {trayNlpPreview && trayNlpPreview.hasDetected && (
                   <div className="flex flex-wrap items-center gap-1 pt-1.5 px-0.5 animate-fadeIn">
-                    <span className="text-[9.5px] font-bold text-[#0A84FF] flex items-center gap-0.5">
+                    <span className="text-[9.5px] font-bold text-[#0F52BA] dark:text-blue-400 flex items-center gap-0.5">
                       <span className="material-symbols-outlined text-[11px]">auto_awesome</span>
                       Detected:
                     </span>
                     {trayNlpPreview.extracted.dueDate && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9.5px] font-semibold border border-blue-200/60">
+                      <span className="px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[9.5px] font-semibold border border-blue-200/60 dark:border-blue-800/40 font-mono">
                         {trayNlpPreview.extracted.dueDate}
                       </span>
                     )}
                     {trayNlpPreview.extracted.startTime && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[9.5px] font-semibold border border-indigo-200/60">
+                      <span className="px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[9.5px] font-semibold border border-indigo-200/60 dark:border-indigo-800/40 font-mono">
                         {trayNlpPreview.extracted.startTime}
                       </span>
                     )}
                     {trayNlpPreview.extracted.durationMinutes && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[9.5px] font-semibold border border-amber-200/60">
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[9.5px] font-semibold border border-amber-200/60 dark:border-amber-800/40 font-mono">
                         {trayNlpPreview.extracted.durationMinutes}m
                       </span>
                     )}
                     {trayNlpPreview.extracted.impact && (
-                      <span className={`px-1.5 py-0.5 rounded-md text-[9.5px] font-semibold border ${
-                        trayNlpPreview.extracted.impact === 'high' ? 'bg-rose-50 text-rose-700 border-rose-200/60' : 'bg-slate-50 text-slate-700 border-slate-200/60'
+                      <span className={`px-1.5 py-0.5 rounded-md text-[9.5px] font-semibold border font-mono ${
+                        trayNlpPreview.extracted.impact === 'high' ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/40' : 'bg-slate-50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 border-slate-200/60 dark:border-slate-800/40'
                       }`}>
                         {trayNlpPreview.extracted.impact} impact
                       </span>
                     )}
                     {trayNlpPreview.extracted.areas && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-700 text-[9.5px] font-semibold border border-slate-200/60">
+                      <span className="px-1.5 py-0.5 rounded-md bg-slate-50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 text-[9.5px] font-semibold border border-slate-200/60 dark:border-slate-800/40 font-mono">
                         {trayNlpPreview.extracted.areas[0]}
                       </span>
                     )}
                     {trayNlpPreview.extracted.goalTitle && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[9.5px] font-semibold border border-purple-200/60">
+                      <span className="px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-[9.5px] font-semibold border border-purple-200/60 dark:border-purple-800/40 font-mono">
                         {trayNlpPreview.extracted.goalTitle}
                       </span>
                     )}
@@ -1715,7 +1750,7 @@ const TodayView = React.memo(function TodayView({
               </form>
 
               {/* Tray Tabs */}
-              <div className="grid grid-cols-5 gap-1 bg-[#F5F4FA] p-0.5 rounded-xl border border-black/[0.04]">
+              <div className="grid grid-cols-5 gap-1 bg-black/[0.04] dark:bg-white/[0.06] p-0.5 rounded-xl border border-black/[0.05] dark:border-white/[0.06]">
                 {[
                   { id: 'unscheduled', label: 'Open' },
                   { id: 'rituals', label: 'Rituals' },
@@ -1727,10 +1762,10 @@ const TodayView = React.memo(function TodayView({
                     key={t.id}
                     type="button"
                     onClick={() => setTrayFilterMode(t.id)}
-                    className={`py-1 rounded-lg text-[10px] font-semibold transition text-center truncate ${
+                    className={`py-1 rounded-lg text-[10px] font-semibold transition text-center truncate cursor-pointer ${
                       trayFilterMode === t.id
-                        ? 'bg-white text-[#1A1B1F] shadow-xs font-bold'
-                        : 'text-[#8E8E93] hover:text-[#1A1B1F]'
+                        ? 'bg-white dark:bg-[#1E1E22] text-[#161618] dark:text-[#F7F6F2] shadow-xs font-bold'
+                        : 'text-[#6B6A72] dark:text-[#8E8E93] hover:text-[#161618] dark:hover:text-[#F7F6F2]'
                     }`}
                   >
                     {t.label}
@@ -1741,13 +1776,13 @@ const TodayView = React.memo(function TodayView({
               {/* Tray Search & Area Filters */}
               <div className="space-y-2">
                 <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8E8E93]" />
                   <input
                     type="text"
                     placeholder="Search tray..."
                     value={traySearch}
                     onChange={(e) => setTraySearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl text-[11px] bg-[#F5F4FA] border border-black/[0.06] text-[#1A1B1F] placeholder:text-[#94A3B8] outline-none focus:bg-white focus:border-[#0A84FF] transition"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl text-[11px] bg-[#F0EFEA] dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] text-[#161618] dark:text-[#F7F6F2] placeholder:text-[#8E8E93] outline-none focus:bg-white dark:focus:bg-[#1E1E22] focus:border-[#0F52BA] transition"
                   />
                 </div>
 
@@ -1756,10 +1791,10 @@ const TodayView = React.memo(function TodayView({
                   <button
                     type="button"
                     onClick={() => setTrayAreaFilter('all')}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition shrink-0 ${
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition shrink-0 cursor-pointer ${
                       trayAreaFilter === 'all'
-                        ? 'bg-[#0A84FF] text-white shadow-2xs'
-                        : 'bg-[#F5F4FA] text-[#64748B] hover:bg-[#EBEBF0]'
+                        ? 'bg-[#0F52BA] text-white shadow-2xs'
+                        : 'bg-black/[0.04] dark:bg-white/[0.06] text-[#6B6A72] dark:text-[#8E8E93] hover:bg-black/[0.07] dark:hover:bg-white/[0.1]'
                     }`}
                   >
                     All
@@ -1771,10 +1806,10 @@ const TodayView = React.memo(function TodayView({
                         key={area.id}
                         type="button"
                         onClick={() => setTrayAreaFilter(isSelected ? 'all' : area.label)}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold transition shrink-0 ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold transition shrink-0 cursor-pointer ${
                           isSelected
-                            ? 'bg-[#0A84FF] text-white shadow-2xs'
-                            : 'bg-[#F5F4FA] text-[#64748B] hover:bg-[#EBEBF0]'
+                            ? 'bg-[#0F52BA] text-white shadow-2xs'
+                            : 'bg-black/[0.04] dark:bg-white/[0.06] text-[#6B6A72] dark:text-[#8E8E93] hover:bg-black/[0.07] dark:hover:bg-white/[0.1]'
                         }`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${area.dotClass}`} />
@@ -1840,10 +1875,10 @@ const TodayView = React.memo(function TodayView({
                           style={{ touchAction: 'none', userSelect: 'none' }}
                           className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-2.5 cursor-pointer group shadow-2xs select-none touch-none ${
                             isSelected
-                              ? 'ring-2 ring-[#0A84FF] border-[#0A84FF] bg-blue-50/70 shadow-xs'
+                              ? 'ring-1 ring-[#0F52BA] border-[#0F52BA] bg-[#0F52BA]/10 shadow-xs'
                               : isDone
-                              ? 'border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50/70 opacity-90'
-                              : 'border-indigo-100/80 bg-white hover:bg-indigo-50/40'
+                              ? 'border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/20 dark:border-emerald-800/30 opacity-90'
+                              : 'border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-[#18181C] hover:border-black/[0.14] dark:hover:border-white/[0.14]'
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -1856,15 +1891,15 @@ const TodayView = React.memo(function TodayView({
                                 }}
                                 className={`w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 ${
                                   isSelected
-                                    ? 'bg-[#0A84FF] border-[#0A84FF] text-white shadow-2xs'
-                                    : 'border-slate-300 bg-white hover:border-[#0A84FF]'
+                                    ? 'bg-[#0F52BA] border-[#0F52BA] text-white shadow-2xs'
+                                    : 'border-black/20 dark:border-white/30 bg-transparent hover:border-[#0F52BA]'
                                 }`}
                               >
                                 {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </button>
                             ) : (
                               <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                                isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-50 text-indigo-600'
+                                isDone ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-[#0F52BA]/10 text-[#0F52BA] dark:text-blue-400'
                               }`}>
                                 <span className="material-symbols-outlined text-[16px]">{isDone ? 'check' : 'school'}</span>
                               </div>
@@ -1873,32 +1908,32 @@ const TodayView = React.memo(function TodayView({
                               <div className="flex items-center gap-1.5">
                                 <p className={`text-[12px] font-bold truncate transition ${
                                   isDone
-                                    ? 'line-through text-slate-400 group-hover:text-emerald-700'
-                                    : 'text-indigo-950 group-hover:text-indigo-600'
+                                    ? 'line-through text-[#6B6A72] dark:text-[#8E8E93] group-hover:text-emerald-600'
+                                    : 'text-[#161618] dark:text-[#F7F6F2] group-hover:text-[#0F52BA] dark:group-hover:text-blue-400'
                                 }`}>
                                   {sched.title}
                                 </p>
                                 {isDone ? (
-                                  <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-bold border border-emerald-200/80 shrink-0">
+                                  <span className="px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold font-mono border border-emerald-500/20 shrink-0">
                                     Done
                                   </span>
                                 ) : isActiveToday ? (
-                                  <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 text-[9px] font-bold border border-emerald-200/60 shrink-0">
+                                  <span className="px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold font-mono border border-emerald-500/20 shrink-0">
                                     Today
                                   </span>
                                 ) : null}
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono mt-0.5">
+                              <div className="flex items-center gap-2 text-[10px] text-[#6B6A72] dark:text-[#8E8E93] font-mono mt-0.5">
                                 <span>{startLabel} – {endLabel}</span>
-                                <span className="text-slate-300">•</span>
-                                <span className="text-indigo-600 font-semibold">{recLabel}</span>
+                                <span className="text-black/20 dark:text-white/20">•</span>
+                                <span className="text-[#0F52BA] dark:text-blue-400 font-semibold">{recLabel}</span>
                               </div>
                             </div>
                           </div>
                           {!isMultiSelectMode && (
                             <div className="flex items-center gap-1.5 shrink-0">
                               {sched.category && (
-                                <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[9.5px] font-bold uppercase tracking-wider">
+                                <span className="px-2 py-0.5 rounded-md bg-black/[0.04] dark:bg-white/[0.06] text-[#6B6A72] dark:text-[#8E8E93] font-mono text-[9px] font-bold uppercase tracking-wider">
                                   {sched.category}
                                 </span>
                               )}
@@ -1933,17 +1968,17 @@ const TodayView = React.memo(function TodayView({
                   )
                 ) : trayFilterMode === 'rituals' ? (
                   habits.length === 0 ? (
-                    <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-2 my-4">
+                    <div className="p-8 rounded-2xl bg-[#F7F6F2] dark:bg-[#18181C] border border-dashed border-black/[0.08] dark:border-white/[0.08] text-center space-y-2 my-4">
                       <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
-                      <p className="text-[12px] font-semibold text-[#1A1B1F]">No habits created</p>
-                      <p className="text-[10px] text-[#64748B]">Create daily rituals to establish baseline consistency.</p>
+                      <p className="text-[12px] font-semibold text-[#161618] dark:text-[#F7F6F2]">No habits created</p>
+                      <p className="text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">Create daily rituals to establish baseline consistency.</p>
                       <button
                         type="button"
                         onClick={() => {
                           setEditingHabit(null);
                           setIsHabitModalOpen(true);
                         }}
-                        className="mt-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#161618] text-white text-[11px] font-semibold hover:opacity-90 transition cursor-pointer"
+                        className="mt-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] text-[11px] font-semibold hover:opacity-90 transition cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         New Ritual
@@ -1971,8 +2006,8 @@ const TodayView = React.memo(function TodayView({
                           title="Click to edit ritual, or drag onto calendar timeline"
                           className={`group p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-pointer select-none touch-none ${
                             isChecked
-                              ? 'bg-emerald-50/70 border-emerald-200 opacity-80'
-                              : 'bg-white hover:bg-emerald-50/30 border-black/[0.06]'
+                              ? 'bg-emerald-500/10 dark:bg-emerald-950/20 border-emerald-500/20 dark:border-emerald-800/30 opacity-80'
+                              : 'bg-white dark:bg-[#18181C] hover:border-black/[0.14] dark:hover:border-white/[0.14] border-black/[0.08] dark:border-white/[0.08]'
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
@@ -1984,41 +2019,41 @@ const TodayView = React.memo(function TodayView({
                               }}
                               className={`w-5 h-5 rounded-full flex items-center justify-center transition shrink-0 ${
                                 isChecked
-                                  ? 'bg-emerald-600 text-white'
-                                  : 'border-2 border-emerald-500 hover:bg-emerald-50 text-transparent'
+                                  ? 'bg-[#2E6F40] text-white'
+                                  : 'border-2 border-emerald-500/60 hover:border-emerald-500 text-transparent'
                               }`}
                             >
                               <Check className="w-3 h-3 stroke-[3]" />
                             </button>
                             <div className="min-w-0">
-                              <p className={`text-[12px] font-semibold truncate ${isChecked ? 'line-through text-emerald-800' : 'text-[#1A1B1F]'}`}>
+                              <p className={`text-[12px] font-semibold truncate ${isChecked ? 'line-through text-[#2E6F40] dark:text-emerald-400' : 'text-[#161618] dark:text-[#F7F6F2]'}`}>
                                 {h.title}
                               </p>
-                              <div className="flex items-center gap-1.5 text-[10px] text-[#64748B]">
+                              <div className="flex items-center gap-1.5 text-[10px] text-[#6B6A72] dark:text-[#8E8E93] font-mono">
                                 <span>{h.duration || '30 mins'}</span>
-                                {h.isTimeBlocked !== false && h.startTime && <span className="text-emerald-600 font-bold">• At {formatTimeString(h.startTime)}</span>}
+                                {h.isTimeBlocked !== false && h.startTime && <span className="text-[#2E6F40] dark:text-emerald-400 font-bold">• At {formatTimeString(h.startTime)}</span>}
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             {h.linkedGoal && (
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-800 truncate max-w-[80px]">
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 truncate max-w-[80px]">
                                 {h.linkedGoal}
                               </span>
                             )}
-                            <Pencil className="w-3 h-3 text-[#94A3B8] opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Pencil className="w-3 h-3 text-[#8E8E93] opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </div>
                       );
                     })
                   )
                 ) : trayTasks.length === 0 ? (
-                  <div className="p-8 rounded-2xl bg-[#F9F9FB] border border-dashed border-black/[0.08] text-center space-y-1.5 my-4">
+                  <div className="p-8 rounded-2xl bg-[#F7F6F2] dark:bg-[#18181C] border border-dashed border-black/[0.08] dark:border-white/[0.08] text-center space-y-1.5 my-4">
                     <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
-                    <p className="text-[12px] font-semibold text-[#1A1B1F]">
+                    <p className="text-[12px] font-semibold text-[#161618] dark:text-[#F7F6F2]">
                       {trayFilterMode === 'unscheduled' ? 'No unscheduled tasks!' : 'No tasks match filter'}
                     </p>
-                    <p className="text-[10px] text-[#64748B]">All deliverables are scheduled on your calendar timeline.</p>
+                    <p className="text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">All deliverables are scheduled on your calendar timeline.</p>
                   </div>
                 ) : (
                   trayTasks.map(task => {
@@ -2056,10 +2091,10 @@ const TodayView = React.memo(function TodayView({
                           isMultiSelectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
                         } hover:shadow-xs group ${
                           isSelected
-                            ? 'ring-2 ring-[#0A84FF] border-[#0A84FF] bg-blue-50/70 shadow-xs'
+                            ? 'ring-1 ring-[#0F52BA] border-[#0F52BA] bg-[#0F52BA]/10 shadow-xs'
                             : draggedTaskId === task.id
-                            ? 'opacity-40 border-[#0A84FF] bg-blue-50/50'
-                            : 'bg-[#FAFAFC] hover:bg-white border-black/[0.06]'
+                            ? 'opacity-40 border-[#0F52BA] bg-[#0F52BA]/10'
+                            : 'bg-white dark:bg-[#18181C] hover:border-black/[0.14] dark:hover:border-white/[0.14] border-black/[0.08] dark:border-white/[0.08]'
                         }`}
                       >
                         <div className="flex items-start gap-2">
@@ -2072,8 +2107,8 @@ const TodayView = React.memo(function TodayView({
                               }}
                               className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition shrink-0 ${
                                 isSelected
-                                  ? 'bg-[#0A84FF] border-[#0A84FF] text-white shadow-2xs'
-                                  : 'border-slate-300 bg-white hover:border-[#0A84FF]'
+                                  ? 'bg-[#0F52BA] border-[#0F52BA] text-white shadow-2xs'
+                                  : 'border-black/20 dark:border-white/30 bg-transparent hover:border-[#0F52BA]'
                               }`}
                             >
                               {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
@@ -2085,36 +2120,36 @@ const TodayView = React.memo(function TodayView({
                                 e.stopPropagation();
                                 onToggleTask?.(task.id, viewDate);
                               }}
-                              className="mt-0.5 text-[#94A3B8] hover:text-[#0A84FF] transition shrink-0"
+                              className="mt-0.5 text-[#8E8E93] hover:text-[#0F52BA] transition shrink-0"
                             >
                               <Square className="w-4 h-4" />
                             </button>
                           )}
 
                           <div className="flex-1 min-w-0">
-                            <p className="text-[12px] font-semibold text-[#1A1B1F] leading-tight truncate">
+                            <p className="text-[12px] font-semibold text-[#161618] dark:text-[#F7F6F2] leading-tight truncate">
                               {task.title}
                             </p>
 
                             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                              <span className="flex items-center gap-1 text-[10px] font-semibold text-[#64748B]">
+                              <span className="flex items-center gap-1 text-[10px] font-semibold text-[#6B6A72] dark:text-[#8E8E93] font-mono">
                                 <span className={`w-1.5 h-1.5 rounded-full ${impactDot}`} />
                                 <span>{task.durationMinutes ? formatDurationLabel(task.durationMinutes) : '45m'}</span>
                               </span>
 
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-black/[0.04] text-[#64748B] truncate max-w-[100px]">
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-black/[0.04] dark:bg-white/[0.06] text-[#6B6A72] dark:text-[#8E8E93] font-mono truncate max-w-[100px]">
                                 {taskArea}
                               </span>
 
                               {task.recurrence && task.recurrence !== 'none' && (
-                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-700" title={`Repeats ${task.recurrence}`}>
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20 font-mono" title={`Repeats ${task.recurrence}`}>
                                   <Repeat className="w-2.5 h-2.5" />
                                   <span className="capitalize">{task.recurrence}</span>
                                 </span>
                               )}
 
                               {isAlreadySlotted && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-[#0A84FF]">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold font-mono bg-[#0F52BA]/10 text-[#0F52BA] dark:text-blue-400 border border-[#0F52BA]/20">
                                   Slotted {task.startTime}
                                 </span>
                               )}

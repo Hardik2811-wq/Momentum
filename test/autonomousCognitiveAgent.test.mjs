@@ -11,6 +11,7 @@ import {
   applyProposal,
   undoAuditAction
 } from '../src/lib/autonomousAgentEngine.js';
+import { todayPlanDate } from '../src/lib/taskMetadata.js';
 
 // Setup Mock LocalStorage for Node.js test environment
 const mockStorage = new Map();
@@ -48,7 +49,7 @@ test('2. Somatic-Cognitive Clash Detection in Context Gathering', () => {
         endTime: '09:00',
         durationMinutes: 60,
         completed: true,
-        plannedDate: '2026-10-17'
+        plannedDate: todayPlanDate()
       },
       {
         id: 't2',
@@ -58,7 +59,7 @@ test('2. Somatic-Cognitive Clash Detection in Context Gathering', () => {
         endTime: '10:35',
         durationMinutes: 90,
         completed: false,
-        plannedDate: '2026-10-17'
+        plannedDate: todayPlanDate()
       }
     ],
     goals: [
@@ -69,7 +70,7 @@ test('2. Somatic-Cognitive Clash Detection in Context Gathering', () => {
     ],
     schedules: [],
     focusSessions: [],
-    settings: { todayDateKey: '2026-10-17' }
+    settings: { todayDateKey: todayPlanDate() }
   };
 
   const context = assembleAutonomousContext(mockStore);
@@ -89,7 +90,7 @@ test('3. Cognitive Audit & 4-Perspective Benefit Attribution', () => {
         endTime: '09:00',
         durationMinutes: 60,
         completed: true,
-        plannedDate: '2026-10-17'
+        plannedDate: todayPlanDate()
       },
       {
         id: 't2',
@@ -98,7 +99,7 @@ test('3. Cognitive Audit & 4-Perspective Benefit Attribution', () => {
         endTime: '10:30',
         durationMinutes: 90,
         completed: false,
-        plannedDate: '2026-10-17'
+        plannedDate: todayPlanDate()
       }
     ],
     goals: [],
@@ -324,14 +325,14 @@ test('9. Confidence and Risk Scorer - Derives multi-factor probability metrics',
 test('10. 12-Vector Forensic Audit Engine - Compiles structured diagnostic report', () => {
   const mockStore = {
     tasks: [
-      { id: 't1', title: 'Morning Gym Cardio', startTime: '08:00', durationMinutes: 60, completed: true },
-      { id: 't2', title: 'Deep Code Refactor', startTime: '09:00', durationMinutes: 90, completed: false }
+      { id: 't1', title: 'Morning Gym Cardio', startTime: '08:00', durationMinutes: 60, completed: true, plannedDate: todayPlanDate() },
+      { id: 't2', title: 'Deep Code Refactor', startTime: '09:00', durationMinutes: 90, completed: false, plannedDate: todayPlanDate() }
     ],
     goals: [{ id: 'g1', title: 'Build SaaS', progress: 0, targetDate: '2026-12-01' }],
     habits: [{ id: 'h1', title: 'Guitar Practice', streak: 10, completedDays: [] }],
     schedules: [],
     focusSessions: [],
-    settings: { todayDateKey: '2026-10-17' }
+    settings: { todayDateKey: todayPlanDate() }
   };
 
   const context = assembleAutonomousContext(mockStore);

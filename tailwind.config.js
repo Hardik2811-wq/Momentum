@@ -5,20 +5,20 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-        display: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-        headline: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'Roboto', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
+        headline: ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
         editorial: ['Newsreader', 'Georgia', 'serif'],
-        'display-mobile': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-        'headline-lg': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-        'headline-sm': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-        title: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-        'title-lg': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-        'title-md': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-        'title-sm': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-        'body-lg': ['Inter', 'sans-serif'], 'body-md': ['Inter', 'sans-serif'], 'body-sm': ['Inter', 'sans-serif'],
-        'label-lg': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'], 'label-md': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'], 'label-sm': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'], caption: ['Inter', 'sans-serif']
+        'display-mobile': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
+        'headline-lg': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
+        'headline-sm': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
+        title: ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
+        'title-lg': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
+        'title-md': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
+        'title-sm': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
+        'body-lg': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'], 'body-md': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'], 'body-sm': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'],
+        'label-lg': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'], 'label-md': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'], 'label-sm': ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif'], caption: ['"Plus Jakarta Sans"', 'Roboto', 'sans-serif']
       },
       fontSize: {
         display: ['3rem', { lineHeight: '1.1', fontWeight: '700' }], 'display-mobile': ['2.25rem', { lineHeight: '1.15', fontWeight: '600' }],

@@ -221,16 +221,21 @@ export default function AndroidWidgetSync({
         checkWidgetEvents();
       }
     };
+    const onResume = () => checkWidgetEvents();
 
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibilityChange);
+    document.addEventListener('resume', onResume);
 
-    const interval = setInterval(checkWidgetEvents, 1500);
+    // Low-frequency fallback ticker (30s) instead of aggressive 1.5s polling
+    // to preserve mobile battery & avoid unnecessary IPC bridge wakeups
+    const interval = setInterval(checkWidgetEvents, 30000);
 
     return () => {
       isCancelled = true;
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      document.removeEventListener('resume', onResume);
       clearInterval(interval);
     };
   }, []);

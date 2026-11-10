@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import QuickAddModal from './components/QuickAddModal';
@@ -18,6 +18,7 @@ import AuthGate from './components/AuthGate';
 import OnboardingModal from './components/OnboardingModal';
 import UniversalBlockEditor from './components/UniversalBlockEditor';
 import UniversalLayoutApplier from './components/UniversalLayoutApplier';
+import ErrorBoundary from './components/ErrorBoundary';
 import GoalModal from './components/GoalModal';
 import HabitModal from './components/HabitModal';
 import AiCopilotModal from './components/AiCopilotModal';
@@ -43,15 +44,59 @@ export default function App() {
   const store = useStore();
   const agent = useAutonomousAgent(store);
 
-  const openAiCopilot = (view = 'chat') => {
+  // Maintain store ref to keep callbacks strictly stable without recreating on 1s focusTimer ticks
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
+  const openAiCopilot = useCallback((view = 'chat') => {
     setCopilotInitialView(view);
     setIsAiCopilotOpen(true);
-  };
+  }, []);
 
-  const openHabitEditor = (habit = null) => {
+  const openAiCopilotChat = useCallback(() => {
+    setCopilotInitialView('chat');
+    setIsAiCopilotOpen(true);
+  }, []);
+
+  const openAiCopilotAgent = useCallback(() => {
+    setCopilotInitialView('agent');
+    setIsAiCopilotOpen(true);
+  }, []);
+
+  const openHabitEditor = useCallback((habit = null) => {
     setEditingGlobalHabit(habit);
     setIsHabitModalOpen(true);
-  };
+  }, []);
+
+  const openNewHabit = useCallback(() => {
+    setEditingGlobalHabit(null);
+    setIsHabitModalOpen(true);
+  }, []);
+
+  const openGoalModal = useCallback(() => {
+    setIsGoalModalOpen(true);
+  }, []);
+
+  const closeGoalModal = useCallback(() => {
+    setIsGoalModalOpen(false);
+  }, []);
+
+  const openQuickAdd = useCallback((props = {}) => {
+    setQuickAddProps(props);
+    setIsQuickAddOpen(true);
+  }, []);
+
+  const closeQuickAdd = useCallback(() => {
+    setIsQuickAddOpen(false);
+    setQuickAddProps({});
+  }, []);
+
+  const startFocusForTask = useCallback((taskId) => {
+    storeRef.current.focusTimer.setTimerTaskId(taskId);
+    if (!storeRef.current.focusTimer.isRunning) {
+      storeRef.current.focusTimer.startTimer();
+    }
+  }, []);
 
   useEffect(() => {
     // Initialize Capacitor Local Notifications
@@ -71,32 +116,28 @@ export default function App() {
     }
   }, [store.schedules]);
 
-  const openQuickAdd = (props = {}) => {
-    setQuickAddProps(props);
-    setIsQuickAddOpen(true);
-  };
-
-  const closeQuickAdd = () => {
-    setIsQuickAddOpen(false);
-    setQuickAddProps({});
-  };
-
-  const startFocusForTask = (taskId) => {
-    store.focusTimer.setTimerTaskId(taskId);
-    if (!store.focusTimer.isRunning) store.focusTimer.startTimer();
-  };
+  // Memoize common view props to preserve React.memo on TodayView, DashboardView, and GoalsView
+  const common = useMemo(() => ({
+    tasks: store.tasks,
+    onToggleTask: store.toggleTask,
+    onDeleteTask: store.deleteTask,
+    onDeleteTasks: store.deleteTasks,
+    onToggleSubtask: store.toggleSubtask,
+    onReorderTasks: store.reorderTasks,
+    onOpenQuickAdd: openQuickAdd,
+    stats: store.stats,
+  }), [
+    store.tasks,
+    store.toggleTask,
+    store.deleteTask,
+    store.deleteTasks,
+    store.toggleSubtask,
+    store.reorderTasks,
+    openQuickAdd,
+    store.stats,
+  ]);
 
   const renderView = () => {
-    const common = {
-      tasks: store.tasks,
-      onToggleTask: store.toggleTask,
-      onDeleteTask: store.deleteTask,
-      onDeleteTasks: store.deleteTasks,
-      onToggleSubtask: store.toggleSubtask,
-      onReorderTasks: store.reorderTasks,
-      onOpenQuickAdd: openQuickAdd,
-      stats: store.stats,
-    };
 
     switch (activeTab) {
       case 'dashboard':
@@ -220,10 +261,10 @@ export default function App() {
             onToggleTask={store.toggleTask}
             onCheckInHabit={store.checkInHabit}
             onOpenQuickAdd={openQuickAdd}
-            onOpenNewGoal={() => setIsGoalModalOpen(true)}
-            onOpenNewHabit={() => openHabitEditor(null)}
+            onOpenNewGoal={openGoalModal}
+            onOpenNewHabit={openNewHabit}
             agentControls={agent}
-            onOpenAgentStudio={() => openAiCopilot('agent')}
+            onOpenAgentStudio={openAiCopilotAgent}
           />
         );
       default:
@@ -259,8 +300,8 @@ export default function App() {
         onToggleTask={store.toggleTask}
         onCheckInHabit={store.checkInHabit}
         onOpenQuickAdd={openQuickAdd}
-        onOpenNewGoal={() => setIsGoalModalOpen(true)}
-        onOpenNewHabit={() => openHabitEditor(null)}
+        onOpenNewGoal={openGoalModal}
+        onOpenNewHabit={openNewHabit}
       />
       <AuthGate>
       <div className="min-h-screen font-sans bg-[#F7F6F2] dark:bg-[#121214] text-[#161618] dark:text-[#EAE8E3]">
@@ -268,7 +309,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickAdd={openQuickAdd}
-        onOpenAiCopilot={() => openAiCopilot('chat')}
+        onOpenAiCopilot={openAiCopilotChat}
         settings={store.settings}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(v => !v)}
@@ -279,19 +320,21 @@ export default function App() {
           tasks={store.tasks}
           goals={store.goals}
           habits={store.habits}
-          onEditHabit={(h) => openHabitEditor(h)}
+          onEditHabit={openHabitEditor}
           setActiveTab={setActiveTab}
           isUniversalEditorMode={isUniversalEditorMode}
           onToggleUniversalEditor={() => setIsUniversalEditorMode(v => !v)}
-          onOpenAiCopilot={() => openAiCopilot('chat')}
-          onOpenAgentStudio={() => openAiCopilot('agent')}
+          onOpenAiCopilot={openAiCopilotChat}
+          onOpenAgentStudio={openAiCopilotAgent}
           onOpenQuickAdd={openQuickAdd}
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebar={() => setIsSidebarCollapsed(v => !v)}
           agentControls={agent}
         />
         <div className="flex-1 w-full">
-          {renderView()}
+          <ErrorBoundary key={activeTab} viewName={activeTab}>
+            {renderView()}
+          </ErrorBoundary>
         </div>
       </div>
 
@@ -310,9 +353,9 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickAdd={openQuickAdd}
-        onOpenNewGoal={() => setIsGoalModalOpen(true)}
-        onOpenNewHabit={() => openHabitEditor(null)}
-        onOpenAiCopilot={() => openAiCopilot('chat')}
+        onOpenNewGoal={openGoalModal}
+        onOpenNewHabit={openNewHabit}
+        onOpenAiCopilot={openAiCopilotChat}
       />
 
       {/* AI Executive Copilot Modal */}
@@ -372,7 +415,7 @@ export default function App() {
       {/* Goal Creation Modal accessible globally */}
       <GoalModal
         isOpen={isGoalModalOpen}
-        onClose={() => setIsGoalModalOpen(false)}
+        onClose={closeGoalModal}
         onAddGoal={store.addGoal}
         habits={store.habits}
       />

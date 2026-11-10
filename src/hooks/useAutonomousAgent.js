@@ -22,6 +22,10 @@ export function useAutonomousAgent(store) {
   const [activeForensicModal, setActiveForensicModal] = useState(false);
   const timerRef = useRef(null);
 
+  // Keep store reference updated without re-triggering heartbeat on every store mutation
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
   // Sync state across tabs and custom events
   useEffect(() => {
     const handleStateChange = (e) => {
@@ -53,19 +57,19 @@ export function useAutonomousAgent(store) {
     const now = Date.now();
     if (!agentState.lastRunTimestamp || (now - agentState.lastRunTimestamp) > intervalMs) {
       const initialTimeout = setTimeout(() => {
-        executeAutonomousRun(store, { silent: true });
+        executeAutonomousRun(storeRef.current, { silent: true });
       }, 2000);
       return () => clearTimeout(initialTimeout);
     }
 
     timerRef.current = setInterval(() => {
-      executeAutonomousRun(store, { silent: true });
+      executeAutonomousRun(storeRef.current, { silent: true });
     }, intervalMs);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [agentState.enabled, agentState.auditIntervalMinutes, agentState.lastRunTimestamp, store]);
+  }, [agentState.enabled, agentState.auditIntervalMinutes, agentState.lastRunTimestamp]);
 
   // Trigger manual neural scan with animated phased feedback
   const triggerAudit = useCallback((isDeep = false) => {
@@ -85,7 +89,7 @@ export function useAutonomousAgent(store) {
     }, 850);
 
     setTimeout(() => {
-      const result = executeAutonomousRun(store, { force: true });
+      const result = executeAutonomousRun(storeRef.current, { force: true });
       setScanPhase('COMPLETE');
       setIsScanning(false);
 
@@ -97,27 +101,27 @@ export function useAutonomousAgent(store) {
 
       setTimeout(() => setScanPhase('IDLE'), 1500);
     }, 1200);
-  }, [store]);
+  }, []);
 
   const applyProposal = useCallback((id) => {
-    return engineApplyProposal(id, store);
-  }, [store]);
+    return engineApplyProposal(id, storeRef.current);
+  }, []);
 
   const dismissProposal = useCallback((id) => {
     return engineDismissProposal(id);
   }, []);
 
   const undoAction = useCallback((id) => {
-    return engineUndoAuditAction(id, store);
-  }, [store]);
+    return engineUndoAuditAction(id, storeRef.current);
+  }, []);
 
   const applyAll = useCallback(() => {
-    return engineApplyAllProposals(store);
-  }, [store]);
+    return engineApplyAllProposals(storeRef.current);
+  }, []);
 
   const applyBatch = useCallback((ids) => {
-    return engineApplyBatchProposals(ids, store);
-  }, [store]);
+    return engineApplyBatchProposals(ids, storeRef.current);
+  }, []);
 
   const updateAgentSettings = useCallback((patch) => {
     const next = { ...agentState, ...patch };

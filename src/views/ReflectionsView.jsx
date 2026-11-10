@@ -345,16 +345,16 @@ export default function ReflectionsView({
         )}
 
         {/* ── UNIFIED HERO BENTO: Executive Diagnosis & Momentum Engine ── */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#1A1A1E] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_32px_rgba(0,0,0,0.04)] border border-black/[0.07] dark:border-white/[0.08] relative overflow-hidden">
+        <div className="p-5 sm:p-6 rounded-2xl bg-white/70 dark:bg-[#18181C]/70 backdrop-blur-xs shadow-2xs border border-black/[0.08] dark:border-white/[0.08] relative overflow-hidden">
           <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-[#0F52BA]/[0.03] blur-3xl pointer-events-none" />
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
             {/* Momentum Score Gauge (Left/Top on Mobile, 4 cols md) */}
-            <div className="md:col-span-4 flex flex-row md:flex-col items-center justify-between sm:justify-around md:justify-center p-4 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] gap-3">
+            <div className="md:col-span-4 flex flex-row md:flex-col items-center justify-between sm:justify-around md:justify-center p-4 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] gap-3">
               <div className="relative w-20 h-20 sm:w-28 sm:h-28 flex items-center justify-center shrink-0">
                 <svg className="w-20 h-20 sm:w-28 sm:h-28 -rotate-90" viewBox="0 0 36 36">
-                  <path className="text-black/[0.06] dark:text-white/[0.08]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3.2" />
-                  <path className="text-[#0F52BA]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${momentumScore}, 100`} strokeLinecap="round" strokeWidth="3.2" />
+                  <path className="text-black/[0.06] dark:text-white/[0.08]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+                  <path className="text-[#0F52BA]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${momentumScore}, 100`} strokeLinecap="round" strokeWidth="3" />
                 </svg>
                 <div className="absolute flex flex-col items-center justify-center">
                   <span className="text-xl sm:text-3xl font-mono tabular-nums font-bold tracking-tight text-[#161618] dark:text-[#F7F6F2]">{momentumScore}</span>
@@ -363,17 +363,17 @@ export default function ReflectionsView({
               </div>
 
               <div className="flex flex-col items-start md:items-center text-left md:text-center mt-0 md:mt-2 flex-1 min-w-0">
-                <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold border ${
                   scoreDelta >= 0
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                    ? 'bg-[#2E6F40]/10 text-[#2E6F40] dark:text-[#4ADE80] border-[#2E6F40]/20'
+                    : 'bg-[#C84B31]/10 text-[#C84B31] dark:text-[#F87171] border-[#C84B31]/20'
                 }`}>
                   <span className="material-symbols-outlined text-[13px]">
                     {scoreDelta >= 0 ? 'trending_up' : 'trending_down'}
                   </span>
                   <span>{scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} pts</span>
                 </div>
-                <p className="font-caption text-[11px] text-on-surface-variant mt-1 leading-snug line-clamp-2 md:line-clamp-none max-w-[200px]">
+                <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93] mt-1 leading-snug line-clamp-2 md:line-clamp-none max-w-[200px]">
                   {momentumPercentileNote}
                 </p>
               </div>
@@ -384,73 +384,73 @@ export default function ReflectionsView({
               <div>
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-lg bg-primary-fixed text-primary flex items-center justify-center shrink-0">
+                    <span className="w-7 h-7 rounded-lg bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] flex items-center justify-center shrink-0 border border-[#0F52BA]/20">
                       <span className="material-symbols-outlined text-[16px]">psychology_alt</span>
                     </span>
-                    <h3 className="font-title text-sm sm:text-base text-on-surface font-semibold">Executive Coach Diagnosis</h3>
+                    <h3 className="font-editorial text-sm sm:text-base text-[#161618] dark:text-[#F7F6F2] font-medium">Executive Coach Diagnosis</h3>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-caption font-semibold ${coachStatus.badgeClass}`}>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold ${coachStatus.badgeClass}`}>
                     {coachStatus.badge}
                   </span>
                 </div>
-                <p className="font-body-md text-xs sm:text-sm text-on-surface leading-relaxed">
-                  {coachNarrative}
+                <p className="font-editorial italic text-xs sm:text-sm text-[#161618] dark:text-[#F7F6F2] leading-relaxed">
+                  "{coachNarrative}"
                 </p>
               </div>
 
               {/* 3 High-Utility Mini Telemetry Tiles */}
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-surface-container">
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.06]">
                 {/* Task Velocity */}
-                <div className="p-2 sm:p-2.5 rounded-xl bg-surface-container-low border border-black/[0.03]">
-                  <div className="flex items-center justify-between text-[10px] text-on-surface-variant font-bold uppercase mb-0.5">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06]">
+                  <div className="flex items-center justify-between text-[10px] text-[#6B6A72] dark:text-[#8E8E93] font-mono font-bold uppercase mb-0.5">
                     <span>Tasks</span>
-                    <span className={completionRate >= 80 ? 'text-emerald-600' : 'text-amber-600'}>
+                    <span className={completionRate >= 80 ? 'text-[#2E6F40] dark:text-[#4ADE80]' : 'text-[#0F52BA] dark:text-[#6495ED]'}>
                       {completionRate}%
                     </span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden my-1">
-                    <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }} />
+                  <div className="w-full h-1.5 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden my-1">
+                    <div className="h-full bg-[#0F52BA] rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }} />
                   </div>
-                  <span className="text-[11px] font-extrabold text-on-surface block">
-                    {completed}/{total} <span className="font-normal text-[10px] text-on-surface-variant">done</span>
+                  <span className="text-[11px] font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2] block">
+                    {completed}/{total} <span className="font-normal text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">done</span>
                   </span>
                 </div>
 
                 {/* Habit Anchors */}
-                <div className="p-2 sm:p-2.5 rounded-xl bg-surface-container-low border border-black/[0.03]">
-                  <div className="flex items-center justify-between text-[10px] text-on-surface-variant font-bold uppercase mb-0.5">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06]">
+                  <div className="flex items-center justify-between text-[10px] text-[#6B6A72] dark:text-[#8E8E93] font-mono font-bold uppercase mb-0.5">
                     <span>Habits</span>
-                    <span className={habitsCompletedToday === totalHabits && totalHabits > 0 ? 'text-emerald-600' : 'text-blue-600'}>
+                    <span className={habitsCompletedToday === totalHabits && totalHabits > 0 ? 'text-[#2E6F40] dark:text-[#4ADE80]' : 'text-[#0F52BA] dark:text-[#6495ED]'}>
                       {habitsCompletedToday === totalHabits && totalHabits > 0 ? 'All' : 'Active'}
                     </span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden my-1">
+                  <div className="w-full h-1.5 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden my-1">
                     <div
-                      className="h-full bg-secondary rounded-full transition-all duration-500"
+                      className="h-full bg-[#2E6F40] rounded-full transition-all duration-500"
                       style={{ width: `${totalHabits > 0 ? Math.round((habitsCompletedToday / totalHabits) * 100) : 0}%` }}
                     />
                   </div>
-                  <span className="text-[11px] font-extrabold text-on-surface block">
-                    {habitsCompletedToday}/{totalHabits} <span className="font-normal text-[10px] text-on-surface-variant">today</span>
+                  <span className="text-[11px] font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2] block">
+                    {habitsCompletedToday}/{totalHabits} <span className="font-normal text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">today</span>
                   </span>
                 </div>
 
                 {/* Milestone Horizon */}
-                <div className="p-2 sm:p-2.5 rounded-xl bg-surface-container-low border border-black/[0.03]">
-                  <div className="flex items-center justify-between text-[10px] text-on-surface-variant font-bold uppercase mb-0.5">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06]">
+                  <div className="flex items-center justify-between text-[10px] text-[#6B6A72] dark:text-[#8E8E93] font-mono font-bold uppercase mb-0.5">
                     <span>Goals</span>
-                    <span className={stalledGoal ? 'text-rose-600' : 'text-emerald-600'}>
+                    <span className={stalledGoal ? 'text-[#C84B31] dark:text-[#F87171]' : 'text-[#2E6F40] dark:text-[#4ADE80]'}>
                       {stalledGoal ? 'Lag' : 'On Track'}
                     </span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden my-1">
+                  <div className="w-full h-1.5 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden my-1">
                     <div
-                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                      className="h-full bg-[#2E6F40] rounded-full transition-all duration-500"
                       style={{ width: `${totalGoals > 0 ? Math.round((goalsOnTrack / totalGoals) * 100) : 100}%` }}
                     />
                   </div>
-                  <span className="text-[11px] font-extrabold text-on-surface block truncate" title={stalledGoal ? stalledGoal.title : `${goalsOnTrack}/${totalGoals} On Track`}>
-                    {goalsOnTrack}/{totalGoals} <span className="font-normal text-[10px] text-on-surface-variant">paced</span>
+                  <span className="text-[11px] font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2] block truncate" title={stalledGoal ? stalledGoal.title : `${goalsOnTrack}/${totalGoals} On Track`}>
+                    {goalsOnTrack}/{totalGoals} <span className="font-normal text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">paced</span>
                   </span>
                 </div>
               </div>
@@ -459,23 +459,23 @@ export default function ReflectionsView({
         </div>
 
         {/* ── Weekly Energy & Mood Log (Mon-Sun) ── */}
-        <div className="p-4 sm:p-gutter-base rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04]">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white/70 dark:bg-[#18181C]/70 backdrop-blur-xs shadow-2xs border border-black/[0.08] dark:border-white/[0.08]">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[20px]">bolt</span>
-                <h3 className="font-title text-title text-on-surface">Daily Energy &amp; Mood Telemetry</h3>
+                <span className="material-symbols-outlined text-[#0F52BA] dark:text-[#6495ED] text-[20px]">bolt</span>
+                <h3 className="font-editorial text-sm sm:text-base font-medium text-[#161618] dark:text-[#F7F6F2]">Daily Energy &amp; Mood Telemetry</h3>
               </div>
-              <p className="font-caption text-caption text-on-surface-variant">
+              <p className="text-[12px] text-[#6B6A72] dark:text-[#8E8E93]">
                 Cognitive battery tracking (1 = Drained, 5 = Peak Flow) • Tap card to cycle or tap segments
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${moodBatteryHealth.color}`}>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-mono font-bold border ${moodBatteryHealth.color}`}>
                 {moodBatteryHealth.label}
               </span>
-              <span className="font-label-sm text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-container text-on-surface border border-black/[0.04]">
-                Avg: <strong className="text-primary">{moodAvg}</strong> / 5
+              <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#161618] dark:text-[#F7F6F2] border border-black/[0.06] dark:border-white/[0.08]">
+                Avg: <strong className="text-[#0F52BA] dark:text-[#6495ED]">{moodAvg}</strong> / 5
               </span>
             </div>
           </div>
@@ -517,19 +517,19 @@ export default function ReflectionsView({
                   }}
                   className={`group relative flex flex-col items-center justify-between p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border transition-all duration-150 cursor-pointer select-none active:scale-[0.97] min-w-0 flex-1 ${
                     isToday
-                      ? 'ring-2 ring-primary/60 shadow-sm ' + config.activeClass
+                      ? 'ring-2 ring-[#0F52BA]/60 shadow-xs ' + config.activeClass
                       : config.activeClass
                   }`}
                   title={`Click ${day} card to cycle rating (1-5)`}
                 >
                   {/* Day Header & Today Marker */}
                   <div className="flex flex-col items-center gap-0.5 w-full">
-                    <span className="font-caption text-[10px] sm:text-[11px] font-bold tracking-wider uppercase opacity-85">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-bold tracking-wider uppercase opacity-85">
                       <span className="sm:hidden">{day.slice(0, 1)}</span>
                       <span className="hidden sm:inline">{day}</span>
                     </span>
                     {isToday ? (
-                      <span className="text-[8px] sm:text-[9px] font-black uppercase px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full bg-primary text-on-primary tracking-tight leading-none scale-90 shadow-xs">
+                      <span className="text-[8px] sm:text-[9px] font-mono font-bold uppercase px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full bg-[#0F52BA] text-white tracking-tight leading-none scale-90 shadow-xs">
                         Now
                       </span>
                     ) : (
@@ -542,10 +542,10 @@ export default function ReflectionsView({
                     <span className="text-lg sm:text-2xl transform transition-transform group-hover:scale-110">
                       {config.emoji}
                     </span>
-                    <span className="text-[11px] sm:text-sm font-extrabold tracking-tight mt-0.5">
+                    <span className="text-[11px] sm:text-sm font-mono font-bold tracking-tight mt-0.5">
                       {rating}<span className="hidden sm:inline text-[10px] font-normal opacity-60">/5</span>
                     </span>
-                    <span className="text-[9px] sm:text-[10px] font-semibold tracking-tight opacity-90 truncate max-w-full hidden sm:block">
+                    <span className="text-[9px] sm:text-[10px] font-mono tracking-tight opacity-90 truncate max-w-full hidden sm:block">
                       {config.short}
                     </span>
                   </div>
@@ -570,16 +570,16 @@ export default function ReflectionsView({
                     <button
                       type="button"
                       onClick={(e) => handleStep(-1, e)}
-                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/10 text-on-surface-variant font-bold text-xs"
+                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/10 text-[#6B6A72] dark:text-[#8E8E93] font-bold text-xs"
                       title="Decrease (-1)"
                     >
                       -
                     </button>
-                    <span className="text-[9px] font-medium opacity-50">tap</span>
+                    <span className="text-[9px] font-mono opacity-50">tap</span>
                     <button
                       type="button"
                       onClick={(e) => handleStep(1, e)}
-                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/10 text-on-surface-variant font-bold text-xs"
+                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/10 text-[#6B6A72] dark:text-[#8E8E93] font-bold text-xs"
                       title="Increase (+1)"
                     >
                       +
@@ -592,32 +592,32 @@ export default function ReflectionsView({
         </div>
 
         {/* ── GUIDED JOURNALING: 3 High-Leverage Retrospective Cards ── */}
-        <div id="retrospective-section" className="space-y-3 sm:space-y-gutter-base scroll-mt-20">
+        <div id="retrospective-section" className="space-y-3 sm:space-y-4 scroll-mt-20">
           <div className="flex items-center justify-between">
-            <h2 className="font-headline-sm text-headline-sm text-on-surface">Structured Guided Retrospective</h2>
-            <span className="text-on-surface-variant font-caption text-xs">Auto-saves to local storage</span>
+            <h2 className="font-editorial text-lg sm:text-xl font-medium text-[#161618] dark:text-[#F7F6F2]">Structured Guided Retrospective</h2>
+            <span className="text-[#6B6A72] dark:text-[#8E8E93] font-mono text-xs">Auto-saves locally</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-gutter-base">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             {/* 1. What Worked Well? */}
-            <div className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04] flex flex-col justify-between">
+            <div className="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-[#18181C]/80 shadow-2xs border border-black/[0.08] dark:border-white/[0.08] flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-secondary text-[20px]">thumb_up</span>
-                  <h3 className="font-title text-sm sm:text-base font-semibold text-on-surface">1. Top Wins</h3>
+                  <span className="material-symbols-outlined text-[#2E6F40] dark:text-[#4ADE80] text-[20px]">thumb_up</span>
+                  <h3 className="font-editorial text-sm sm:text-base font-medium text-[#161618] dark:text-[#F7F6F2]">1. Top Wins</h3>
                 </div>
                 <textarea
                   value={workedWell}
                   onChange={(e) => updateReflection?.({ workedWell: e.target.value })}
-                  placeholder="e.g. Breakthrough deep work sprint..."
+                  placeholder="Breakthrough deep work sprint, deliverables shipped..."
                   rows={2}
-                  className="w-full p-2.5 rounded-xl bg-surface-container-low border border-black/[0.06] text-on-surface text-xs sm:text-sm placeholder:text-on-surface-variant/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none transition-all"
+                  className="w-full p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] text-[#161618] dark:text-[#F7F6F2] text-xs sm:text-sm placeholder:text-[#8E8E93] focus:bg-white dark:focus:bg-[#1E1E24] focus:outline-none focus:ring-2 focus:ring-[#0F52BA]/30 resize-none transition-all font-editorial italic"
                 />
               </div>
 
               {/* 1-Tap Recognition: Curated Clean Single Row (Max 3 items) */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-surface-container/60">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-black/[0.05] dark:border-white/[0.06]">
+                <span className="text-[10px] text-[#8E8E93] font-mono uppercase tracking-wider">
                   Quick:
                 </span>
                 {completedTasks.slice(0, 2).map(t => (
@@ -625,7 +625,7 @@ export default function ReflectionsView({
                     key={t.id}
                     type="button"
                     onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • Finished "${t.title}"` : `Finished "${t.title}"` })}
-                    className="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
+                    className="px-2 py-0.5 rounded-lg bg-[#2E6F40]/10 hover:bg-[#2E6F40]/15 text-[#2E6F40] dark:text-[#4ADE80] border border-[#2E6F40]/20 text-[10px] font-mono font-medium transition-all active:scale-95 flex items-center gap-1"
                     title={`Add "${t.title}" to wins`}
                   >
                     <span>+</span>
@@ -635,7 +635,7 @@ export default function ReflectionsView({
                 <button
                   type="button"
                   onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • Deep Focus sprint` : 'Deep Focus sprint' })}
-                  className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                  className="px-2 py-0.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] text-[#161618] dark:text-[#F7F6F2] text-[10px] font-mono transition-colors active:scale-95"
                 >
                   + Focus sprint
                 </button>
@@ -643,7 +643,7 @@ export default function ReflectionsView({
                   <button
                     type="button"
                     onClick={() => updateReflection?.({ workedWell: workedWell ? `${workedWell} • Morning routine locked` : 'Morning routine locked' })}
-                    className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                    className="px-2 py-0.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] text-[#161618] dark:text-[#F7F6F2] text-[10px] font-mono transition-colors active:scale-95"
                   >
                     + Morning routine
                   </button>
@@ -652,17 +652,17 @@ export default function ReflectionsView({
             </div>
 
             {/* 2. What Got Pushed Back & Friction */}
-            <div className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04] flex flex-col justify-between">
+            <div className="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-[#18181C]/80 shadow-2xs border border-black/[0.08] dark:border-white/[0.08] flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between gap-1.5 mb-2">
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-amber-500 text-[18px]">schedule</span>
-                    <h3 className="font-title text-sm sm:text-base font-semibold text-on-surface">2. Slipped / Friction</h3>
+                    <h3 className="font-editorial text-sm sm:text-base font-medium text-[#161618] dark:text-[#F7F6F2]">2. Slipped / Friction</h3>
                   </div>
                   <select
                     value={pushedBackReason}
                     onChange={(e) => updateReflection?.({ pushedBackReason: e.target.value })}
-                    className="px-2 py-0.5 rounded-lg bg-surface-container text-on-surface text-[10px] sm:text-[11px] font-medium border-none outline-none cursor-pointer max-w-[120px] truncate"
+                    className="px-2 py-0.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] text-[#161618] dark:text-[#F7F6F2] text-[10px] sm:text-[11px] font-mono font-medium border border-black/[0.05] dark:border-white/[0.07] outline-none cursor-pointer max-w-[120px] truncate"
                     title="Select bottleneck reason"
                   >
                     {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
@@ -671,15 +671,15 @@ export default function ReflectionsView({
                 <textarea
                   value={pushedBack}
                   onChange={(e) => updateReflection?.({ pushedBack: e.target.value })}
-                  placeholder="e.g. Rolled task or friction to eliminate..."
+                  placeholder="Rolled task, distraction, friction to eliminate..."
                   rows={2}
-                  className="w-full p-2.5 rounded-xl bg-surface-container-low border border-black/[0.06] text-on-surface text-xs sm:text-sm placeholder:text-on-surface-variant/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none transition-all"
+                  className="w-full p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] text-[#161618] dark:text-[#F7F6F2] text-xs sm:text-sm placeholder:text-[#8E8E93] focus:bg-white dark:focus:bg-[#1E1E24] focus:outline-none focus:ring-2 focus:ring-[#0F52BA]/30 resize-none transition-all font-editorial italic"
                 />
               </div>
 
               {/* 1-Tap Recognition: Curated Clean Single Row (Max 3 items) */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-surface-container/60">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-black/[0.05] dark:border-white/[0.06]">
+                <span className="text-[10px] text-[#8E8E93] font-mono uppercase tracking-wider">
                   Quick:
                 </span>
                 {incompleteTasks.slice(0, 2).map(t => (
@@ -687,7 +687,7 @@ export default function ReflectionsView({
                     key={t.id}
                     type="button"
                     onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • Rolled "${t.title}"` : `Rolled "${t.title}"` })}
-                    className="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
+                    className="px-2 py-0.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/20 text-[10px] font-mono font-medium transition-all active:scale-95 flex items-center gap-1"
                     title={`Mark "${t.title}" as pushed back`}
                   >
                     <span>+</span>
@@ -697,7 +697,7 @@ export default function ReflectionsView({
                 <button
                   type="button"
                   onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • Context switching` : 'Context switching' })}
-                  className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                  className="px-2 py-0.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] text-[#161618] dark:text-[#F7F6F2] text-[10px] font-mono transition-colors active:scale-95"
                 >
                   + Switching
                 </button>
@@ -705,7 +705,7 @@ export default function ReflectionsView({
                   <button
                     type="button"
                     onClick={() => updateReflection?.({ pushedBack: pushedBack ? `${pushedBack} • Energy dip` : 'Energy dip' })}
-                    className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                    className="px-2 py-0.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] text-[#161618] dark:text-[#F7F6F2] text-[10px] font-mono transition-colors active:scale-95"
                   >
                     + Energy dip
                   </button>
@@ -714,18 +714,18 @@ export default function ReflectionsView({
             </div>
 
             {/* 3. The ONE Priority for Next Week + Goal Link */}
-            <div className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04] flex flex-col justify-between">
+            <div className="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-[#18181C]/80 shadow-2xs border border-black/[0.08] dark:border-white/[0.08] flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between gap-1.5 mb-2">
                   <div className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-primary text-[18px]">flag</span>
-                    <h3 className="font-title text-sm sm:text-base font-semibold text-on-surface">3. ONE Priority</h3>
+                    <span className="material-symbols-outlined text-[#0F52BA] dark:text-[#6495ED] text-[18px]">flag</span>
+                    <h3 className="font-editorial text-sm sm:text-base font-medium text-[#161618] dark:text-[#F7F6F2]">3. ONE Priority</h3>
                   </div>
                   <div className="flex items-center gap-1">
                     <select
                       value={targetGoalId}
                       onChange={(e) => updateReflection?.({ targetGoalId: e.target.value })}
-                      className="px-2 py-0.5 rounded-lg bg-primary-fixed text-on-primary-fixed-variant text-[10px] sm:text-[11px] font-semibold border-none outline-none cursor-pointer max-w-[120px] truncate"
+                      className="px-2 py-0.5 rounded-lg bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] text-[10px] sm:text-[11px] font-mono font-medium border border-[#0F52BA]/20 outline-none cursor-pointer max-w-[120px] truncate"
                       title="Link to goal"
                     >
                       {goals.map(g => (
@@ -737,15 +737,15 @@ export default function ReflectionsView({
                 <textarea
                   value={onePriority}
                   onChange={(e) => updateReflection?.({ onePriority: e.target.value })}
-                  placeholder="e.g. Deploy Portfolio Website v3..."
+                  placeholder="The single outcome that makes everything else easier..."
                   rows={2}
-                  className="w-full p-2.5 rounded-xl bg-surface-container-low border border-black/[0.06] text-on-surface text-xs sm:text-sm placeholder:text-on-surface-variant/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none transition-all"
+                  className="w-full p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] text-[#161618] dark:text-[#F7F6F2] text-xs sm:text-sm placeholder:text-[#8E8E93] focus:bg-white dark:focus:bg-[#1E1E24] focus:outline-none focus:ring-2 focus:ring-[#0F52BA]/30 resize-none transition-all font-editorial italic"
                 />
               </div>
 
               {/* 1-Tap Recognition: Curated Clean Single Row (Max 3 items) */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-surface-container/60">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-black/[0.05] dark:border-white/[0.06]">
+                <span className="text-[10px] text-[#8E8E93] font-mono uppercase tracking-wider">
                   Quick:
                 </span>
                 {goals.slice(0, 2).map(g => (
@@ -753,7 +753,7 @@ export default function ReflectionsView({
                     key={g.id}
                     type="button"
                     onClick={() => updateReflection?.({ onePriority: `Advance "${g.title}" milestone`, targetGoalId: g.id })}
-                    className="px-2 py-0.5 rounded-lg bg-primary-fixed/60 hover:bg-primary-fixed text-primary text-[10px] font-semibold transition-all active:scale-95 flex items-center gap-1"
+                    className="px-2 py-0.5 rounded-lg bg-[#0F52BA]/10 hover:bg-[#0F52BA]/20 text-[#0F52BA] dark:text-[#6495ED] border border-[#0F52BA]/20 text-[10px] font-mono font-medium transition-all active:scale-95 flex items-center gap-1"
                   >
                     <span>+</span>
                     <span className="truncate max-w-[110px]">{g.title}</span>
@@ -762,7 +762,7 @@ export default function ReflectionsView({
                 <button
                   type="button"
                   onClick={() => updateReflection?.({ onePriority: 'Close sprint backlog' })}
-                  className="px-2 py-0.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-[10px] font-medium transition-colors active:scale-95"
+                  className="px-2 py-0.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] text-[#161618] dark:text-[#F7F6F2] text-[10px] font-mono transition-colors active:scale-95"
                 >
                   + Close backlog
                 </button>
@@ -772,20 +772,20 @@ export default function ReflectionsView({
         </div>
 
         {/* ── Velocity Calibration & Habit Tune-Up ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-gutter-base">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           {/* Stalled Goal Velocity Speedometer or Clean Horizon State */}
-          <div id="goal-pacing-alert" className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04] flex flex-col justify-between scroll-mt-24">
+          <div id="goal-pacing-alert" className="p-4 sm:p-5 rounded-2xl bg-white/70 dark:bg-[#18181C]/70 backdrop-blur-xs shadow-2xs border border-black/[0.08] dark:border-white/[0.08] flex flex-col justify-between scroll-mt-24">
             {stalledGoal ? (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="font-label-md text-label-md text-on-surface font-semibold">Goal Pacing Alert</span>
-                  <span className="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-bold">Needs Attention</span>
+                  <span className="font-editorial text-sm sm:text-base font-medium text-[#161618] dark:text-[#F7F6F2]">Goal Pacing Alert</span>
+                  <span className="px-2 py-0.5 rounded-full bg-[#C84B31]/10 text-[#C84B31] dark:text-[#F87171] border border-[#C84B31]/20 font-mono text-[10px] font-bold">Needs Attention</span>
                 </div>
-                <div className="my-2 p-3 rounded-xl bg-surface-container-low flex items-start gap-2.5">
+                <div className="my-2.5 p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] flex items-start gap-2.5">
                   <span className="material-symbols-outlined text-amber-500 mt-0.5">warning</span>
                   <div>
-                    <span className="font-semibold text-sm text-on-surface block">{stalledGoal.title}</span>
-                    <p className="font-caption text-xs text-on-surface-variant mt-0.5">
+                    <span className="font-medium text-sm text-[#161618] dark:text-[#F7F6F2] block">{stalledGoal.title}</span>
+                    <p className="text-xs text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
                       Pacing is behind schedule ({stalledGoal.progress || 0}% progress). Recommend reducing friction and simplifying the next milestone.
                     </p>
                   </div>
@@ -796,7 +796,7 @@ export default function ReflectionsView({
                     setGoalTunedNotice(true);
                     setTimeout(() => setGoalTunedNotice(false), 2500);
                   }}
-                  className="w-full py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-xs font-semibold transition-colors"
+                  className="w-full py-2 rounded-xl bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] hover:opacity-90 font-semibold text-xs shadow-tactile transition-all cursor-pointer"
                 >
                   {goalTunedNotice ? '✓ Milestone Scope Calibrated' : 'Simplify Next Step (Lower Friction)'}
                 </button>
@@ -804,19 +804,19 @@ export default function ReflectionsView({
             ) : (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="font-label-md text-label-md text-on-surface font-semibold">Goal Pacing Health</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">All Horizons Clean</span>
+                  <span className="font-editorial text-sm sm:text-base font-medium text-[#161618] dark:text-[#F7F6F2]">Goal Pacing Health</span>
+                  <span className="px-2 py-0.5 rounded-full bg-[#2E6F40]/10 text-[#2E6F40] dark:text-[#4ADE80] border border-[#2E6F40]/20 font-mono text-[10px] font-bold">All Horizons Clean</span>
                 </div>
-                <div className="my-2 p-3 rounded-xl bg-surface-container-low flex items-start gap-2.5">
-                  <span className="material-symbols-outlined text-secondary mt-0.5">verified</span>
+                <div className="my-2.5 p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] flex items-start gap-2.5">
+                  <span className="material-symbols-outlined text-[#2E6F40] dark:text-[#4ADE80] mt-0.5">verified</span>
                   <div>
-                    <span className="font-semibold text-sm text-on-surface block">Velocity On Track</span>
-                    <p className="font-caption text-xs text-on-surface-variant mt-0.5">
+                    <span className="font-medium text-sm text-[#161618] dark:text-[#F7F6F2] block">Velocity On Track</span>
+                    <p className="text-xs text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
                       All {goals.length} tracked horizon goals are pacing within acceptable milestone thresholds.
                     </p>
                   </div>
                 </div>
-                <div className="w-full py-2 text-center text-xs font-medium text-secondary">
+                <div className="w-full py-2 text-center text-xs font-mono font-medium text-[#2E6F40] dark:text-[#4ADE80]">
                   ✓ Horizon momentum maintained
                 </div>
               </>
@@ -824,10 +824,10 @@ export default function ReflectionsView({
           </div>
 
           {/* Recurring Habit Tune-Up */}
-          <div className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04] flex flex-col justify-between">
+          <div className="p-4 sm:p-5 rounded-2xl bg-white/70 dark:bg-[#18181C]/70 backdrop-blur-xs shadow-2xs border border-black/[0.08] dark:border-white/[0.08] flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface font-semibold">Habit Tune-Up</span>
-              <span className="material-symbols-outlined text-primary text-[18px]">tune</span>
+              <span className="font-editorial text-sm sm:text-base font-medium text-[#161618] dark:text-[#F7F6F2]">Habit Tune-Up</span>
+              <span className="material-symbols-outlined text-[#0F52BA] dark:text-[#6495ED] text-[18px]">tune</span>
             </div>
             <div
               onClick={() => {
@@ -835,12 +835,12 @@ export default function ReflectionsView({
                 setIsHabitModalOpen(true);
               }}
               title={lowestHabit ? `Click to edit "${lowestHabit.title}" sequence` : 'Click to create habit sequence'}
-              className="my-2 p-3 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors flex items-start gap-2.5 cursor-pointer group/tune"
+              className="my-2.5 p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors flex items-start gap-2.5 cursor-pointer group/tune"
             >
-              <span className="material-symbols-outlined text-primary mt-0.5">autorenew</span>
+              <span className="material-symbols-outlined text-[#0F52BA] dark:text-[#6495ED] mt-0.5">autorenew</span>
               <div>
-                <span className="font-semibold text-sm text-on-surface group-hover/tune:text-primary transition-colors block">{lowestHabit?.title || 'Habit Sequences'}</span>
-                <p className="font-caption text-xs text-on-surface-variant mt-0.5">
+                <span className="font-medium text-sm text-[#161618] dark:text-[#F7F6F2] group-hover/tune:text-[#0F52BA] dark:group-hover/tune:text-[#6495ED] transition-colors block">{lowestHabit?.title || 'Habit Sequences'}</span>
+                <p className="text-xs text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
                   {lowestHabit
                     ? `Recorded ${(lowestHabit.completedDays || []).length} check-ins this cycle. Re-anchoring cadences prevents friction.`
                     : 'All habits tracked consistently across this cycle.'}
@@ -855,7 +855,7 @@ export default function ReflectionsView({
                 setHabitTuneNotice(true);
                 setTimeout(() => setHabitTuneNotice(false), 2000);
               }}
-              className="w-full py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-xs font-semibold transition-colors cursor-pointer"
+              className="w-full py-2 rounded-xl bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] hover:opacity-90 font-semibold text-xs shadow-tactile transition-colors cursor-pointer"
             >
               {habitTuneNotice ? '✓ Routine Re-anchored' : 'Re-anchor Anchor Window'}
             </button>
@@ -863,27 +863,27 @@ export default function ReflectionsView({
         </div>
 
         {/* ── Review History Drawer (Progressive Disclosure) ── */}
-        <div className="p-3 sm:p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.04]">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white/70 dark:bg-[#18181C]/70 backdrop-blur-xs shadow-2xs border border-black/[0.08] dark:border-white/[0.08]">
           <div
             onClick={() => setShowArchive(!showArchive)}
             className="flex items-center justify-between cursor-pointer select-none"
           >
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-primary">
+            <div className="flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-[18px] text-[#0F52BA] dark:text-[#6495ED]">
                 {showArchive ? 'expand_less' : 'history'}
               </span>
               <div>
-                <h3 className="font-title text-title text-on-surface text-xs sm:text-sm font-semibold">
+                <h3 className="font-editorial text-sm sm:text-base font-medium text-[#161618] dark:text-[#F7F6F2]">
                   Archived Weekly Reviews
                 </h3>
-                <p className="font-caption text-caption text-on-surface-variant text-[11px]">
+                <p className="font-mono text-[11px] text-[#6B6A72] dark:text-[#8E8E93]">
                   {history.length} past cycle snapshot{history.length !== 1 ? 's' : ''} • {showArchive ? 'Tap to collapse' : 'Tap to expand history'}
                 </p>
               </div>
             </div>
             <button
               type="button"
-              className="px-2.5 py-1 rounded-lg bg-surface-container text-xs font-semibold text-on-surface flex items-center gap-1 hover:bg-surface-container-high transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] text-xs font-mono font-medium text-[#161618] dark:text-[#F7F6F2] flex items-center gap-1 hover:bg-black/[0.08] dark:hover:bg-white/[0.1] transition-colors"
             >
               <span>{showArchive ? 'Hide' : 'View'} ({history.length})</span>
               <span className="material-symbols-outlined text-[14px]">
@@ -893,45 +893,45 @@ export default function ReflectionsView({
           </div>
 
           {showArchive && (
-            <div className="space-y-2 mt-3 pt-3 border-t border-surface-container animate-fadeIn">
+            <div className="space-y-2 mt-3 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] animate-fadeIn">
               {history.map((rev) => {
                 const isOpen = activeHistoryId === rev.id;
                 return (
-                  <div key={rev.id} className="rounded-xl bg-surface-container-low border border-black/[0.04] overflow-hidden transition-all">
+                  <div key={rev.id} className="rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] overflow-hidden transition-all">
                     <div
                       onClick={() => setActiveHistoryId(isOpen ? null : rev.id)}
-                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-surface-container transition-colors"
+                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[16px] text-primary">
+                        <span className="material-symbols-outlined text-[16px] text-[#0F52BA] dark:text-[#6495ED]">
                           {isOpen ? 'expand_less' : 'expand_more'}
                         </span>
-                        <span className="font-semibold text-xs sm:text-sm text-on-surface">{rev.title}</span>
-                        <span className="hidden sm:inline-block font-caption text-[11px] text-on-surface-variant">• {rev.dateRange}</span>
+                        <span className="font-medium text-xs sm:text-sm text-[#161618] dark:text-[#F7F6F2]">{rev.title}</span>
+                        <span className="hidden sm:inline-block font-mono text-[11px] text-[#6B6A72] dark:text-[#8E8E93]">• {rev.dateRange}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface text-[10px] font-semibold">
+                        <span className="px-2 py-0.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] text-[#161618] dark:text-[#F7F6F2] font-mono text-[10px] font-semibold">
                           Score: {rev.momentumScore}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant text-[10px] font-semibold">
+                        <span className="px-2 py-0.5 rounded-full bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] font-mono text-[10px] font-semibold">
                           {rev.completedRate}% done
                         </span>
                       </div>
                     </div>
 
                     {isOpen && (
-                      <div className="p-4 border-t border-surface-container bg-surface-container-lowest/60 text-xs text-on-surface-variant space-y-2 animate-fadeIn">
+                      <div className="p-4 border-t border-black/[0.05] dark:border-white/[0.06] bg-black/[0.01] dark:bg-white/[0.02] text-xs text-[#6B6A72] dark:text-[#8E8E93] space-y-2 animate-fadeIn font-editorial">
                         <div>
-                          <strong className="text-on-surface block mb-0.5">What Worked Well:</strong>
-                          <p>{rev.workedWell}</p>
+                          <strong className="text-[#161618] dark:text-[#F7F6F2] font-sans font-semibold block mb-0.5">What Worked Well:</strong>
+                          <p className="italic">{rev.workedWell}</p>
                         </div>
                         <div>
-                          <strong className="text-on-surface block mb-0.5">Pushed Back:</strong>
-                          <p>{rev.pushedBack}</p>
+                          <strong className="text-[#161618] dark:text-[#F7F6F2] font-sans font-semibold block mb-0.5">Pushed Back:</strong>
+                          <p className="italic">{rev.pushedBack}</p>
                         </div>
                         <div>
-                          <strong className="text-on-surface block mb-0.5">Target Priority:</strong>
-                          <p>{rev.onePriority} ({rev.targetGoal})</p>
+                          <strong className="text-[#161618] dark:text-[#F7F6F2] font-sans font-semibold block mb-0.5">Target Priority:</strong>
+                          <p className="italic">{rev.onePriority} ({rev.targetGoal})</p>
                         </div>
                       </div>
                     )}
@@ -943,28 +943,28 @@ export default function ReflectionsView({
         </div>
 
         {/* Mobile In-Flow Review Completion & Finalize Card (Never overlaps bottom navigation) */}
-        <div className="md:hidden p-4 rounded-2xl bg-surface-container-lowest shadow-sm border border-black/[0.06] flex flex-col gap-3.5 my-2">
+        <div className="md:hidden p-4 rounded-2xl bg-white/80 dark:bg-[#18181C]/80 shadow-2xs border border-black/[0.08] dark:border-white/[0.08] flex flex-col gap-3.5 my-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] flex items-center justify-center shrink-0 border border-[#0F52BA]/20">
               <span className="material-symbols-outlined text-[22px]">assignment_turned_in</span>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-sm text-on-surface">Weekly Review Complete</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-surface-container-high text-primary">
+                <span className="font-editorial font-medium text-sm text-[#161618] dark:text-[#F7F6F2]">Weekly Review Complete</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED]">
                   {retrospectiveProgress}/3 Prompts
                 </span>
               </div>
-              <div className="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant">
-                <span className={workedWell.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+              <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+                <span className={workedWell.trim() ? 'text-[#2E6F40] dark:text-[#4ADE80] font-semibold' : 'opacity-60'}>
                   {workedWell.trim() ? '✓ Wins' : '○ Wins'}
                 </span>
                 <span>•</span>
-                <span className={pushedBack.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+                <span className={pushedBack.trim() ? 'text-[#2E6F40] dark:text-[#4ADE80] font-semibold' : 'opacity-60'}>
                   {pushedBack.trim() ? '✓ Slipped' : '○ Slipped'}
                 </span>
                 <span>•</span>
-                <span className={onePriority.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+                <span className={onePriority.trim() ? 'text-[#2E6F40] dark:text-[#4ADE80] font-semibold' : 'opacity-60'}>
                   {onePriority.trim() ? '✓ Priority' : '○ Priority'}
                 </span>
               </div>
@@ -974,7 +974,7 @@ export default function ReflectionsView({
           <button
             type="button"
             onClick={() => setShowFinalizeConfirm(true)}
-            className="w-full py-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary text-xs font-bold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-3 rounded-xl bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] text-xs font-semibold shadow-tactile active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>Finalize &amp; Archive Week</span>
             <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -984,28 +984,28 @@ export default function ReflectionsView({
       </div>
 
       {/* ── DESKTOP ONLY STICKY REVIEW COMPLETION BAR ── */}
-      <aside aria-label="Review completion bar" className="hidden md:flex fixed bottom-6 right-8 w-[480px] z-30 bg-surface-container-lowest/95 backdrop-blur-md shadow-2xl border border-black/10 dark:border-white/10 rounded-2xl p-3 px-4 items-center justify-between gap-3 transition-all animate-fadeIn">
+      <aside aria-label="Review completion bar" className="hidden md:flex fixed bottom-6 right-8 w-[480px] z-30 bg-[#F7F6F2]/95 dark:bg-[#18181C]/95 backdrop-blur-md shadow-double-bezel border border-black/[0.08] dark:border-white/[0.08] rounded-2xl p-3 px-4 items-center justify-between gap-3 transition-all animate-fadeIn">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] flex items-center justify-center shrink-0 border border-[#0F52BA]/20">
             <span className="material-symbols-outlined text-[20px]">assignment_turned_in</span>
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-xs text-on-surface">Weekly Review</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-surface-container-high text-on-surface-variant">
+              <span className="font-editorial font-medium text-xs text-[#161618] dark:text-[#F7F6F2]">Weekly Review</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-black/[0.04] dark:bg-white/[0.06] text-[#6B6A72] dark:text-[#8E8E93]">
                 {retrospectiveProgress}/3 Prompts
               </span>
             </div>
-            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-on-surface-variant">
-              <span className={workedWell.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+            <div className="flex items-center gap-2 mt-0.5 text-[11px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+              <span className={workedWell.trim() ? 'text-[#2E6F40] dark:text-[#4ADE80] font-semibold' : 'opacity-60'}>
                 {workedWell.trim() ? '✓ Wins' : '○ Wins'}
               </span>
               <span>•</span>
-              <span className={pushedBack.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+              <span className={pushedBack.trim() ? 'text-[#2E6F40] dark:text-[#4ADE80] font-semibold' : 'opacity-60'}>
                 {pushedBack.trim() ? '✓ Slipped' : '○ Slipped'}
               </span>
               <span>•</span>
-              <span className={onePriority.trim() ? 'text-emerald-600 font-semibold' : 'opacity-60'}>
+              <span className={onePriority.trim() ? 'text-[#2E6F40] dark:text-[#4ADE80] font-semibold' : 'opacity-60'}>
                 {onePriority.trim() ? '✓ Priority' : '○ Priority'}
               </span>
             </div>
@@ -1015,7 +1015,7 @@ export default function ReflectionsView({
         <button
           type="button"
           onClick={() => setShowFinalizeConfirm(true)}
-          className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-label-md text-xs font-bold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+          className="px-4 py-2 rounded-xl bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] hover:opacity-90 font-semibold text-xs shadow-tactile active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
         >
           <span>Finalize Week</span>
           <span className="material-symbols-outlined text-[16px]">arrow_forward</span>

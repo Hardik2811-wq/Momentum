@@ -6,11 +6,41 @@
 
 import { calcStreak, todayKey } from '../store/useStore.js';
 
+/**
+ * Safely converts any timestamp (number, ISO string, date key) into a YYYY-MM-DD local date key.
+ */
+function toDateKey(val, fallback = '') {
+  if (!val) return fallback;
+  if (typeof val === 'number') {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  }
+  const s = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return fallback;
+}
+
 function parseDaysBetween(dateStrA, dateStrB) {
-  if (!dateStrA || !dateStrB) return 0;
-  const da = new Date(`${dateStrA}T12:00:00`);
-  const db = new Date(`${dateStrB}T12:00:00`);
+  const keyA = toDateKey(dateStrA);
+  const keyB = toDateKey(dateStrB);
+  if (!keyA || !keyB) return 0;
+  const da = new Date(`${keyA}T12:00:00`);
+  const db = new Date(`${keyB}T12:00:00`);
   const diffMs = db.getTime() - da.getTime();
+  if (isNaN(diffMs)) return 0;
   return Math.max(0, Math.round(diffMs / 86400000));
 }
 
@@ -56,7 +86,7 @@ export function computeHabitDecayMetrics(habit = {}, todayDateStr = '') {
   // Find most recent completed date
   const sortedDates = [...completedDays].filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
   const lastActiveDate = sortedDates[sortedDates.length - 1] || null;
-  const createdAtDate = habit.createdAt ? String(habit.createdAt).slice(0, 10) : today;
+  const createdAtDate = toDateKey(habit.createdAt, today);
   const daysSinceCreation = parseDaysBetween(createdAtDate, today);
   const daysSinceCheckIn = lastActiveDate ? parseDaysBetween(lastActiveDate, today) : Math.min(daysSinceCreation, 3);
 
@@ -112,7 +142,7 @@ export function computeHabitDecayMetrics(habit = {}, todayDateStr = '') {
 
   // Minimum Viable Recovery (MVR) suggestion
   // What 2-minute micro-rep halts decay?
-  const mvrSuggestion = generateMinimumViableRecovery(habit);
+  const mvr = generateMinimumViableRecovery(habit);
 
   return {
     id: habit.id,
@@ -129,7 +159,8 @@ export function computeHabitDecayMetrics(habit = {}, todayDateStr = '') {
     velocity,
     riskLevel,
     isAtRisk,
-    mvrSuggestion
+    mvr,
+    mvrSuggestion: mvr.recoveryPrescription
   };
 }
 

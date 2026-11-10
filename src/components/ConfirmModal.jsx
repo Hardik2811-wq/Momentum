@@ -72,31 +72,31 @@ export default function ConfirmModal({
         </div>
 
         {/* Modal Title */}
-        <h3 className="text-[17px] sm:text-[18px] font-semibold text-[#1A1B1F] dark:text-[#F7F6F2] tracking-tight leading-snug mb-2">
+        <h3 className="font-editorial text-[19px] sm:text-[20px] font-normal text-[#161618] dark:text-[#F7F6F2] tracking-tight leading-snug mb-2">
           {title}
         </h3>
 
         {/* Modal Message */}
-        <p className="text-[13px] text-[#71717A] dark:text-[#A1A1AA] leading-relaxed max-w-[270px] mb-6">
+        <p className="text-xs text-[#6B6A72] dark:text-[#8E8E93] leading-relaxed max-w-[270px] mb-6">
           {message}
         </p>
 
-        {/* Pill Buttons Row */}
+        {/* Action Buttons Row */}
         <div className="flex items-center gap-3 w-full">
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-2.5 px-4 rounded-full text-[13px] font-medium text-[#4B4B52] dark:text-[#D4D4D8] bg-white dark:bg-[#252529] border border-black/[0.12] dark:border-white/[0.12] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-[0.98] transition-all cursor-pointer"
+            className="flex-1 py-2 px-4 rounded-xl text-[12.5px] font-medium text-[#161618] dark:text-[#F7F6F2] bg-white dark:bg-[#252529] border border-black/[0.1] dark:border-white/[0.1] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-[0.98] transition-all cursor-pointer"
           >
             {cancelText}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`flex-1 py-2.5 px-4 rounded-full text-[13px] font-semibold text-white shadow-sm active:scale-[0.98] transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-4 rounded-xl text-[12.5px] font-semibold text-white shadow-xs active:scale-[0.98] transition-all cursor-pointer ${
               isDanger
-                ? 'bg-[#E5484D] hover:bg-[#D93D42] shadow-red-500/25'
-                : 'bg-[#0A84FF] hover:bg-[#0071E3] shadow-blue-500/25'
+                ? 'bg-[#C84B31] hover:bg-[#B33F27]'
+                : 'bg-[#0F52BA] hover:bg-[#003EA8]'
             }`}
           >
             {confirmText}

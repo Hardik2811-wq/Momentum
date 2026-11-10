@@ -14,25 +14,25 @@ const CATEGORY_MAP = {
 
 const CATEGORY_COLORS = {
   primary: {
-    badge: 'bg-blue-50 text-[#0A84FF] border border-blue-200/60',
-    dot: 'bg-[#0A84FF]',
-    bar: 'bg-gradient-to-r from-[#0A84FF] to-[#5E5CE6]',
-    text: 'text-[#0A84FF]',
-    hover: 'hover:text-[#0A84FF]'
+    badge: 'bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] border border-[#0F52BA]/20',
+    dot: 'bg-[#0F52BA]',
+    bar: 'bg-gradient-to-r from-[#0F52BA] to-[#3B82F6]',
+    text: 'text-[#0F52BA] dark:text-[#6495ED]',
+    hover: 'hover:text-[#0F52BA]'
   },
   secondary: {
-    badge: 'bg-emerald-50 text-emerald-600 border border-emerald-200/60',
-    dot: 'bg-emerald-500',
-    bar: 'bg-gradient-to-r from-emerald-500 to-teal-400',
-    text: 'text-emerald-600',
-    hover: 'hover:text-emerald-600'
+    badge: 'bg-[#2E6F40]/10 text-[#2E6F40] dark:text-[#4ADE80] border border-[#2E6F40]/20',
+    dot: 'bg-[#2E6F40]',
+    bar: 'bg-gradient-to-r from-[#2E6F40] to-[#10B981]',
+    text: 'text-[#2E6F40] dark:text-[#4ADE80]',
+    hover: 'hover:text-[#2E6F40]'
   },
   tertiary: {
-    badge: 'bg-purple-50 text-purple-600 border border-purple-200/60',
-    dot: 'bg-purple-500',
-    bar: 'bg-gradient-to-r from-purple-500 to-pink-500',
-    text: 'text-purple-600',
-    hover: 'hover:text-purple-600'
+    badge: 'bg-[#C84B31]/10 text-[#C84B31] dark:text-[#F87171] border border-[#C84B31]/20',
+    dot: 'bg-[#C84B31]',
+    bar: 'bg-gradient-to-r from-[#C84B31] to-[#E11D48]',
+    text: 'text-[#C84B31] dark:text-[#F87171]',
+    hover: 'hover:text-[#C84B31]'
   }
 };
 
@@ -199,20 +199,20 @@ const GoalsView = React.memo(function GoalsView({
     // Velocity Badge Config
     let velIcon = 'check_circle';
     let velText = 'On track';
-    let velClass = 'bg-blue-50 text-[#0A84FF] border border-blue-200/50';
+    let velClass = 'bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] border border-[#0F52BA]/20';
 
     if (workProgress === 100 || goal.velocity === 'complete') {
       velIcon = 'task_alt';
       velText = 'Completed';
-      velClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200/60';
+      velClass = 'bg-[#2E6F40]/10 text-[#2E6F40] dark:text-[#4ADE80] border border-[#2E6F40]/20';
     } else if (goal.velocity === 'ahead') {
       velIcon = 'trending_up';
       velText = 'Ahead of pace';
-      velClass = 'bg-emerald-50 text-emerald-600 border border-emerald-200/50';
+      velClass = 'bg-[#2E6F40]/10 text-[#2E6F40] dark:text-[#4ADE80] border border-[#2E6F40]/20';
     } else if (goal.velocity === 'behind') {
       velIcon = 'warning';
       velText = 'Needs attention';
-      velClass = 'bg-amber-50 text-amber-700 border border-amber-200/50';
+      velClass = 'bg-[#C84B31]/10 text-[#C84B31] dark:text-[#F87171] border border-[#C84B31]/20';
     }
 
     const isFlexible = goal.dateType === 'open' || !goal.targetDate;
@@ -222,7 +222,7 @@ const GoalsView = React.memo(function GoalsView({
         key={goal.id}
         data-block-id={`goal-card-${goal.id}`}
         onClick={() => setDetailGoalId(goal.id)}
-        className="group relative flex flex-col justify-between rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.06] dark:border-white/[0.08] p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-black/[0.12] dark:hover:border-white/[0.14] transition-all duration-200 cursor-pointer"
+        className="group relative flex flex-col justify-between rounded-2xl bg-white/80 dark:bg-[#18181C]/80 border border-black/[0.08] dark:border-white/[0.08] p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-black/[0.18] dark:hover:border-white/[0.18] transition-all duration-200 cursor-pointer"
       >
         <div>
           {/* Top Row: Categories & Velocity */}
@@ -234,7 +234,7 @@ const GoalsView = React.memo(function GoalsView({
                 return (
                   <span
                     key={catKey}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold ${c.badge}`}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-mono font-medium ${c.badge}`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
                     <span>{info.label}</span>
@@ -243,7 +243,7 @@ const GoalsView = React.memo(function GoalsView({
               })}
             </div>
 
-            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold ${velClass}`}>
+            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-mono font-semibold ${velClass}`}>
               <span className="material-symbols-outlined text-[13px]">{velIcon}</span>
               <span>{velText}</span>
             </div>
@@ -266,7 +266,7 @@ const GoalsView = React.memo(function GoalsView({
                   cx="50"
                   cy="50"
                   r="40"
-                  strokeWidth="8"
+                  strokeWidth="7"
                 />
                 <circle
                   className={`${color.text} fill-none transition-all duration-700`}
@@ -277,14 +277,14 @@ const GoalsView = React.memo(function GoalsView({
                   strokeDasharray={circumference}
                   strokeDashoffset={offset}
                   strokeLinecap="round"
-                  strokeWidth="8"
+                  strokeWidth="7"
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
-                <span className="text-[15px] sm:text-[17px] font-black text-[#1A1B1F] dark:text-[#F7F6F2] tracking-tight leading-none">
-                  {workProgress}<span className="text-[10px] sm:text-[11px] font-bold text-[#8E8E93]">%</span>
+                <span className="text-[16px] sm:text-[18px] font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2] tracking-tight leading-none">
+                  {workProgress}<span className="text-[10px] font-mono font-medium text-[#8E8E93]">%</span>
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-bold text-[#8E8E93] tracking-wider uppercase mt-0.5">
+                <span className="text-[8.5px] sm:text-[9.5px] font-mono uppercase tracking-wider text-[#8E8E93] mt-0.5">
                   done
                 </span>
               </div>
@@ -292,17 +292,17 @@ const GoalsView = React.memo(function GoalsView({
 
             {/* Title, Why, Horizon */}
             <div className="flex-1 min-w-0">
-              <h2 className="text-[15px] sm:text-[16px] font-bold text-[#1A1B1F] dark:text-[#F7F6F2] tracking-tight leading-snug group-hover:text-[#0A84FF] transition-colors">
+              <h2 className="text-[15px] sm:text-[16.5px] font-editorial font-medium text-[#161618] dark:text-[#F7F6F2] tracking-tight leading-snug group-hover:text-[#0F52BA] dark:group-hover:text-[#6495ED] transition-colors">
                 {goal.title}
               </h2>
 
               {goal.why && (
-                <p className="mt-0.5 text-[11.5px] sm:text-[12px] text-[#64748B] dark:text-[#A0A0AB] italic leading-snug line-clamp-2">
+                <p className="mt-1 text-[11.5px] sm:text-[12px] font-editorial italic text-[#6B6A72] dark:text-[#8E8E93] leading-snug line-clamp-2">
                   "{goal.why}"
                 </p>
               )}
 
-              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-[#64748B] dark:text-[#8E8E93]">
+              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">
                 <span className="material-symbols-outlined text-[13.5px]">
                   {isFlexible ? 'all_inclusive' : 'calendar_today'}
                 </span>
@@ -314,22 +314,22 @@ const GoalsView = React.memo(function GoalsView({
           </div>
 
           {/* Execution Engine: Next Action & Linked Status */}
-          <div className="mt-3 sm:mt-4 rounded-xl bg-[#F8F8FC] dark:bg-[#141418] border border-black/[0.04] dark:border-white/[0.06] p-2.5 sm:p-3">
-            <div className="flex items-center justify-between text-[9.5px] sm:text-[10px] uppercase font-bold tracking-wider text-[#8E8E93]">
+          <div className="mt-3.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.06] p-2.5 sm:p-3">
+            <div className="flex items-center justify-between text-[9.5px] sm:text-[10px] font-mono uppercase tracking-widest text-[#8E8E93]">
               <span>Next Execution Step</span>
-              <span>{goal.completedTaskCount || 0}/{goal.linkedTaskCount || 0} tasks done</span>
+              <span className="tabular-nums font-medium">{goal.completedTaskCount || 0}/{goal.linkedTaskCount || 0} tasks done</span>
             </div>
 
             {goal.nextTask ? (
-              <div className="mt-1 flex items-center justify-between gap-2">
+              <div className="mt-1.5 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="material-symbols-outlined text-[15px] text-[#0A84FF]">play_circle</span>
-                  <span className="text-[12px] font-semibold text-[#1A1B1F] dark:text-[#F7F6F2] truncate">
+                  <span className="material-symbols-outlined text-[15px] text-[#0F52BA] dark:text-[#6495ED]">play_circle</span>
+                  <span className="text-[12px] font-medium text-[#161618] dark:text-[#F7F6F2] truncate">
                     {goal.nextTask.title}
                   </span>
                 </div>
                 {goal.nextTask.dueDate && (
-                  <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-white dark:bg-[#1E1E24] text-[#64748B] dark:text-[#A0A0AB] border border-black/[0.04] dark:border-white/[0.06]">
+                  <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-white/80 dark:bg-white/[0.08] text-[#6B6A72] dark:text-[#8E8E93] border border-black/[0.06] dark:border-white/[0.07]">
                     {goal.nextTask.dueDate}
                   </span>
                 )}
@@ -343,7 +343,7 @@ const GoalsView = React.memo(function GoalsView({
             {/* Linked Habits badge if present */}
             {goal.linkedHabits && goal.linkedHabits.length > 0 && (
               <div className="mt-2 pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] font-bold text-[#8E8E93]">Ritual:</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[#8E8E93]">Ritual:</span>
                 {goal.linkedHabits.map(h => (
                   <button
                     key={h.id}
@@ -354,9 +354,9 @@ const GoalsView = React.memo(function GoalsView({
                       setIsHabitModalOpen(true);
                     }}
                     title="Click to edit habit sequence"
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white dark:bg-[#1E1E24] hover:bg-emerald-50 text-[#1A1B1F] dark:text-[#F7F6F2] border border-black/[0.04] dark:border-white/[0.08] hover:border-emerald-300 transition cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-white dark:bg-[#1E1E24] hover:bg-[#2E6F40]/10 text-[#161618] dark:text-[#F7F6F2] border border-black/[0.06] dark:border-white/[0.08] hover:border-[#2E6F40]/30 transition cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[11px] text-emerald-500">repeat</span>
+                    <span className="material-symbols-outlined text-[11px] text-[#2E6F40]">repeat</span>
                     <span>{h.title}</span>
                   </button>
                 ))}
@@ -366,7 +366,7 @@ const GoalsView = React.memo(function GoalsView({
         </div>
 
         {/* Bottom Actions Toolbar */}
-        <div className="mt-3 pt-2.5 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-2">
+        <div className="mt-3.5 pt-2.5 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -374,7 +374,7 @@ const GoalsView = React.memo(function GoalsView({
                 e.stopPropagation();
                 onOpenQuickAdd?.({ initialGoalId: goal.id });
               }}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#0A84FF] hover:bg-[#0071E3] text-white text-[11px] font-semibold transition active:scale-95 shadow-3xs cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] hover:opacity-90 text-[11px] font-semibold transition active:scale-95 shadow-tactile cursor-pointer"
             >
               <span className="material-symbols-outlined text-[14px]">add</span>
               <span>Add Task</span>
@@ -386,10 +386,10 @@ const GoalsView = React.memo(function GoalsView({
                 e.stopPropagation();
                 setDetailGoalId(goal.id);
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#F0EFF5] dark:bg-white/[0.08] hover:bg-[#E5E5EB] text-[#1A1B1F] dark:text-[#F7F6F2] text-[11px] font-semibold transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-[#161618] dark:text-[#F7F6F2] text-[11px] font-medium border border-black/[0.04] dark:border-white/[0.06] transition active:scale-95 cursor-pointer"
               title="Open Goal Details & Execution Workspace"
             >
-              <span className="material-symbols-outlined text-[14px] text-[#64748B] dark:text-[#A0A0AB]">edit_note</span>
+              <span className="material-symbols-outlined text-[14px] text-[#6B6A72] dark:text-[#8E8E93]">edit_note</span>
               <span>Details</span>
             </button>
           </div>
@@ -400,10 +400,10 @@ const GoalsView = React.memo(function GoalsView({
               e.stopPropagation();
               setGoalToDelete(goal);
             }}
-            className="p-1.5 rounded-lg text-[#8E8E93] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-[#8E8E93] hover:text-[#C84B31] hover:bg-[#C84B31]/10 transition cursor-pointer"
             title={`Delete ${goal.title}`}
           >
-            <span className="material-symbols-outlined text-[17px]">delete</span>
+            <span className="material-symbols-outlined text-[16px]">delete</span>
           </button>
         </div>
       </div>
@@ -412,14 +412,14 @@ const GoalsView = React.memo(function GoalsView({
 
   /* ── Eisenhower Priority Matrix Quadrant ── */
   const renderMatrixQuadrant = (title, goalsList, dotColor, badgeBg, badgeText) => (
-    <div className="rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.06] dark:border-white/[0.08] p-4 shadow-2xs flex flex-col justify-between min-h-[200px]">
+    <div className="rounded-2xl bg-white/80 dark:bg-[#18181C]/80 border border-black/[0.08] dark:border-white/[0.08] p-4 shadow-2xs flex flex-col justify-between min-h-[200px]">
       <div>
-        <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.06] mb-3">
+        <div className="flex items-center justify-between pb-3 border-b border-black/[0.05] dark:border-white/[0.06] mb-3">
           <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
-            <span className="text-[13px] font-bold text-[#1A1B1F] dark:text-[#F7F6F2]">{title}</span>
+            <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+            <span className="font-editorial text-[14px] font-medium text-[#161618] dark:text-[#F7F6F2]">{title}</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeBg}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${badgeBg}`}>
             {badgeText} ({goalsList.length})
           </span>
         </div>
@@ -430,11 +430,11 @@ const GoalsView = React.memo(function GoalsView({
               <div
                 key={g.id}
                 onClick={() => setDetailGoalId(g.id)}
-                className="p-2.5 rounded-xl bg-[#F8F8FC] dark:bg-[#141418] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between hover:bg-white dark:hover:bg-[#1E1E24] transition cursor-pointer"
+                className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between hover:bg-white dark:hover:bg-[#1E1E24] transition cursor-pointer"
               >
                 <div className="min-w-0">
-                  <h4 className="text-[12px] font-semibold text-[#1A1B1F] dark:text-[#F7F6F2] truncate">{g.title}</h4>
-                  <span className="text-[10px] text-[#8E8E93]">
+                  <h4 className="text-[12px] font-medium text-[#161618] dark:text-[#F7F6F2] truncate">{g.title}</h4>
+                  <span className="text-[10px] font-mono text-[#8E8E93]">
                     {g.workProgress ?? g.progress ?? 0}% · {g.dateType === 'open' ? 'Flexible' : `${g.daysLeft ?? 0}d left`}
                   </span>
                 </div>
@@ -444,14 +444,14 @@ const GoalsView = React.memo(function GoalsView({
                     e.stopPropagation();
                     onOpenQuickAdd?.({ initialGoalId: g.id });
                   }}
-                  className="px-2 py-1 rounded-lg bg-white dark:bg-[#1E1E24] text-[10px] font-bold text-[#0A84FF] shadow-3xs hover:bg-blue-50 active:scale-95 transition cursor-pointer"
+                  className="px-2 py-1 rounded-lg bg-[#161618] dark:bg-[#F7F6F2] text-[10px] font-mono font-semibold text-white dark:text-[#161618] shadow-tactile active:scale-95 transition cursor-pointer"
                 >
                   + Task
                 </button>
               </div>
             ))
           ) : (
-            <p className="text-[11px] text-[#8E8E93] py-4 text-center">No goals in this quadrant</p>
+            <p className="text-[11px] font-mono text-[#8E8E93] py-4 text-center">No goals in this quadrant</p>
           )}
         </div>
       </div>
@@ -512,37 +512,49 @@ const GoalsView = React.memo(function GoalsView({
           </div>
         </header>
 
-        {/* ── Top Executive Horizon Pulse Ribbon (Compact 4-col bar on mobile, cards on desktop) ── */}
-        <section data-block-id="goals-stats-ribbon" className="grid grid-cols-4 gap-2 sm:gap-3">
-          <div className="p-2.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-            <span className="block text-[8.5px] sm:text-[10px] font-mono uppercase tracking-wider sm:tracking-widest text-[#6B6A72] dark:text-[#8E8E93] truncate">Horizons</span>
-            <div className="mt-0.5 sm:mt-1.5 flex items-baseline gap-1 sm:gap-2">
-              <span className="text-lg sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.total}</span>
-              <span className="hidden sm:inline text-[11px] font-mono font-medium text-[#0F52BA] dark:text-[#6495ED]">Live</span>
+        {/* ── Top Executive Horizon Pulse Ledger Ribbon (Cardless Hairline Segmentation) ── */}
+        <section data-block-id="goals-stats-ribbon" className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-black/[0.08] dark:divide-white/[0.08] rounded-2xl bg-white/70 dark:bg-[#18181C]/70 backdrop-blur-xs border border-black/[0.08] dark:border-white/[0.08] overflow-hidden shadow-2xs">
+          <div className="p-3.5 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Active Horizons</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0F52BA] animate-pulse" />
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.total}</span>
+              <span className="text-[11px] font-mono text-[#0F52BA] dark:text-[#6495ED]">Live Vectors</span>
             </div>
           </div>
 
-          <div className="p-2.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-            <span className="block text-[8.5px] sm:text-[10px] font-mono uppercase tracking-wider sm:tracking-widest text-[#6B6A72] dark:text-[#8E8E93] truncate">Velocity</span>
-            <div className="mt-0.5 sm:mt-1.5 flex items-baseline gap-1 sm:gap-2">
-              <span className="text-lg sm:text-3xl font-mono tabular-nums font-bold text-[#2E6F40] dark:text-[#4ADE80]">{horizonStats.onTrackPct}%</span>
-              <span className="hidden sm:inline text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">{horizonStats.onTrack} On Track</span>
+          <div className="p-3.5 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Velocity Pace</span>
+              <span className="text-[10px] font-mono font-semibold text-[#2E6F40] dark:text-[#4ADE80]">{horizonStats.onTrack} On Track</span>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#2E6F40] dark:text-[#4ADE80]">{horizonStats.onTrackPct}%</span>
+              <span className="text-[11px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">Confidence</span>
             </div>
           </div>
 
-          <div className="p-2.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-            <span className="block text-[8.5px] sm:text-[10px] font-mono uppercase tracking-wider sm:tracking-widest text-[#6B6A72] dark:text-[#8E8E93] truncate">Pipeline</span>
-            <div className="mt-0.5 sm:mt-1.5 flex items-baseline gap-1 sm:gap-2">
-              <span className="text-lg sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.activeTasks}</span>
-              <span className="hidden sm:inline text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">Tasks</span>
+          <div className="p-3.5 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Execution Pipeline</span>
+              <span className="text-[10px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">{horizonStats.completedTasks} Done</span>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.activeTasks}</span>
+              <span className="text-[11px] font-mono text-[#6B6A72] dark:text-[#8E8E93]">Deliverables</span>
             </div>
           </div>
 
-          <div className="p-2.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-            <span className="block text-[8.5px] sm:text-[10px] font-mono uppercase tracking-wider sm:tracking-widest text-[#6B6A72] dark:text-[#8E8E93] truncate">Rituals</span>
-            <div className="mt-0.5 sm:mt-1.5 flex items-baseline gap-1 sm:gap-2">
-              <span className="text-lg sm:text-3xl font-mono tabular-nums font-bold text-[#6C4AB6] dark:text-[#A78BFA]">{horizonStats.linkedHabitsCount}</span>
-              <span className="hidden sm:inline text-[11px] font-mono font-medium text-[#6B6A72] dark:text-[#8E8E93]">Linked</span>
+          <div className="p-3.5 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">Lindy Rituals</span>
+              <span className="material-symbols-outlined text-[14px] text-[#2E6F40]">cached</span>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-mono tabular-nums font-bold text-[#161618] dark:text-[#F7F6F2]">{horizonStats.linkedHabitsCount}</span>
+              <span className="text-[11px] font-mono text-[#2E6F40] dark:text-[#4ADE80]">Compounding</span>
             </div>
           </div>
         </section>
@@ -629,13 +641,13 @@ const GoalsView = React.memo(function GoalsView({
             </div>
           ) : (
             /* ── Smart High-Converting Zero State with Presets ── */
-            <section className="p-8 sm:p-12 rounded-2xl bg-white border border-black/[0.06] shadow-2xs text-center space-y-6">
+            <section className="p-8 sm:p-12 rounded-2xl bg-white/80 dark:bg-[#18181C]/80 border border-black/[0.08] dark:border-white/[0.08] shadow-2xs text-center space-y-6">
               <div className="max-w-md mx-auto">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0A84FF] flex items-center justify-center mx-auto mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] border border-[#0F52BA]/20 flex items-center justify-center mx-auto mb-3">
                   <span className="material-symbols-outlined text-[26px]">flag</span>
                 </div>
-                <h3 className="text-lg font-bold text-[#1A1B1F]">No Strategic Horizons Found</h3>
-                <p className="mt-1 text-[13px] text-[#64748B]">
+                <h3 className="font-editorial text-xl font-medium text-[#161618] dark:text-[#F7F6F2]">No Strategic Horizons Found</h3>
+                <p className="mt-1 text-[13px] text-[#6B6A72] dark:text-[#8E8E93]">
                   Big achievements start with 1 clear vector. Pick a starter blueprint or define your custom goal.
                 </p>
               </div>
@@ -646,20 +658,20 @@ const GoalsView = React.memo(function GoalsView({
                   <div
                     key={idx}
                     onClick={() => addGoal(template)}
-                    className="p-4 rounded-xl bg-[#F8F8FC] border border-black/[0.04] hover:bg-white hover:border-[#0A84FF]/40 hover:shadow-md cursor-pointer transition-all duration-200 group flex flex-col justify-between"
+                    className="p-4 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] hover:bg-white dark:hover:bg-[#1E1E24] hover:border-[#0F52BA]/40 cursor-pointer transition-all duration-200 group flex flex-col justify-between"
                   >
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#0A84FF]">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-[#0F52BA] dark:text-[#6495ED] font-semibold">
                         {CATEGORY_MAP[template.categories[0]]?.label}
                       </span>
-                      <h4 className="mt-1 text-[13px] font-bold text-[#1A1B1F] group-hover:text-[#0A84FF] transition">
+                      <h4 className="mt-1 font-editorial text-[14px] font-medium text-[#161618] dark:text-[#F7F6F2] group-hover:text-[#0F52BA] dark:group-hover:text-[#6495ED] transition">
                         {template.title}
                       </h4>
-                      <p className="mt-1 text-[11px] text-[#64748B] line-clamp-2">
-                        {template.why}
+                      <p className="mt-1 text-[11px] font-editorial italic text-[#6B6A72] dark:text-[#8E8E93] line-clamp-2">
+                        "{template.why}"
                       </p>
                     </div>
-                    <div className="mt-4 pt-2 border-t border-black/[0.04] flex items-center justify-between text-[11px] font-bold text-[#0A84FF]">
+                    <div className="mt-4 pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[11px] font-mono font-semibold text-[#0F52BA] dark:text-[#6495ED]">
                       <span>Click to adopt</span>
                       <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                     </div>
@@ -670,7 +682,7 @@ const GoalsView = React.memo(function GoalsView({
               <button
                 type="button"
                 onClick={() => setShowNewGoal(true)}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#0A84FF] hover:bg-[#0071E3] text-white text-[12px] font-semibold transition shadow-xs"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] hover:opacity-90 text-[12px] font-semibold shadow-tactile transition active:scale-95 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">add</span>
                 <span>Create Custom Horizon</span>
@@ -684,45 +696,45 @@ const GoalsView = React.memo(function GoalsView({
               {renderMatrixQuadrant(
                 'Critical / Behind Pace',
                 filteredGoals.filter(g => g.velocity === 'behind'),
-                'bg-red-500',
-                'bg-red-50 text-red-700',
+                'bg-[#C84B31]',
+                'bg-[#C84B31]/10 text-[#C84B31] dark:text-[#F87171] border border-[#C84B31]/20',
                 'Urgent Action'
               )}
               {renderMatrixQuadrant(
                 'On Track / Steady Velocity',
                 filteredGoals.filter(g => g.velocity === 'on-track'),
-                'bg-blue-500',
-                'bg-blue-50 text-blue-700',
+                'bg-[#0F52BA]',
+                'bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] border border-[#0F52BA]/20',
                 'Core Focus'
               )}
               {renderMatrixQuadrant(
                 'Ahead of Pace',
                 filteredGoals.filter(g => g.velocity === 'ahead'),
-                'bg-emerald-500',
-                'bg-emerald-50 text-emerald-700',
+                'bg-[#2E6F40]',
+                'bg-[#2E6F40]/10 text-[#2E6F40] dark:text-[#4ADE80] border border-[#2E6F40]/20',
                 'High Momentum'
               )}
               {renderMatrixQuadrant(
                 'Completed Horizons',
                 filteredGoals.filter(g => (g.workProgress ?? g.progress ?? 0) === 100),
-                'bg-purple-500',
-                'bg-purple-50 text-purple-700',
+                'bg-[#6C4AB6]',
+                'bg-[#6C4AB6]/10 text-[#6C4AB6] dark:text-[#A78BFA] border border-[#6C4AB6]/20',
                 'Archived'
               )}
             </div>
           </section>
         )}
 
-        {/* ── Visual Design Philosophy Footer Banner ── */}
-        <section className="p-4 sm:p-5 rounded-2xl bg-white border border-black/[0.06] shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        {/* ── Visual Design Philosophy Footer Banner (Cardless Hairline Instrument) ── */}
+        <section className="p-4 sm:p-5 rounded-2xl bg-white/70 dark:bg-[#18181C]/70 backdrop-blur-xs border border-black/[0.08] dark:border-white/[0.08] shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0A84FF] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#0F52BA]/10 text-[#0F52BA] dark:text-[#6495ED] border border-[#0F52BA]/20 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[20px]">architecture</span>
             </div>
             <div>
-              <span className="text-[10px] uppercase text-[#0A84FF] font-bold tracking-wider">Design Philosophy</span>
-              <h4 className="text-[13px] font-bold text-[#1A1B1F]">The Architecture of Restraint</h4>
-              <p className="text-[12px] text-[#64748B] max-w-xl">
+              <span className="text-[10px] font-mono uppercase text-[#0F52BA] dark:text-[#6495ED] font-bold tracking-widest">Design Philosophy</span>
+              <h4 className="font-editorial text-[14px] sm:text-[15px] font-medium text-[#161618] dark:text-[#F7F6F2]">The Architecture of Restraint</h4>
+              <p className="text-[12px] text-[#6B6A72] dark:text-[#8E8E93] max-w-xl">
                 High velocity is not frantic activity. It is the uncompromising removal of secondary priorities to make room for absolute precision.
               </p>
             </div>
@@ -730,10 +742,10 @@ const GoalsView = React.memo(function GoalsView({
 
           <div className="flex items-center gap-2.5 self-end md:self-auto shrink-0">
             <div className="text-right">
-              <div className="text-[12px] font-semibold text-[#1A1B1F]">{settings?.profile?.name || 'Personal Workspace'}</div>
-              <div className="text-[10px] text-[#8E8E93]">{settings?.profile?.role || 'Focus Mode'}</div>
+              <div className="text-[12px] font-medium text-[#161618] dark:text-[#F7F6F2]">{settings?.profile?.name || 'Personal Workspace'}</div>
+              <div className="text-[10px] font-mono text-[#8E8E93]">{settings?.profile?.role || 'Focus Mode'}</div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0A84FF] to-[#5E5CE6] flex items-center justify-center text-white font-bold text-xs shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F52BA] to-[#3B82F6] flex items-center justify-center text-white font-mono font-bold text-xs shadow-xs">
               {(settings?.profile?.name || 'M').slice(0, 2).toUpperCase()}
             </div>
           </div>

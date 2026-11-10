@@ -27,8 +27,8 @@ const Toggle = ({ checked, onChange }) => (
 );
 
 const Section = ({ title, badge, children }) => (
-  <section className="rounded-2xl border overflow-hidden transition-colors bg-white dark:bg-[#1A1A1E] border-black/[0.07] dark:border-white/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_8px_24px_rgba(0,0,0,0.03)]">
-    <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.06] dark:border-white/[0.06]">
+  <section className="rounded-2xl border overflow-hidden transition-colors bg-white/80 dark:bg-[#18181C]/80 border-black/[0.08] dark:border-white/[0.08] shadow-2xs">
+    <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.06] dark:border-white/[0.06] bg-black/[0.015] dark:bg-white/[0.015]">
       <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#6B6A72] dark:text-[#8E8E93]">
         {title}
       </span>
@@ -39,7 +39,7 @@ const Section = ({ title, badge, children }) => (
 );
 
 const Row = ({ label, hint, children, noBorder }) => (
-  <div className={`flex items-center justify-between py-3 gap-4 ${!noBorder ? 'border-b border-black/[0.04] dark:border-white/[0.05]' : ''}`}>
+  <div className={`flex items-center justify-between py-3 gap-4 ${!noBorder ? 'border-b border-black/[0.06] dark:border-white/[0.06]' : ''}`}>
     <div className="min-w-0">
       <p className="text-[13px] font-medium text-[#161618] dark:text-[#F7F6F2]">{label}</p>
       {hint && <p className="text-[11px] mt-0.5 text-[#6B6A72] dark:text-[#8E8E93]">{hint}</p>}
@@ -185,12 +185,12 @@ export default function SettingsView({
         {/* ── Profile ── */}
         <Section title="User Profile">
           <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md flex-shrink-0">
+            <div className="w-13 h-13 rounded-xl bg-[#161618] dark:bg-[#F7F6F2] flex items-center justify-center text-white dark:text-[#161618] font-mono font-bold text-base shadow-xs flex-shrink-0">
               {getInitials(profile.name)}
             </div>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1 text-[#BBBBC0]">
+                <label className="block font-mono text-[9.5px] font-semibold uppercase tracking-wider mb-1 text-[#6B6A72] dark:text-[#8E8E93]">
                   Full Name
                 </label>
                 <input
@@ -202,7 +202,7 @@ export default function SettingsView({
               </div>
 
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1 text-[#BBBBC0]">
+                <label className="block font-mono text-[9.5px] font-semibold uppercase tracking-wider mb-1 text-[#6B6A72] dark:text-[#8E8E93]">
                   Role / Title
                 </label>
                 <input
@@ -214,7 +214,7 @@ export default function SettingsView({
               </div>
 
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1 text-[#BBBBC0]">
+                <label className="block font-mono text-[9.5px] font-semibold uppercase tracking-wider mb-1 text-[#6B6A72] dark:text-[#8E8E93]">
                   Timezone
                 </label>
                 <TimezoneSelect
@@ -231,24 +231,24 @@ export default function SettingsView({
           title="Cloud Account & Real-Time Sync"
           badge={
             cloudSync?.isConnected ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 CLOUD ACTIVE
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 border border-amber-500/20">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
                 OFFLINE ONLY
               </span>
             )
           }
         >
           <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.04]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
               <div>
-                <p className="text-[13px] font-semibold text-[#1A1B1F]">
+                <p className="text-[13px] font-semibold text-[#161618] dark:text-[#F7F6F2]">
                   {cloudSync?.email || 'Logged In Operator'}
                 </p>
-                <p className="text-[11px] text-[#BBBBC0]">
+                <p className="font-mono text-[11px] text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
                   {cloudSync?.lastSyncedAt
                     ? `Last synced: ${new Date(cloudSync.lastSyncedAt).toLocaleTimeString()}`
                     : 'Real-time WebSocket active for Web & Android'}
@@ -258,7 +258,7 @@ export default function SettingsView({
                 <button
                   type="button"
                   onClick={cloudSync?.syncNow}
-                  className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-[#0A84FF] border border-[#0A84FF]/30 hover:bg-[#0A84FF]/5 transition-colors flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-[#0F52BA] dark:text-blue-400 border border-[#0F52BA]/30 hover:bg-[#0F52BA]/10 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[15px]">sync</span>
                   Sync Now
@@ -266,13 +266,13 @@ export default function SettingsView({
                 <button
                   type="button"
                   onClick={cloudSync?.signOut}
-                  className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-rose-500 border border-rose-500/30 hover:bg-rose-50 transition-colors"
+                  className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/10 transition-colors cursor-pointer"
                 >
                   Sign Out
                 </button>
               </div>
             </div>
-            <p className="text-[11px] text-[#8E8E93]">
+            <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93]">
               Tasks, goals, habits, and schedules synchronize across Laptop Web and Android App via live Supabase snapshots.
             </p>
           </div>
@@ -392,7 +392,7 @@ export default function SettingsView({
               <button
                 type="button"
                 onClick={() => agentControls?.triggerAudit?.(true)}
-                className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[12px] font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.1] dark:hover:bg-white/[0.14] text-[#161618] dark:text-[#F7F6F2] border border-black/[0.08] dark:border-white/[0.08] text-[12px] font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
               >
                 <span className="material-symbols-outlined text-[14px]">explore</span>
                 <span>Run Forensic Audit</span>
@@ -401,7 +401,7 @@ export default function SettingsView({
               <button
                 type="button"
                 onClick={onOpenAgentStudio}
-                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-[12px] font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-[#0F52BA] hover:bg-[#003EA8] text-white text-[12px] font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
               >
                 <span className="material-symbols-outlined text-[14px]">smart_toy</span>
                 <span>Open Agent Studio</span>
@@ -499,7 +499,7 @@ export default function SettingsView({
               <button
                 type="button"
                 onClick={() => setShowByokModal(true)}
-                className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#0A84FF] bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200/60 dark:border-blue-800/40 transition"
+                className="shrink-0 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-[#0F52BA] dark:text-blue-400 bg-[#0F52BA]/10 hover:bg-[#0F52BA]/15 border border-[#0F52BA]/25 transition cursor-pointer"
               >
                 {byokStatus?.groqKeyCount > 0 ? 'Manage keys' : 'Add keys'}
               </button>
@@ -508,14 +508,14 @@ export default function SettingsView({
 
           <div className="mt-4 border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-primary dark:text-[#F7F6F2]">
+              <label className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[#161618] dark:text-[#F7F6F2]">
                 Master Copilot Strategy &amp; Behavior Directive
               </label>
               {directiveSaved && (
-                <span className="text-[11px] font-semibold text-emerald-600">Saved to AI memory</span>
+                <span className="font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Saved to AI memory</span>
               )}
             </div>
-            <p className="text-[11px] text-[#8E8E93] mb-2 leading-relaxed">
+            <p className="text-[11px] text-[#6B6A72] dark:text-[#8E8E93] mb-2 leading-relaxed">
               Define your strict personal operating rules, exam timetable, time blocking, and psychological mandates. Copilot respects this on every single plan without eating repetitive prompt tokens.
             </p>
             <textarea
@@ -529,7 +529,7 @@ export default function SettingsView({
               className={`w-full p-2.5 rounded-xl text-[12px] font-mono leading-relaxed outline-none border resize-y ${inputCls}`}
             />
             <div className="mt-2 flex items-center justify-between">
-              <span className="text-[10px] text-[#BBBBC0]">
+              <span className="font-mono text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">
                 {customDirective.length} characters • Injected into all Copilot plans
               </span>
               <button
@@ -539,7 +539,7 @@ export default function SettingsView({
                   setDirectiveSaved(true);
                   setTimeout(() => setDirectiveSaved(false), 2500);
                 }}
-                className="px-3.5 py-1.5 rounded-xl bg-[#1A1B1F] dark:bg-white text-white dark:text-[#1A1B1F] text-[11px] font-semibold hover:opacity-90 transition-colors"
+                className="px-3.5 py-1.5 rounded-xl bg-[#161618] dark:bg-[#F7F6F2] text-white dark:text-[#161618] text-[11px] font-semibold hover:opacity-90 transition-colors cursor-pointer"
               >
                 Save Strategy Directive
               </button>
@@ -547,8 +547,8 @@ export default function SettingsView({
           </div>
 
           <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
-            <p className="text-[11px] text-[#8E8E93]">Accepted AI: {intelligence.aiAccepted} · Discarded AI: {intelligence.aiDismissed}</p>
-            <button type="button" onClick={clearLearning} className="rounded-lg px-2 py-1 text-[11px] font-semibold text-[#5E5E6A] dark:text-[#9A9AA0] hover:bg-black/[0.04] dark:hover:bg-white/[0.05]">Reset learning</button>
+            <p className="font-mono text-[10.5px] text-[#6B6A72] dark:text-[#8E8E93]">Accepted AI: {intelligence.aiAccepted} · Discarded AI: {intelligence.aiDismissed}</p>
+            <button type="button" onClick={clearLearning} className="rounded-lg px-2 py-1 font-mono text-[10.5px] font-semibold text-[#6B6A72] dark:text-[#8E8E93] hover:text-rose-600 dark:hover:text-rose-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer">Reset learning</button>
           </div>
         </Section>
 
@@ -567,12 +567,12 @@ export default function SettingsView({
               Connect literal <strong>claude.ai</strong> (Remote MCP Connector / Skill) or <strong>chatgpt.com</strong> (Custom GPT Actions) directly to your live Momentum OS workspace. Any task, timetable block, habit, or goal created in Claude or ChatGPT dynamically syncs to your <strong>Android App &amp; Laptop Web</strong> in ~150ms via Supabase Realtime WebSockets.
             </p>
 
-            <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-xl bg-[#F7F6F2] dark:bg-[#151518] border border-black/[0.07] dark:border-white/[0.08]">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-3.5 rounded-xl bg-[#F7F6F2] dark:bg-[#202024] border border-black/[0.06] dark:border-white/[0.07]">
               <div className="min-w-0">
-                <p className="text-[12px] font-semibold text-ink-primary dark:text-[#F7F6F2]">
+                <p className="text-[12.5px] font-semibold text-[#161618] dark:text-[#F7F6F2]">
                   {mcpInfo.configured ? 'Personal MCP Bridge Token Active' : 'Step 1: Generate Personal Bridge Token'}
                 </p>
-                <p className="text-[11px] text-[#8E8E93] mt-0.5">
+                <p className="font-mono text-[11px] text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
                   {mcpInfo.configured
                     ? 'SHA-256 token hash synced to cloud snapshot. Ready for Claude.ai & ChatGPT.com.'
                     : 'Generates your encrypted mom_<userId>_<secret> bridge token and syncs its hash to cloud.'}
@@ -583,14 +583,14 @@ export default function SettingsView({
                   type="button"
                   onClick={handleGenerateMcpToken}
                   disabled={isGeneratingMcp}
-                  className="px-3 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[11px] font-semibold hover:bg-[#0071E3] transition cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 rounded-xl bg-[#0F52BA] hover:bg-[#003EA8] text-white text-[11px] font-semibold transition cursor-pointer disabled:opacity-50 shadow-xs"
                 >
                   {isGeneratingMcp ? 'Generating…' : mcpInfo.configured ? 'Regenerate Token' : 'Generate Bridge Token'}
                 </button>
                 <a
                   href="/MOMENTUM_CLAUDE_SKILL.md"
                   download="MOMENTUM_CLAUDE_SKILL.md"
-                  className="px-3 py-1.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] text-ink-primary dark:text-[#F7F6F2] text-[11px] font-semibold hover:bg-black/[0.1] dark:hover:bg-white/[0.14] transition flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] text-[#161618] dark:text-[#F7F6F2] text-[11px] font-semibold hover:bg-black/[0.1] dark:hover:bg-white/[0.14] transition flex items-center gap-1 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[14px]">download</span>
                   <span>Skill .MD</span>
@@ -600,7 +600,7 @@ export default function SettingsView({
 
             {mcpInfo.configured && (
               <div className="space-y-2.5 pt-1">
-                <div className="rounded-xl bg-[#F0EFEA] dark:bg-[#202024] p-2.5 border border-black/[0.06] dark:border-white/[0.07]">
+                <div className="rounded-xl bg-[#F0EFEA] dark:bg-[#202024] p-3 border border-black/[0.06] dark:border-white/[0.07]">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">
                       Claude.ai Remote MCP Server URL (Settings → Integrations → Add MCP)
@@ -608,17 +608,17 @@ export default function SettingsView({
                     <button
                       type="button"
                       onClick={() => copyMcpText(mcpInfo.mcpUrl, 'mcpUrl')}
-                      className="text-[10.5px] font-semibold text-[#0A84FF] hover:underline shrink-0 cursor-pointer"
+                      className="font-mono text-[10.5px] font-semibold text-[#0F52BA] dark:text-blue-400 hover:underline shrink-0 cursor-pointer"
                     >
                       {mcpCopiedField === 'mcpUrl' ? '✓ Copied' : 'Copy URL'}
                     </button>
                   </div>
-                  <p className="font-mono text-[11px] text-ink-primary dark:text-[#E0DFD5] truncate select-all">
+                  <p className="font-mono text-[11px] text-[#161618] dark:text-[#E0DFD5] truncate select-all">
                     {mcpInfo.mcpUrl}
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-[#F0EFEA] dark:bg-[#202024] p-2.5 border border-black/[0.06] dark:border-white/[0.07]">
+                <div className="rounded-xl bg-[#F0EFEA] dark:bg-[#202024] p-3 border border-black/[0.06] dark:border-white/[0.07]">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
                       ChatGPT.com Custom Action OpenAPI URL (Create GPT → Actions → Import URL)
@@ -626,29 +626,29 @@ export default function SettingsView({
                     <button
                       type="button"
                       onClick={() => copyMcpText(mcpInfo.openApiUrl, 'openApiUrl')}
-                      className="text-[10.5px] font-semibold text-[#0A84FF] hover:underline shrink-0 cursor-pointer"
+                      className="font-mono text-[10.5px] font-semibold text-[#0F52BA] dark:text-blue-400 hover:underline shrink-0 cursor-pointer"
                     >
                       {mcpCopiedField === 'openApiUrl' ? '✓ Copied' : 'Copy OpenAPI URL'}
                     </button>
                   </div>
-                  <p className="font-mono text-[11px] text-ink-primary dark:text-[#E0DFD5] truncate select-all">
+                  <p className="font-mono text-[11px] text-[#161618] dark:text-[#E0DFD5] truncate select-all">
                     {mcpInfo.openApiUrl}
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-[#F0EFEA] dark:bg-[#202024] p-2.5 border border-black/[0.06] dark:border-white/[0.07] flex items-center justify-between gap-2">
+                <div className="rounded-xl bg-[#F0EFEA] dark:bg-[#202024] p-3 border border-black/[0.06] dark:border-white/[0.07] flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-ink-secondary dark:text-[#8E8E93] block">
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#6B6A72] dark:text-[#8E8E93] block">
                       Bearer Token (For Claude Desktop / ChatGPT Bearer Auth)
                     </span>
-                    <p className="font-mono text-[11px] text-ink-primary dark:text-[#E0DFD5] truncate select-all mt-0.5">
+                    <p className="font-mono text-[11px] text-[#161618] dark:text-[#E0DFD5] truncate select-all mt-0.5">
                       {mcpInfo.token}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => copyMcpText(mcpInfo.token, 'token')}
-                    className="text-[10.5px] font-semibold text-[#0A84FF] hover:underline shrink-0 cursor-pointer"
+                    className="font-mono text-[10.5px] font-semibold text-[#0F52BA] dark:text-blue-400 hover:underline shrink-0 cursor-pointer"
                   >
                     {mcpCopiedField === 'token' ? '✓ Copied' : 'Copy Token'}
                   </button>
@@ -672,9 +672,9 @@ export default function SettingsView({
                 type="number"
                 value={settings?.focusLength ?? 45}
                 onChange={(e) => updateSettings({ focusLength: Number(e.target.value) })}
-                className={`w-16 px-2 py-1.5 text-center rounded-xl text-[12px] font-semibold border outline-none ${inputCls}`}
+                className={`w-16 px-2 py-1.5 text-center rounded-xl text-[12px] font-mono font-semibold border outline-none ${inputCls}`}
               />
-              <span className="text-[11px] text-[#BBBBC0]">min</span>
+              <span className="font-mono text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">min</span>
             </div>
           </Row>
           <Row label="Daily Deep Work Target" hint="Target hours of uninterrupted focus daily.">
@@ -684,9 +684,9 @@ export default function SettingsView({
                 step="0.5"
                 value={settings?.dailyTarget ?? 4.5}
                 onChange={(e) => updateSettings({ dailyTarget: Number(e.target.value) })}
-                className={`w-16 px-2 py-1.5 text-center rounded-xl text-[12px] font-semibold border outline-none ${inputCls}`}
+                className={`w-16 px-2 py-1.5 text-center rounded-xl text-[12px] font-mono font-semibold border outline-none ${inputCls}`}
               />
-              <span className="text-[11px] text-[#BBBBC0]">hrs</span>
+              <span className="font-mono text-[10px] text-[#6B6A72] dark:text-[#8E8E93]">hrs</span>
             </div>
           </Row>
           <Row label="Auto-start Recovery Breaks" hint="Transition to 5-minute break automatically when sprint concludes.">
@@ -701,7 +701,7 @@ export default function SettingsView({
                 <button
                   type="button"
                   onClick={() => sendNotification('Test Alert', { body: 'Momentum notifications are working!' })}
-                  className="px-2 py-1 rounded-lg bg-[#F5F4FA] hover:bg-[#EBEAF0] text-[10px] font-semibold text-[#1A1B1F] transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-[10.5px] font-mono font-semibold text-[#161618] dark:text-[#F7F6F2] transition-colors cursor-pointer"
                 >
                   Test Alert
                 </button>
@@ -715,7 +715,7 @@ export default function SettingsView({
                 <button
                   type="button"
                   onClick={() => playChime('complete')}
-                  className="px-2 py-1 rounded-lg bg-[#F5F4FA] hover:bg-[#EBEAF0] text-[10px] font-semibold text-[#1A1B1F] transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-[10.5px] font-mono font-semibold text-[#161618] dark:text-[#F7F6F2] transition-colors cursor-pointer"
                 >
                   Test Chime 🔔
                 </button>
@@ -728,15 +728,15 @@ export default function SettingsView({
         {/* ── Data & Backup (Cloud / Offline Safety) ── */}
         <Section title="Data Backup & Portability">
           <div className="space-y-3">
-            <div className="flex items-center justify-between py-2 border-b border-black/[0.04]">
+            <div className="flex items-center justify-between py-2 border-b border-black/[0.06] dark:border-white/[0.06]">
               <div>
-                <p className="text-[13px] font-medium text-[#1A1B1F]">Export JSON Backup</p>
-                <p className="text-[11px] mt-0.5 text-[#BBBBC0]">Save full database (tasks, goals, habits, reflections) to disk.</p>
+                <p className="text-[13px] font-medium text-[#161618] dark:text-[#F7F6F2]">Export JSON Backup</p>
+                <p className="text-[11px] mt-0.5 text-[#6B6A72] dark:text-[#8E8E93]">Save full database (tasks, goals, habits, reflections) to disk.</p>
               </div>
               <button
                 type="button"
                 onClick={exportFullBackup}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0A84FF] text-white text-[12px] font-semibold hover:bg-[#0071E3] transition-all shadow-sm shadow-blue-500/25 active:scale-95"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0F52BA] hover:bg-[#003EA8] text-white text-[12px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[15px]">file_download</span>
                 <span>Export Backup</span>
@@ -745,8 +745,8 @@ export default function SettingsView({
 
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-[13px] font-medium text-[#1A1B1F]">Restore from Backup</p>
-                <p className="text-[11px] mt-0.5 text-[#BBBBC0]">Load an existing Momentum JSON backup file.</p>
+                <p className="text-[13px] font-medium text-[#161618] dark:text-[#F7F6F2]">Restore from Backup</p>
+                <p className="text-[11px] mt-0.5 text-[#6B6A72] dark:text-[#8E8E93]">Load an existing Momentum JSON backup file.</p>
               </div>
               <div>
                 <input
@@ -759,7 +759,7 @@ export default function SettingsView({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#F5F4FA] text-[#1A1B1F] border border-black/[0.08] text-[12px] font-semibold hover:bg-white transition-all shadow-sm active:scale-95"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-[#161618] dark:text-[#F7F6F2] border border-black/[0.08] dark:border-white/[0.08] text-[12px] font-semibold transition-all shadow-2xs active:scale-95 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[15px]">upload_file</span>
                   <span>Import Backup</span>
@@ -819,29 +819,29 @@ export default function SettingsView({
         <Section title="Workspace State & Reset">
           <div className="space-y-4">
             {/* Clean Slate */}
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.04]">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
               <div>
-                <p className="text-[13px] font-semibold text-[#1A1B1F]">Wipe Clean (Empty Workspace)</p>
-                <p className="text-[11px] mt-0.5 text-[#BBBBC0]">Start 100% fresh with 0 sample tasks, goals, or habits.</p>
+                <p className="text-[13px] font-semibold text-[#161618] dark:text-[#F7F6F2]">Wipe Clean (Empty Workspace)</p>
+                <p className="text-[11px] mt-0.5 text-[#6B6A72] dark:text-[#8E8E93]">Start 100% fresh with 0 sample tasks, goals, or habits.</p>
               </div>
               <button 
                 type="button"
                 onClick={() => setShowClearConfirm(true)}
-                className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-amber-600 border border-amber-500/30 hover:bg-amber-50 transition-colors">
+                className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/10 transition-colors cursor-pointer">
                 Wipe Clean
               </button>
             </div>
 
             {/* Load Demo Data */}
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.04]">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
               <div>
-                <p className="text-[13px] font-semibold text-[#1A1B1F]">Load Sample Workspace</p>
-                <p className="text-[11px] mt-0.5 text-[#BBBBC0]">Populate rich demo tasks, strategic goals, habits, and reflections.</p>
+                <p className="text-[13px] font-semibold text-[#161618] dark:text-[#F7F6F2]">Load Sample Workspace</p>
+                <p className="text-[11px] mt-0.5 text-[#6B6A72] dark:text-[#8E8E93]">Populate rich demo tasks, strategic goals, habits, and reflections.</p>
               </div>
               <button 
                 type="button"
                 onClick={loadDemoData}
-                className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-primary border border-primary/30 hover:bg-primary/5 transition-colors">
+                className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-[#0F52BA] dark:text-blue-400 border border-[#0F52BA]/30 hover:bg-[#0F52BA]/10 transition-colors cursor-pointer">
                 Load Sample
               </button>
             </div>
@@ -849,13 +849,13 @@ export default function SettingsView({
             {/* Reset Defaults */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] font-semibold text-red-600">Reset System Baseline</p>
-                <p className="text-[11px] mt-0.5 text-[#BBBBC0]">Reset all preferences and restore default configuration.</p>
+                <p className="text-[13px] font-semibold text-rose-600 dark:text-rose-400">Reset System Baseline</p>
+                <p className="text-[11px] mt-0.5 text-[#6B6A72] dark:text-[#8E8E93]">Reset all preferences and restore default configuration.</p>
               </div>
               <button 
                 type="button"
                 onClick={() => setShowResetConfirm(true)}
-                className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-red-500 border border-red-500/30 hover:bg-red-500/10 transition-colors">
+                className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/10 transition-colors cursor-pointer">
                 Reset
               </button>
             </div>

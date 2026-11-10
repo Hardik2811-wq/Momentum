@@ -36,7 +36,7 @@
 
         <receiver
             android:name=".widget.TodayWidgetProvider"
-            android:exported="false"
+            android:exported="true"
             android:label="Momentum Today">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

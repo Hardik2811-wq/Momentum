@@ -414,7 +414,7 @@ export default function HabitModal({
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h4 className="text-sm font-bold text-on-surface truncate max-w-[200px] sm:max-w-xs">
+                  <h4 className="text-sm font-bold text-[#161618] dark:text-[#F7F6F2] truncate max-w-[200px] sm:max-w-xs">
                     {title.trim() || 'Untitled Habit'}
                   </h4>
                   <span className="px-1.5 py-0.5 rounded-md bg-white border border-black/[0.06] text-[10px] font-semibold text-neutral-600 shrink-0">
@@ -524,13 +524,13 @@ export default function HabitModal({
                     title={item.period ? `${item.label} (${item.period})` : item.label}
                     className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl border text-center transition-all ${
                       isSelected
-                        ? 'bg-surface-container-lowest border-primary ring-2 ring-primary/20 text-on-surface font-bold shadow-xs'
-                        : 'bg-neutral-50/70 border-black/[0.06] hover:bg-neutral-100/70 text-neutral-600 font-medium'
+                        ? 'bg-white dark:bg-[#1E1E22] border-[#0F52BA] ring-1 ring-[#0F52BA]/30 text-[#161618] dark:text-[#F7F6F2] font-semibold shadow-xs'
+                        : 'bg-black/[0.02] dark:bg-white/[0.03] border-black/[0.06] dark:border-white/[0.08] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[#6B6A72] dark:text-[#8E8E93] font-medium'
                     }`}
                   >
                     <span
                       className={`material-symbols-outlined text-[17px] shrink-0 transition-transform ${
-                        isSelected ? 'text-primary scale-110' : 'text-neutral-400'
+                        isSelected ? 'text-[#0F52BA] dark:text-blue-400 scale-105' : 'text-[#8E8E93]'
                       }`}
                     >
                       {item.icon}
@@ -566,16 +566,16 @@ export default function HabitModal({
                       key={freq.id}
                       type="button"
                       onClick={() => setTargetFrequency(freq.id)}
-                      className={`flex flex-col items-start px-2 py-1.5 rounded-xl border text-left transition-all ${
+                      className={`flex flex-col items-start px-2.5 py-2 rounded-xl border text-left transition-all ${
                         isSelected
-                          ? 'bg-surface-container-lowest border-primary ring-2 ring-primary/20 shadow-xs'
-                          : 'bg-neutral-50/70 border-black/[0.06] hover:bg-neutral-100/70'
+                          ? 'bg-white dark:bg-[#1E1E22] border-[#0F52BA] ring-1 ring-[#0F52BA]/30 shadow-xs'
+                          : 'bg-black/[0.02] dark:bg-white/[0.03] border-black/[0.06] dark:border-white/[0.08] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
                       }`}
                     >
-                      <span className={`text-[11px] font-bold ${isSelected ? 'text-on-surface' : 'text-on-surface-variant'}`}>
+                      <span className={`text-[11px] font-semibold ${isSelected ? 'text-[#161618] dark:text-[#F7F6F2]' : 'text-[#6B6A72] dark:text-[#8E8E93]'}`}>
                         {freq.label}
                       </span>
-                      <span className="text-[9px] text-outline mt-0.2">{freq.desc}</span>
+                      <span className="font-mono text-[9.5px] text-[#8E8E93] mt-0.5">{freq.desc}</span>
                     </button>
                   );
                 })}
@@ -629,7 +629,7 @@ export default function HabitModal({
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   placeholder="e.g. 25 mins"
-                  className="w-full px-3 py-1.5 rounded-xl bg-neutral-50/70 border border-black/[0.08] text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full px-3 py-1.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] text-xs font-semibold text-[#161618] dark:text-[#F7F6F2] focus:outline-none focus:ring-1 focus:ring-[#0F52BA]"
                 />
               ) : (
                 <div className="flex flex-wrap gap-1">
@@ -642,8 +642,8 @@ export default function HabitModal({
                         onClick={() => setDuration(p)}
                         className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
                           isSelected
-                            ? 'bg-primary text-white shadow-xs font-bold'
-                            : 'bg-neutral-50/70 border border-black/[0.05] hover:bg-neutral-100 text-neutral-600'
+                            ? 'bg-[#0F52BA] text-white shadow-xs font-bold'
+                            : 'bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[#6B6A72] dark:text-[#8E8E93]'
                         }`}
                       >
                         {p}
@@ -654,11 +654,11 @@ export default function HabitModal({
               )}
 
               {/* Schedule Time Block on Calendar Timeline */}
-              <div className="pt-2 border-t border-black/[0.04]">
+              <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px] text-primary">schedule</span>
-                    <span className="text-[11px] font-bold text-on-surface">Schedule on Calendar Timeline</span>
+                    <span className="material-symbols-outlined text-[16px] text-[#0F52BA]">schedule</span>
+                    <span className="text-[11px] font-semibold text-[#161618] dark:text-[#F7F6F2]">Schedule on Calendar Timeline</span>
                   </div>
                   <button
                     type="button"
@@ -668,7 +668,7 @@ export default function HabitModal({
                       if (next && !startTime) setStartTime(cadence.includes('Evening') ? '21:00' : cadence.includes('Afternoon') ? '14:00' : '07:30');
                     }}
                     className={`relative w-8 h-4.5 rounded-full transition-colors cursor-pointer ${
-                      isTimeBlocked ? 'bg-primary' : 'bg-neutral-300'
+                      isTimeBlocked ? 'bg-[#0F52BA]' : 'bg-black/15 dark:bg-white/20'
                     }`}
                   >
                     <span
@@ -680,17 +680,17 @@ export default function HabitModal({
                 </div>
 
                 {isTimeBlocked && (
-                  <div className="mt-2.5 flex items-center gap-2 animate-fadeIn bg-surface-container-lowest p-2 rounded-xl border border-black/[0.06]">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 shrink-0">
+                  <div className="mt-2.5 flex items-center gap-2 animate-fadeIn bg-black/[0.02] dark:bg-white/[0.03] p-2.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08]">
+                    <label className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#6B6A72] dark:text-[#8E8E93] shrink-0">
                       Start Time:
                     </label>
                     <input
                       type="time"
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
-                      className="px-2 py-1 rounded-lg bg-neutral-50 border border-black/[0.08] text-xs font-semibold text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="px-2 py-1 rounded-lg bg-white dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] text-xs font-semibold font-mono text-[#161618] dark:text-[#F7F6F2] focus:outline-none focus:ring-1 focus:ring-[#0F52BA]"
                     />
-                    <span className="text-[10px] text-outline">
+                    <span className="font-mono text-[10px] text-[#8E8E93]">
                       Repeats on scheduled days automatically
                     </span>
                   </div>
@@ -700,26 +700,26 @@ export default function HabitModal({
           </div>
 
           {/* 6. Horizon Goal & Grace Shield (Mature Clean Card, No Career/Health tags) */}
-          <div className="rounded-xl bg-neutral-50/80 border border-black/[0.06] p-3">
+          <div className="rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] p-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
               {/* Mature Linked Goal Selector */}
               <div className="space-y-1 relative">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#8E8E93]">
                   Linked Horizon Goal
                 </label>
                 <button
                   type="button"
                   onClick={() => setIsGoalMenuOpen(!isGoalMenuOpen)}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-black/[0.08] hover:border-black/20 text-xs font-semibold text-on-surface shadow-xs transition-all text-left"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-[#202024] border border-black/[0.08] dark:border-white/[0.08] hover:border-black/20 text-xs font-semibold text-[#161618] dark:text-[#F7F6F2] shadow-xs transition-all text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-2 truncate pr-1">
                     {linkedGoal ? (
                       <>
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: activeSignpost.accentHex }} />
-                        <span className="truncate text-on-surface">{linkedGoal}</span>
+                        <span className="truncate text-[#161618] dark:text-[#F7F6F2]">{linkedGoal}</span>
                       </>
                     ) : (
-                      <span className="text-neutral-400 font-normal">None (Independent Habit)</span>
+                      <span className="text-[#8E8E93] font-normal">None (Independent Habit)</span>
                     )}
                   </div>
                   <span className="material-symbols-outlined text-[16px] text-neutral-400 shrink-0 ml-1">
@@ -734,31 +734,31 @@ export default function HabitModal({
                       className="fixed inset-0 z-30"
                       onClick={() => setIsGoalMenuOpen(false)}
                     />
-                    <div className="absolute bottom-full mb-1.5 left-0 right-0 z-40 bg-white rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.16)] border border-black/[0.08] py-1 max-h-44 overflow-y-auto animate-fadeIn">
+                    <div className="absolute bottom-full mb-1.5 left-0 right-0 z-40 bg-white dark:bg-[#1E1E22] rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.16)] border border-black/[0.08] dark:border-white/[0.08] py-1 max-h-44 overflow-y-auto animate-fadeIn">
                       <button
                         type="button"
                         onClick={() => {
                           setLinkedGoal('');
                           setIsGoalMenuOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors ${
+                        className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors cursor-pointer ${
                           !linkedGoal
-                            ? 'bg-neutral-50 text-neutral-900 font-bold'
-                            : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                            ? 'bg-black/[0.04] dark:bg-white/[0.08] text-[#161618] dark:text-[#F7F6F2] font-semibold'
+                            : 'text-[#6B6A72] dark:text-[#8E8E93] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] hover:text-[#161618] dark:hover:text-[#F7F6F2]'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-black/20 dark:bg-white/30" />
                           <span>None (Independent Habit)</span>
                         </div>
                         {!linkedGoal && (
-                          <span className="material-symbols-outlined text-[16px] text-primary">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-[#0F52BA] dark:text-blue-400">check</span>
                         )}
                       </button>
 
                       {goals.length > 0 && (
-                        <div className="border-t border-neutral-100 my-1 pt-1">
-                          <div className="px-3 py-0.5 text-[9px] font-bold text-neutral-400 uppercase tracking-wider">
+                        <div className="border-t border-black/[0.06] dark:border-white/[0.06] my-1 pt-1">
+                          <div className="px-3 py-0.5 font-mono text-[9px] font-bold text-[#8E8E93] uppercase tracking-wider">
                             Active Horizons
                           </div>
                           {goals.map((g) => {
@@ -771,28 +771,28 @@ export default function HabitModal({
                                   setLinkedGoal(g.title);
                                   setIsGoalMenuOpen(false);
                                 }}
-                                className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors ${
+                                className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors cursor-pointer ${
                                   isSelected
-                                    ? 'bg-neutral-50 text-neutral-900 font-bold'
-                                    : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900'
+                                    ? 'bg-black/[0.04] dark:bg-white/[0.08] text-[#161618] dark:text-[#F7F6F2] font-semibold'
+                                    : 'text-[#6B6A72] dark:text-[#8E8E93] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] hover:text-[#161618] dark:hover:text-[#F7F6F2]'
                                 }`}
                               >
                                 <div className="flex items-center gap-2 truncate pr-2">
                                   <span
                                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                      isSelected ? 'bg-primary' : 'bg-neutral-300'
+                                      isSelected ? 'bg-[#0F52BA]' : 'bg-black/20 dark:bg-white/30'
                                     }`}
                                   />
                                   <span className="truncate">{g.title}</span>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {typeof g.progress === 'number' && (
-                                    <span className="text-[11px] font-medium text-neutral-400">
+                                    <span className="font-mono text-[10.5px] text-[#8E8E93]">
                                       {g.progress}%
                                     </span>
                                   )}
                                   {isSelected && (
-                                    <span className="material-symbols-outlined text-[16px] text-primary">
+                                    <span className="material-symbols-outlined text-[16px] text-[#0F52BA] dark:text-blue-400">
                                       check
                                     </span>
                                   )}

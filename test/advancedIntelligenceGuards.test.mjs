@@ -131,6 +131,34 @@ test('Habit Decay Guard: Lindy-modulated exponential decay predicts higher reten
   assert.ok(youngMetrics.mvrSuggestion, 'Must provide 2-min MVR suggestion');
 });
 
+test('Habit Decay Guard: handles epoch timestamp, ISO string, and null createdAt without NaN', () => {
+  const habitWithEpoch = {
+    id: 'h-epoch',
+    title: 'Reading',
+    duration: '30 mins',
+    createdAt: Date.now() - 86400000 * 10,
+    completedDays: ['2026-10-01', '2026-10-05']
+  };
+
+  const habitWithIso = {
+    id: 'h-iso',
+    title: 'Meditation',
+    duration: '15 mins',
+    createdAt: '2026-09-15T08:30:00.000Z',
+    completedDays: ['2026-10-01']
+  };
+
+  const epochMetrics = computeHabitDecayMetrics(habitWithEpoch, '2026-10-07');
+  const isoMetrics = computeHabitDecayMetrics(habitWithIso, '2026-10-07');
+
+  assert.ok(!isNaN(epochMetrics.lambda), 'Lambda must not be NaN for epoch createdAt');
+  assert.ok(!isNaN(epochMetrics.currentStrength), 'Current strength must not be NaN');
+  assert.ok(!isNaN(epochMetrics.survivalProb), 'Survival probability must not be NaN');
+  assert.ok(!isNaN(isoMetrics.lambda), 'Lambda must not be NaN for ISO createdAt');
+  assert.ok(!isNaN(isoMetrics.currentStrength), 'Current strength must not be NaN for ISO createdAt');
+  assert.ok(epochMetrics.habitAgeDays >= 6, 'Epoch createdAt should compute realistic habit age');
+});
+
 test('Capacity Overload Guard: flags high cognitive entropy and Kingman saturation', () => {
   const tasks = [
     { id: 1, title: 'Deep Work A', startTime: '09:00', durationMinutes: 120, energy: 'High', impact: 'high', plannedDate: '2026-10-08', areas: ['Deep Focus'] },

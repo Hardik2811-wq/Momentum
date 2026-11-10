@@ -96,12 +96,12 @@ const TaskCard = React.memo(function TaskCard({
   return (
     <div className="relative overflow-hidden rounded-2xl">
       {/* Background Action Indicators for Swipe-to-Action */}
-      <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none rounded-2xl bg-surface-container-low/70">
-        <div className="flex items-center gap-1.5 font-display text-xs font-bold text-emerald-600">
+      <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none rounded-2xl bg-[#F0EFEA]/80 dark:bg-[#202024]/80">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
           <Check className="w-4 h-4 stroke-[2.5]" />
           <span>{task.completed ? 'Undo' : 'Complete'}</span>
         </div>
-        <div className="flex items-center gap-1.5 font-display text-xs font-bold text-rose-600">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
           <span>Delete</span>
           <Trash2 className="w-4 h-4 stroke-[2]" />
         </div>
@@ -233,7 +233,7 @@ const TaskCard = React.memo(function TaskCard({
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.18 }}
-              className="mt-3 pt-3 border-t border-black/[0.04] space-y-1.5 overflow-hidden"
+              className="mt-3 pt-3 border-t border-black/[0.06] dark:border-white/[0.06] space-y-1.5 overflow-hidden"
             >
               {task.subtasks.map(st => (
                 <div
@@ -242,20 +242,20 @@ const TaskCard = React.memo(function TaskCard({
                     e.stopPropagation();
                     handleSubtaskCheck(st.id);
                   }}
-                  className="flex items-center gap-2.5 py-1.5 px-2 rounded-xl hover:bg-surface-container-low transition-colors cursor-pointer select-none"
+                  className="flex items-center gap-2.5 py-1.5 px-2 rounded-xl hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer select-none"
                 >
                   <div
                     className={`w-4 h-4 rounded-md flex items-center justify-center transition-colors border ${
                       st.completed
-                        ? 'bg-primary border-primary text-white'
-                        : 'border-black/25 bg-surface hover:border-primary'
+                        ? 'bg-[#0F52BA] border-[#0F52BA] text-white'
+                        : 'border-black/25 dark:border-white/30 bg-transparent hover:border-[#0F52BA]'
                     }`}
                   >
                     {st.completed && <Check className="w-3 h-3 stroke-[3]" />}
                   </div>
                   <span
                     className={`text-xs ${
-                      st.completed ? 'line-through text-on-surface-variant/60' : 'text-on-surface font-medium'
+                      st.completed ? 'line-through text-[#6B6A72] dark:text-[#8E8E93]' : 'text-[#161618] dark:text-[#F7F6F2] font-medium'
                     }`}
                   >
                     {st.title}

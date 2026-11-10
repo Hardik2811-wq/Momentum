@@ -728,6 +728,23 @@ const DEFAULT_SETTINGS = {
   customUiLayout: {},
 };
 
+/**
+ * Canonical serializer for cloud workspace snapshots to prevent false-dirty
+ * checks or infinite sync echoes caused by non-deterministic key orders.
+ */
+function serializeWorkspaceSnapshot(data) {
+  if (!data || typeof data !== 'object') return '';
+  return JSON.stringify({
+    tasks: Array.isArray(data.tasks) ? data.tasks : [],
+    goals: Array.isArray(data.goals) ? data.goals : [],
+    habits: Array.isArray(data.habits) ? data.habits : [],
+    schedules: Array.isArray(data.schedules) ? data.schedules : [],
+    reflections: data.reflections || {},
+    settings: data.settings || {},
+    focusSessions: Array.isArray(data.focusSessions) ? data.focusSessions : []
+  });
+}
+
 /* ── Main store hook ── */
 export default function useStore() {
   const [tasks, setTasks] = useLocalStorage('momentum_tasks', DEFAULT_TASKS);
@@ -776,16 +793,7 @@ export default function useStore() {
       setSettings(mergedSettings);
     }
 
-    const snapshotData = {
-      tasks: Array.isArray(saved.tasks) ? saved.tasks : [],
-      goals: Array.isArray(saved.goals) ? saved.goals : [],
-      habits: Array.isArray(saved.habits) ? saved.habits : [],
-      schedules: Array.isArray(saved.schedules) ? saved.schedules : [],
-      reflections: saved.reflections || {},
-      settings: saved.settings || {},
-      focusSessions: Array.isArray(saved.focusSessions) ? saved.focusSessions : []
-    };
-    lastSyncedJsonRef.current = JSON.stringify(snapshotData);
+    lastSyncedJsonRef.current = serializeWorkspaceSnapshot(saved);
     setLastSyncedAt(Date.now());
 
     setTimeout(() => {
@@ -883,16 +891,8 @@ export default function useStore() {
           (payload) => {
             const incoming = payload.new?.data;
             if (incoming && typeof incoming === 'object') {
-              const incomingJson = JSON.stringify({
-                tasks: incoming.tasks || [],
-                goals: incoming.goals || [],
-                habits: incoming.habits || [],
-                schedules: incoming.schedules || [],
-                reflections: incoming.reflections || {},
-                settings: incoming.settings || {},
-                focusSessions: incoming.focusSessions || []
-              });
-              if (incomingJson !== lastSyncedJsonRef.current) {
+              const incomingJson = serializeWorkspaceSnapshot(incoming);
+              if (incomingJson && incomingJson !== lastSyncedJsonRef.current) {
                 applyRemoteSnapshot(incoming, activeSession?.user?.user_metadata);
                 setLastSyncedAt(Date.now());
               }
@@ -946,12 +946,12 @@ export default function useStore() {
       tasks,
       goals,
       habits,
+      schedules,
       reflections,
       settings,
-      focusSessions,
-      schedules
+      focusSessions
     };
-    const currentJson = JSON.stringify(currentPayload);
+    const currentJson = serializeWorkspaceSnapshot(currentPayload);
 
     // Skip echo save if matches last synced state
     if (currentJson === lastSyncedJsonRef.current) {
@@ -1268,7 +1268,7 @@ export default function useStore() {
   }, [tasks, habits, setTasks, setHabits, settings.soundEffects, showToast]);
 
   const deleteTask = useCallback((id, options = {}) => {
-    const target = tasks.find(t => t.id === id);
+    const target = tasks.find(t => String(t.id) === String(id));
     if (!target) return;
 
     const mode = options?.mode || 'all'; // 'this' | 'following' | 'all'
@@ -1278,11 +1278,11 @@ export default function useStore() {
       const existing = Array.isArray(target.excludedDates) ? target.excludedDates : [];
       if (!existing.includes(targetDate)) {
         const updatedExcluded = [...existing, targetDate];
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, excludedDates: updatedExcluded } : t));
+        setTasks(prev => prev.map(t => String(t.id) === String(id) ? { ...t, excludedDates: updatedExcluded } : t));
         showToast(`Deleted occurrence on ${planDateLabel(targetDate)}`, {
           actionLabel: 'Undo',
           onAction: () => {
-            setTasks(prev => prev.map(t => t.id === id ? { ...t, excludedDates: existing } : t));
+            setTasks(prev => prev.map(t => String(t.id) === String(id) ? { ...t, excludedDates: existing } : t));
             showToast('Occurrence restored');
           }
         });
@@ -1293,7 +1293,7 @@ export default function useStore() {
     if (mode === 'following') {
       const baseDate = taskPlanDate(target);
       if (!baseDate || targetDate <= baseDate) {
-        setTasks(prev => prev.filter(t => t.id !== id));
+        setTasks(prev => prev.filter(t => String(t.id) !== String(id)));
         showToast(`Deleted "${target.title}" and all events`, {
           actionLabel: 'Undo',
           onAction: () => {
@@ -1305,11 +1305,11 @@ export default function useStore() {
       }
 
       const prevUntil = target.recurrenceUntil || null;
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, recurrenceUntil: targetDate } : t));
+      setTasks(prev => prev.map(t => String(t.id) === String(id) ? { ...t, recurrenceUntil: targetDate } : t));
       showToast(`Deleted from ${planDateLabel(targetDate)} onward`, {
         actionLabel: 'Undo',
         onAction: () => {
-          setTasks(prev => prev.map(t => t.id === id ? { ...t, recurrenceUntil: prevUntil } : t));
+          setTasks(prev => prev.map(t => String(t.id) === String(id) ? { ...t, recurrenceUntil: prevUntil } : t));
           showToast('Recurring series restored');
         }
       });
@@ -1317,7 +1317,7 @@ export default function useStore() {
     }
 
     // Default: 'all'
-    setTasks(prev => prev.filter(t => t.id !== id));
+    setTasks(prev => prev.filter(t => String(t.id) !== String(id)));
     showToast(`Deleted "${target.title}"`, {
       actionLabel: 'Undo',
       onAction: () => {
@@ -1346,7 +1346,7 @@ export default function useStore() {
   const updateTask = useCallback((id, patch) => {
     setTasks(prev => {
       const updated = prev.map(t => {
-        if (t.id === id) {
+        if (String(t.id) === String(id)) {
           const merged = { ...t, ...patch };
           learnFromTaskSave(merged);
           return merged;
@@ -1360,8 +1360,8 @@ export default function useStore() {
 
   const toggleSubtask = useCallback((taskId, subtaskId) => {
     setTasks(prev => prev.map(t => {
-      if (t.id !== taskId) return t;
-      const subtasks = (t.subtasks || []).map(s => s.id === subtaskId ? { ...s, completed: !s.completed } : s);
+      if (String(t.id) !== String(taskId)) return t;
+      const subtasks = (t.subtasks || []).map(s => String(s.id) === String(subtaskId) ? { ...s, completed: !s.completed } : s);
       return { ...t, subtasks };
     }));
   }, [setTasks]);

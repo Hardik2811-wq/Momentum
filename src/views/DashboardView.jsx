@@ -49,6 +49,7 @@ import TaskCard from '../components/TaskCard';
 import TaskDetailModal from '../components/TaskDetailModal';
 import ScheduleDetailModal from '../components/ScheduleDetailModal';
 import HabitModal from '../components/HabitModal';
+import ExecutiveCommandHero from '../components/executive/ExecutiveCommandHero';
 import { deadlineStatus, effortLabel, IMPACT_LABELS, taskImpact, taskPlanDate, todayPlanDate, isTaskScheduledForDate, isTaskCompletedForDate, calculateEndTime } from '../lib/taskMetadata';
 import {
   classifyDayItems,
@@ -234,9 +235,7 @@ const DashboardView = React.memo(function DashboardView({
   const activeQueueTasks = visibleTasks;
   const completedQueueTasks = useMemo(() => todayTasks.filter(t => isTaskCompletedForDate(t, todayPlan)), [todayTasks, todayPlan]);
 
-  // Live Reactive Morphing & Emotion
   const progressPercent = todayTasks.length ? Math.round((completedTodayTasksCount / todayTasks.length) * 100) : 0;
-  const progressEmotion = progressPercent >= 100 ? { color: 'text-emerald-500', emoji: '🔥', stroke: '#10b981' } : progressPercent >= 50 ? { color: 'text-amber-500', emoji: '🚀', stroke: '#f59e0b' } : { color: 'text-primary', emoji: '🎯', stroke: '#0a84ff' };
 
   const checkedHabits = useMemo(() => habits.filter(habit => habit.completedDays?.includes(today)).length, [habits, today]);
   const activeGoals = useMemo(() => goals.filter(goal => goal.velocity !== 'complete').slice(0, 3), [goals]);
@@ -665,41 +664,48 @@ const DashboardView = React.memo(function DashboardView({
   }, []);
 
   return (
-    <main className="w-full min-h-screen bg-[#F7F6F2] dark:bg-[#121214] pt-[calc(3.85rem+env(safe-area-inset-top))] md:pt-15 pb-6 sm:pb-8 px-3.5 sm:px-5 lg:px-8 transition-colors duration-200">
-      <div className="mx-auto w-full max-w-[1520px] space-y-3.5 sm:space-y-5">
+    <main className="operational-page w-full min-h-screen bg-[#F7F6F2] dark:bg-[#121214] pt-[calc(3.85rem+env(safe-area-inset-top))] md:pt-15 pb-6 sm:pb-8 px-3.5 sm:px-5 lg:px-8 transition-colors duration-200">
+      <div className="mx-auto w-full max-w-[1520px] space-y-5 sm:space-y-7">
         
         {/* ── Sub-header: Minimalist Focus Briefing ── */}
-        <header data-block-id="dashboard-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 pb-2 border-b border-black/[0.06] dark:border-white/[0.07]">
+        <header data-block-id="dashboard-header" className="command-masthead flex flex-col sm:flex-row sm:items-end justify-between gap-5 sm:gap-8">
           <div className="min-w-0">
-            <h1 className="text-[22px] sm:text-3xl font-editorial tracking-tight text-[#161618] dark:text-[#F7F6F2] truncate flex items-center gap-2 leading-tight">
-              <span>{greeting}, {userName}</span>
-              <span className="text-lg sm:text-xl">{progressEmotion.emoji}</span>
+            <h1 className="max-w-6xl text-[clamp(2rem,4vw,3.25rem)] font-editorial font-medium tracking-[-0.03em] text-[#161618] dark:text-[#F7F6F2] leading-[0.95]">
+              {greeting}, {userName}
             </h1>
-            <p className="font-editorial text-xs sm:text-sm italic text-[#6B6A72] dark:text-[#8E8E93] mt-0.5">
-              Focus on what matters right now · Lock your momentum.
+            <p className="max-w-xl text-xs sm:text-sm leading-relaxed text-[#6B6A72] dark:text-[#8E8E93] mt-2">
+              {todayTasks.length > 0
+                ? `${completedTodayTasksCount} of ${todayTasks.length} commitments complete. Choose one next action.`
+                : 'Your day is clear. Add one meaningful commitment when you are ready.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Quick Metrics Capsule */}
-            <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] rounded-xl px-3 py-1.5 shadow-2xs">
-              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono font-bold text-[#0F52BA] dark:text-[#6495ED]">
-                <Clock className="w-3.5 h-3.5 shrink-0" />
-                <span>{Math.round(totalPlannedMinutes / 60 * 10) / 10}h planned</span>
-              </div>
-              <span className="h-3 w-[1px] bg-black/10 dark:bg-white/10" />
-              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono text-[#6B6A72] dark:text-[#8E8E93]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>{completedTodayTasksCount}/{todayTasks.length} done</span>
-              </div>
-              <span className="h-3 w-[1px] bg-black/10 dark:bg-white/10" />
-              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono text-[#6B6A72] dark:text-[#8E8E93]">
-                <Flame className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                <span>{checkedHabits}/{habits.length} habits</span>
-              </div>
+          <div className="w-full sm:w-auto command-summary gap-3 sm:gap-4 shrink-0 py-1.5">
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono font-bold text-[#0F52BA] dark:text-[#6495ED]">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <span>{totalPlannedMinutes}m planned</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6F40] dark:text-emerald-400 shrink-0" />
+              <span>{progressPercent}% complete</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono text-[#6B6A72] dark:text-[#8E8E93]">
+              <Flame className="w-3.5 h-3.5 text-[#C84B31] dark:text-rose-400 shrink-0" />
+              <span>{checkedHabits}/{habits.length} rituals</span>
             </div>
           </div>
         </header>
+
+        {/* ── Executive Command Hero: Biological Circadian Instrument ── */}
+        <ExecutiveCommandHero
+          currentTime={currentTime}
+          tasks={tasks}
+          habits={habits}
+          schedules={schedules}
+          onTriggerAudit={sweepMissedTasksToBacklog}
+          onStartFocus={onStartFocus}
+          onOpenQuickAdd={onOpenQuickAdd}
+        />
 
         {/* ── Android / Mobile Segmented Workspace Switcher (< lg) ── */}
         <div className="lg:hidden flex items-center p-1 rounded-2xl bg-black/[0.05] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.07]">

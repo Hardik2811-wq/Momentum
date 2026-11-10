@@ -1598,7 +1598,7 @@ export default function AiCopilotModal({
                           {/* Items Preview */}
                           <div className="space-y-1.5 max-h-48 overflow-y-auto">
                             {items.map((item, idx) => (
-                              <div key={idx} className="p-2 rounded-lg bg-white dark:bg-surface-container border border-red-100 dark:border-red-900/30 text-xs flex items-center justify-between gap-2 shadow-2xs">
+                              <div key={idx} className="p-2 rounded-lg bg-white dark:bg-[#202024] border border-red-100 dark:border-red-900/30 text-xs flex items-center justify-between gap-2 shadow-2xs">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
                                     item.type === 'goal' ? 'bg-blue-100 text-blue-800' :

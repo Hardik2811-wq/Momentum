@@ -33,7 +33,7 @@ export default function FocusTimerBar({ focusTimer, tasks = [], onClose }) {
         <div className="w-full h-1 bg-white/10">
           <div
             className={`h-full transition-all duration-1000 ${
-              mode === 'focus' ? 'bg-[#0A84FF]' : 'bg-emerald-400'
+              mode === 'focus' ? 'bg-[#0F52BA]' : 'bg-emerald-400'
             }`}
             style={{ width: `${progressPercent}%` }}
           />
@@ -45,8 +45,8 @@ export default function FocusTimerBar({ focusTimer, tasks = [], onClose }) {
           <div className="flex items-center gap-2.5 min-w-0">
             <button
               onClick={() => switchTimerMode(mode === 'focus' ? 'break' : 'focus')}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform active:scale-95 ${
-                mode === 'focus' ? 'bg-[#0A84FF]/20 text-[#0A84FF]' : 'bg-emerald-500/20 text-emerald-400'
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform active:scale-95 cursor-pointer ${
+                mode === 'focus' ? 'bg-[#0F52BA]/25 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'
               }`}
               title={`Switch to ${mode === 'focus' ? 'Break' : 'Focus'}`}
             >
@@ -60,13 +60,13 @@ export default function FocusTimerBar({ focusTimer, tasks = [], onClose }) {
                 <span className="font-mono text-[16px] font-bold tracking-tight text-white">
                   {timeDisplay}
                 </span>
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full ${
-                  mode === 'focus' ? 'bg-[#0A84FF]/25 text-[#0A84FF]' : 'bg-emerald-500/25 text-emerald-400'
+                <span className={`font-mono text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full ${
+                  mode === 'focus' ? 'bg-[#0F52BA]/30 text-blue-300 border border-[#0F52BA]/40' : 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40'
                 }`}>
                   {mode === 'focus' ? 'Deep Work' : 'Break'}
                 </span>
               </div>
-              <span className="text-[11px] text-white/60 truncate max-w-[150px] sm:max-w-[220px]">
+              <span className="text-[11px] text-white/70 truncate max-w-[150px] sm:max-w-[220px]">
                 {activeTask ? activeTask.title : 'No task selected'}
               </span>
             </div>
@@ -76,10 +76,10 @@ export default function FocusTimerBar({ focusTimer, tasks = [], onClose }) {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={isRunning ? pauseTimer : startTimer}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold transition-all active:scale-95 ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold transition-all active:scale-95 cursor-pointer ${
                 isRunning
                   ? 'bg-amber-500 hover:bg-amber-600'
-                  : 'bg-[#0A84FF] hover:bg-[#0071E3] shadow-sm shadow-blue-500/30'
+                  : 'bg-[#0F52BA] hover:bg-[#003EA8] shadow-xs'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">
@@ -128,7 +128,7 @@ export default function FocusTimerBar({ focusTimer, tasks = [], onClose }) {
             <select
               value={activeTaskId || ''}
               onChange={(e) => setTimerTaskId(e.target.value ? Number(e.target.value) : null)}
-              className="w-full px-3 py-2 rounded-xl bg-white/10 text-white text-[12px] outline-none border border-white/10 focus:border-[#0A84FF]"
+              className="w-full px-3 py-2 rounded-xl bg-white/10 text-white text-[12px] outline-none border border-white/10 focus:border-[#0F52BA]"
             >
               <option value="" className="bg-[#1A1B1F] text-white">Select a task to anchor sprint...</option>
               {uncompletedTasks.map(t => (
