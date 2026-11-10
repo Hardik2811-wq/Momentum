@@ -24,14 +24,60 @@ import {
 import {
   timeToMinutes,
   minutesToTime,
-  detectScheduleCollisions
+  detectScheduleCollisions,
+  computeCollisionRisk
 } from './scheduleCollisionGuard.js';
+
+/**
+ * Normalizes weekday representations into canonical 0=Sun..6=Sat array
+ * Supports numbers (0-6, or ISO 1-7), and day names ('Mon', 'Monday', etc.)
+ */
+export function normalizeRepeatDays(input) {
+  if (input === null || input === undefined) return [];
+  const arr = Array.isArray(input) ? input : [input];
+  const nameMap = {
+    sun: 0, sunday: 0, su: 0,
+    mon: 1, monday: 1, mo: 1,
+    tue: 2, tues: 2, tuesday: 2, tu: 2,
+    wed: 3, wednesday: 3, we: 3,
+    thu: 4, thur: 4, thurs: 4, thursday: 4, th: 4,
+    fri: 5, friday: 5, fr: 5,
+    sat: 6, saturday: 6, sa: 6
+  };
+  const result = new Set();
+  for (const item of arr) {
+    if (typeof item === 'number') {
+      if (item >= 0 && item <= 6) {
+        result.add(item);
+      } else if (item === 7) {
+        // ISO Mon=1..Sun=7 -> 0
+        result.add(0);
+      }
+    } else if (typeof item === 'string') {
+      const lower = item.trim().toLowerCase();
+      if (nameMap[lower] !== undefined) {
+        result.add(nameMap[lower]);
+      } else {
+        const parsed = parseInt(lower, 10);
+        if (!isNaN(parsed)) {
+          if (parsed >= 0 && parsed <= 6) result.add(parsed);
+          else if (parsed === 7) result.add(0);
+        }
+      }
+    }
+  }
+  return Array.from(result).sort((a, b) => a - b);
+}
 
 /**
  * Checks if a schedule item (fixed routine/timetable) is active for target date
  */
 export function isScheduleActiveForDate(sched = {}, dateStr = todayPlanDate()) {
   if (!sched || !dateStr) return false;
+
+  // 1. Check excluded dates / single-occurrence skips (Holidays, cancellations, exceptions)
+  if (Array.isArray(sched.excludedDates) && sched.excludedDates.includes(dateStr)) return false;
+  if (Array.isArray(sched.exceptions) && sched.exceptions.includes(dateStr)) return false;
 
   const repeatType = sched.recurrence || sched.repeat;
   const isRecurring = Boolean(
@@ -41,23 +87,45 @@ export function isScheduleActiveForDate(sched = {}, dateStr = todayPlanDate()) {
   );
 
   if (isRecurring) {
-    if (sched.recurrenceEndDate && dateStr > sched.recurrenceEndDate) return false;
+    // Explicit end date enforcement (inclusive)
+    const effectiveEndDate = sched.recurrenceEndDate || sched.endDate;
+    if (effectiveEndDate && dateStr > effectiveEndDate) return false;
     if (sched.recurrenceUntil && dateStr >= sched.recurrenceUntil) return false;
-    if (sched.recurrenceStartDate && dateStr < sched.recurrenceStartDate) return false;
 
-    if (repeatType === 'daily' || repeatType === 'everyday') return true;
+    // Explicit start date enforcement
+    const effectiveStartDate = sched.recurrenceStartDate || sched.startDate;
+    if (effectiveStartDate && dateStr < effectiveStartDate) return false;
 
     const targetDate = new Date(`${dateStr}T12:00:00`);
     if (Number.isNaN(targetDate.getTime())) return false;
     const dayOfWeek = targetDate.getDay();
 
+    if (repeatType === 'daily' || repeatType === 'everyday') return true;
+
     if (repeatType === 'weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5;
     if (repeatType === 'weekends') return dayOfWeek === 0 || dayOfWeek === 6;
-    if (repeatType === 'custom' || repeatType === 'weekly') {
-      const days = Array.isArray(sched.repeatDays) && sched.repeatDays.length > 0
+
+    if (repeatType === 'biweekly') {
+      const anchorStr = effectiveStartDate || sched.plannedDate || '2026-01-01';
+      const anchorDate = new Date(`${anchorStr}T12:00:00`);
+      if (!Number.isNaN(anchorDate.getTime())) {
+        const diffDays = Math.round((targetDate.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.floor(diffDays / 7);
+        if (Math.abs(diffWeeks) % 2 !== 0) return false;
+      }
+      const rawDays = Array.isArray(sched.repeatDays) && sched.repeatDays.length > 0
         ? sched.repeatDays
         : (sched.plannedDate ? [new Date(`${sched.plannedDate}T12:00:00`).getDay()] : [1]);
-      return days.includes(dayOfWeek);
+      const normalizedDays = normalizeRepeatDays(rawDays);
+      return normalizedDays.includes(dayOfWeek);
+    }
+
+    if (repeatType === 'custom' || repeatType === 'weekly') {
+      const rawDays = Array.isArray(sched.repeatDays) && sched.repeatDays.length > 0
+        ? sched.repeatDays
+        : (sched.plannedDate ? [new Date(`${sched.plannedDate}T12:00:00`).getDay()] : [1]);
+      const normalizedDays = normalizeRepeatDays(rawDays);
+      return normalizedDays.includes(dayOfWeek);
     }
     return false;
   }
@@ -399,4 +467,108 @@ export function buildBacklogTaskPatch() {
     endTime: null,
     isBacklog: true
   };
+}
+
+/**
+ * Projects and renders calendar occurrences for any given date range (startDate to endDate)
+ * Expands recurring schedules, attaches tasks, habits, and flags time-window collisions.
+ */
+export function renderCalendarRange({
+  tasks = [],
+  schedules = [],
+  habits = [],
+  startDate = todayPlanDate(),
+  endDate = todayPlanDate(),
+  now = new Date()
+}) {
+  const result = [];
+  const start = new Date(`${startDate}T12:00:00`);
+  const end = new Date(`${endDate}T12:00:00`);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+    return result;
+  }
+
+  // Cap expansion at 90 days to avoid excessive allocations
+  const maxDays = 90;
+  let dayCount = 0;
+  const curr = new Date(start);
+
+  while (curr <= end && dayCount < maxDays) {
+    const dStr = curr.toISOString().slice(0, 10);
+    const dayClassification = classifyDayItems({
+      tasks,
+      schedules,
+      targetDate: dStr,
+      now
+    });
+
+    const activeSchedules = schedules.filter(s => isScheduleActiveForDate(s, dStr));
+    const activeTasks = tasks.filter(t => isTaskScheduledForDate(t, dStr));
+
+    // Pairwise collision evaluation for all scheduled items and tasks on target date
+    const allDayItems = [
+      ...activeTasks.map(t => ({ ...t, itemType: 'task' })),
+      ...activeSchedules.map(s => ({ ...s, itemType: 'schedule' }))
+    ];
+    const dayCollisions = [];
+    for (let i = 0; i < allDayItems.length; i++) {
+      for (let j = i + 1; j < allDayItems.length; j++) {
+        const itemA = allDayItems[i];
+        const itemB = allDayItems[j];
+        if (!itemA.startTime || !itemB.startTime) continue;
+        const risk = computeCollisionRisk(itemA, itemB);
+        if (risk.level !== 'clear') {
+          dayCollisions.push({
+            candidate: itemA,
+            collidingWith: itemB,
+            riskScore: risk.riskScore,
+            level: risk.level,
+            overlapMins: risk.overlapMins,
+            explanation: risk.explanation
+          });
+        }
+      }
+    }
+
+    const activeHabits = habits.map(h => ({
+      id: h.id,
+      title: h.title,
+      cadence: h.cadence || 'Anytime',
+      startTime: h.startTime || null,
+      completed: Array.isArray(h.completedDays) && h.completedDays.includes(dStr)
+    }));
+
+    result.push({
+      date: dStr,
+      dayOfWeek: curr.getDay(),
+      activeNow: dayClassification.activeNow,
+      upcoming: dayClassification.upcoming,
+      missed: dayClassification.missed,
+      completed: dayClassification.completed,
+      schedules: activeSchedules.map(s => ({
+        id: s.id,
+        title: s.title,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        durationMinutes: s.durationMinutes,
+        category: s.category || 'College'
+      })),
+      tasks: activeTasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        startTime: t.startTime || null,
+        endTime: t.endTime || null,
+        durationMinutes: t.durationMinutes || 45,
+        completed: Boolean(t.completed),
+        scheduleId: t.scheduleId || t.linkedScheduleId || null,
+        goalId: t.goalId || null
+      })),
+      collisions: dayCollisions,
+      habits: activeHabits
+    });
+
+    curr.setDate(curr.getDate() + 1);
+    dayCount++;
+  }
+  return result;
 }

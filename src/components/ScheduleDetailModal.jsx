@@ -122,6 +122,10 @@ export default function ScheduleDetailModal({
       durationMinutes: computedDuration,
       recurrence: recurrence !== 'none' ? recurrence : null,
       repeatDays: recurrence === 'custom' ? repeatDays : recurrence === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : null,
+      startDate: schedule.startDate || schedule.plannedDate || null,
+      endDate: schedule.endDate || schedule.recurrenceEndDate || null,
+      recurrenceEndDate: schedule.recurrenceEndDate || schedule.endDate || null,
+      excludedDates: Array.isArray(schedule.excludedDates) ? schedule.excludedDates : [],
       category,
       areas: [category],
       notes: notes.trim()

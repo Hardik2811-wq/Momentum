@@ -1459,6 +1459,43 @@ export default function useStore() {
     });
   }, [schedules, setSchedules, showToast]);
 
+  const skipScheduleOccurrence = useCallback((id, dateStr) => {
+    if (!id || !dateStr) return;
+    setSchedules(prev => prev.map(s => {
+      if (String(s.id) !== String(id)) return s;
+      const currentExcluded = Array.isArray(s.excludedDates) ? s.excludedDates : [];
+      if (currentExcluded.includes(dateStr)) return s;
+      return { ...s, excludedDates: [...currentExcluded, dateStr] };
+    }));
+    showToast(`Skipped schedule occurrence for ${dateStr}`);
+  }, [setSchedules, showToast]);
+
+  const endScheduleSeries = useCallback((id, fromDateStr) => {
+    if (!id || !fromDateStr) return;
+    setSchedules(prev => prev.map(s => {
+      if (String(s.id) !== String(id)) return s;
+      return { ...s, recurrenceEndDate: fromDateStr };
+    }));
+    showToast(`Schedule series ended from ${fromDateStr}`);
+  }, [setSchedules, showToast]);
+
+  const deleteSchedulesByFilter = useCallback((filter = {}) => {
+    const toDelete = schedules.filter(s => {
+      if (filter.title && s.title?.toLowerCase() !== filter.title.toLowerCase()) return false;
+      if (filter.titleContains && !s.title?.toLowerCase().includes(filter.titleContains.toLowerCase())) return false;
+      if (filter.category && s.category?.toLowerCase() !== filter.category.toLowerCase()) return false;
+      if (filter.dayOfWeek !== undefined && Array.isArray(s.repeatDays) && !s.repeatDays.includes(filter.dayOfWeek)) return false;
+      if (filter.dateRange?.from && s.plannedDate && s.plannedDate < filter.dateRange.from) return false;
+      if (filter.dateRange?.to && s.plannedDate && s.plannedDate > filter.dateRange.to) return false;
+      return true;
+    });
+
+    if (toDelete.length === 0) return 0;
+    const ids = toDelete.map(s => String(s.id));
+    deleteSchedules(ids);
+    return ids.length;
+  }, [schedules, deleteSchedules]);
+
   /* Goals Actions */
   const addGoal = useCallback((goalData) => {
     const newId = goalData.id || ('g' + Date.now() + Math.random().toString(36).slice(2, 7));
@@ -2096,6 +2133,7 @@ export default function useStore() {
     tasks, addTask, updateTask, toggleTask, deleteTask, deleteTasks, toggleSubtask, reorderTasks,
     moveTaskToBacklog, sweepMissedTasksToBacklog,
     schedules, addSchedule, updateSchedule, deleteSchedule, deleteSchedules,
+    skipScheduleOccurrence, endScheduleSeries, deleteSchedulesByFilter,
     goals: reactiveGoals, addGoal, updateGoal, updateGoalProgress, deleteGoal,
     habits, checkInHabit, addHabit, updateHabit, deleteHabit, useGraceDay,
     reflections, updateReflection, saveWeeklyReview,
