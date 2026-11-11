@@ -24,7 +24,7 @@ import HabitModal from './components/HabitModal';
 import AiCopilotModal from './components/AiCopilotModal';
 import ApiKeyModal from './components/ApiKeyModal';
 import AndroidWidgetSync from './components/AndroidWidgetSync';
-import { requestNotificationPermissions, setupNotificationChannels, setupListeners, syncDailyBriefing, syncScheduleReminders } from './lib/notifications';
+import { requestNotificationPermissions, setupNotificationChannels, setupListeners, syncDailyBriefing, syncScheduleReminders, syncTaskReminders } from './lib/notifications';
 import { useAutonomousAgent } from './hooks/useAutonomousAgent';
 import AgentFlowDiffModal from './components/agent/AgentFlowDiffModal';
 import AgentForensicReport from './components/agent/AgentForensicReport';
@@ -107,14 +107,27 @@ export default function App() {
         syncDailyBriefing();
       }
     });
+
+    // Listen for interactive action button events (e.g. "Mark Done" tapped on Android notification tray)
+    const handleNotificationAction = (e) => {
+      const { actionId, taskId } = e.detail || {};
+      if (actionId === 'mark_done' && taskId) {
+        storeRef.current?.toggleTask?.(taskId, true);
+      }
+    };
+    window.addEventListener('momentum:notification_action', handleNotificationAction);
+    return () => window.removeEventListener('momentum:notification_action', handleNotificationAction);
   }, []);
 
   useEffect(() => {
-    // Re-sync schedule reminders whenever schedules change
+    // Re-sync schedule & task reminders whenever schedules or tasks change
     if (store.schedules && store.schedules.length > 0) {
       syncScheduleReminders(store.schedules);
     }
-  }, [store.schedules]);
+    if (store.tasks && store.tasks.length > 0) {
+      syncTaskReminders(store.tasks);
+    }
+  }, [store.schedules, store.tasks]);
 
   // Memoize common view props to preserve React.memo on TodayView, DashboardView, and GoalsView
   const common = useMemo(() => ({

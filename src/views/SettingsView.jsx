@@ -3,6 +3,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import TimezoneSelect from '../components/TimezoneSelect';
 import ApiKeyModal from '../components/ApiKeyModal';
 import { sendNotification } from '../store/useStore';
+import { requestNotificationPermissions } from '../lib/notifications';
 import {
   generateMcpBridgeToken,
   getByokStatus,
@@ -137,16 +138,16 @@ export default function SettingsView({
   };
 
   const handleNotificationToggle = async (val) => {
-    if (val && 'Notification' in window && Notification.permission !== 'granted') {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
+    if (val) {
+      const granted = await requestNotificationPermissions();
+      if (granted) {
         updateSettings({ desktopNotifications: true });
-        sendNotification('Momentum Activated', { body: 'Desktop notifications are active.' });
+        sendNotification('Momentum Activated', { body: 'Notifications are active on your device.' });
       } else {
         updateSettings({ desktopNotifications: false });
       }
     } else {
-      updateSettings({ desktopNotifications: val });
+      updateSettings({ desktopNotifications: false });
     }
   };
 
@@ -695,12 +696,12 @@ export default function SettingsView({
           <Row label="Auto-Chain Series (CN Lecture 1 → 2 → 3)" hint="Automatically enforce sequence for numbered lectures and parts. Turn off to manage all dependencies manually.">
             <Toggle checked={settings?.autoSeriesChaining ?? true} onChange={(v) => updateSettings({ autoSeriesChaining: v })} />
           </Row>
-          <Row label="Desktop Notifications" hint="System alerts when focus timer finishes or cycle changes.">
+          <Row label="System & Android Notifications" hint="Heads-up banners & alerts when focus timer finishes, classes approach, or tasks start.">
             <div className="flex items-center gap-2">
               {settings?.desktopNotifications && (
                 <button
                   type="button"
-                  onClick={() => sendNotification('Test Alert', { body: 'Momentum notifications are working!' })}
+                  onClick={() => sendNotification('Test Alert', { body: 'Momentum Android notifications are active and working!' })}
                   className="px-2.5 py-1 rounded-lg bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-[10.5px] font-mono font-semibold text-[#161618] dark:text-[#F7F6F2] transition-colors cursor-pointer"
                 >
                   Test Alert

@@ -8,6 +8,7 @@ import { computeHabitDecayMetrics, getHabitsAtRisk } from '../lib/habitDecayGuar
 import { evaluateCapacityLoad } from '../lib/capacityOverloadGuard.js';
 import { buildLifeGraph } from '../lib/lifeGraph.js';
 import { getCavemanMetrics } from '../lib/cavemanCompressor.js';
+import { sendLocalNotification } from '../lib/notifications.js';
 
 /* ── localStorage wrapper ── */
 function useLocalStorage(key, defaultValue) {
@@ -154,15 +155,12 @@ export function playChime(type = 'complete') {
   }
 }
 
-/* ── Desktop Notification Helper ── */
+/* ── Desktop & Android Native Notification Helper ── */
 export function sendNotification(title, options = {}) {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'granted') {
-    try {
-      new Notification(title, { icon: '/favicon.svg', ...options });
-    } catch (e) {
-      console.warn('Notification failed', e);
-    }
+  try {
+    sendLocalNotification(title, options);
+  } catch (e) {
+    console.warn('sendNotification dispatch failed', e);
   }
 }
 
