@@ -67,6 +67,14 @@ export default function MobileTabBar({
       icon: 'auto_awesome',
       iconBg: 'bg-[#0F52BA] text-white',
       action: onOpenAiCopilot
+    },
+    {
+      id: 'settings',
+      label: 'Profile & Settings',
+      sublabel: 'User profile, circadian & alarms',
+      icon: 'person',
+      iconBg: 'bg-gradient-to-br from-[#0F52BA] to-[#3B82F6] text-white',
+      action: () => handleTabClick('settings')
     }
   ];
 

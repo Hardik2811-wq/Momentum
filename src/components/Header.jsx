@@ -25,7 +25,8 @@ export default function Header({
   isSidebarCollapsed = false,
   onToggleSidebar,
   agentControls = null,
-  onOpenAgentStudio = null
+  onOpenAgentStudio = null,
+  settings = null
 }) {
   const searchRef = useRef(null);
   const notifRef = useRef(null);
@@ -35,6 +36,15 @@ export default function Header({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const mobileMenuRef = useRef(null);
+
+  const profile = settings?.profile || { name: 'Operator', role: 'Personal OS' };
+  const initials = (profile.name || 'OP')
+    .split(' ')
+    .filter(Boolean)
+    .map(w => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'OP';
 
   const completedTasksCount = tasks.filter(t => t.completed).length;
   const totalTasksCount = tasks.length;
@@ -175,7 +185,7 @@ export default function Header({
         </button>
 
         {/* ── Search Input ── */}
-        <div className="w-[128px] sm:w-[175px] lg:w-[215px] relative">
+        <div className="w-[100px] xs:w-[130px] sm:w-[175px] lg:w-[215px] relative">
           <span className={`material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[14px] pointer-events-none transition-colors ${
             searchFocused ? 'text-[#0F52BA]' : 'text-[#8E8E93]'
           }`}>search</span>
@@ -230,7 +240,7 @@ export default function Header({
         </div>
 
       {/* ── Right Controls ── */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
 
         {/* Autonomous Copilot Living Ambient Orb */}
         {agentControls && (
@@ -243,17 +253,17 @@ export default function Header({
           />
         )}
 
-        {/* AI Executive Copilot Pill */}
+        {/* AI Executive Copilot Pill (Desktop / Tablet only — mobile already has Ambient Orb & FAB) */}
         <button
           type="button"
           onClick={onOpenAiCopilot}
           title="AI Executive Copilot — Upload docs & create intelligent schedules"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white dark:bg-[#1A1A1E] text-[#161618] dark:text-[#F7F6F2] border border-black/[0.07] dark:border-white/[0.08] hover:border-black/[0.15] dark:hover:border-white/[0.15] shadow-xs transition-all active:scale-95 cursor-pointer"
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white dark:bg-[#1A1A1E] text-[#161618] dark:text-[#F7F6F2] border border-black/[0.07] dark:border-white/[0.08] hover:border-black/[0.15] dark:hover:border-white/[0.15] shadow-xs transition-all active:scale-95 cursor-pointer"
         >
           <span className="material-symbols-outlined text-[15px] text-[#0F52BA]">
             auto_awesome
           </span>
-          <span className="hidden sm:inline">Copilot</span>
+          <span>Copilot</span>
         </button>
 
         {/* Universal UI Editor Mode Toggle (desktop only) */}
@@ -316,6 +326,22 @@ export default function Header({
           )}
         </div>
 
+        {/* User Profile Avatar (1-Tap direct to Profile & Settings) */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('settings')}
+          title={`User Profile: ${profile.name || 'Operator'} (${profile.role || 'Settings'})`}
+          className={`relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full transition-all active:scale-95 cursor-pointer shrink-0 ${
+            activeTab === 'settings'
+              ? 'ring-2 ring-[#0F52BA] ring-offset-1 dark:ring-offset-[#121214]'
+              : 'hover:ring-2 hover:ring-black/10 dark:hover:ring-white/10'
+          }`}
+        >
+          <div className="w-full h-full rounded-full bg-gradient-to-br from-[#0F52BA] to-[#3B82F6] flex items-center justify-center text-white font-mono font-bold text-[10px] sm:text-[11px] shadow-xs select-none">
+            {initials}
+          </div>
+        </button>
+
         {/* Mobile Extra Menu (Stats, Review, Config) */}
         <div className="relative md:hidden" ref={mobileMenuRef}>
           <button
@@ -327,7 +353,20 @@ export default function Header({
           </button>
 
           {showMobileMenu && (
-            <div className="absolute top-full right-0 mt-1 w-44 bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] rounded-xl shadow-double-bezel overflow-hidden z-50 py-1 animate-fadeIn">
+            <div className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-[#1A1A1E] border border-black/[0.07] dark:border-white/[0.08] rounded-xl shadow-double-bezel overflow-hidden z-50 py-1 animate-fadeIn">
+              {/* Profile Card Header in Dropdown */}
+              <button
+                onClick={() => { setActiveTab('settings'); setShowMobileMenu(false); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors border-b border-black/[0.06] dark:border-white/[0.06]"
+              >
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0F52BA] to-[#3B82F6] flex items-center justify-center text-white font-mono font-bold text-[10px] shrink-0">
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] font-semibold text-[#161618] dark:text-[#F7F6F2] truncate">{profile.name || 'Operator'}</div>
+                  <div className="text-[9.5px] font-mono text-[#8E8E93] truncate">{profile.role || 'Profile & Settings'}</div>
+                </div>
+              </button>
               <button
                 onClick={() => { onOpenAiCopilot?.(); setShowMobileMenu(false); }}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-[#0F52BA] hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors"

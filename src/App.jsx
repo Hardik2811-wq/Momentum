@@ -343,6 +343,7 @@ export default function App() {
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebar={() => setIsSidebarCollapsed(v => !v)}
           agentControls={agent}
+          settings={store.settings}
         />
         <div className="flex-1 w-full">
           <ErrorBoundary key={activeTab} viewName={activeTab}>
