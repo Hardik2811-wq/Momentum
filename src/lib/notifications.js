@@ -3,6 +3,8 @@ import { Capacitor } from '@capacitor/core';
 
 const SCHEDULE_ACTION_TYPE = 'SCHEDULE_ACTIONS';
 const TASK_ACTION_TYPE = 'TASK_ACTIONS';
+const HABIT_ACTION_TYPE = 'HABIT_ACTIONS';
+const DAILY_BRIEFING_ACTION_TYPE = 'DAILY_BRIEFING_ACTIONS';
 
 /**
  * Check if running in a native Capacitor mobile container (Android/iOS)
@@ -56,20 +58,28 @@ export const setupNotificationChannels = async () => {
           id: SCHEDULE_ACTION_TYPE,
           actions: [
             { id: 'mark_done', title: 'Mark Done' },
-            { id: 'snooze', title: 'Snooze 10m' }
+            { id: 'snooze_5', title: 'Snooze 5m' }
           ]
         },
         {
           id: TASK_ACTION_TYPE,
           actions: [
-            { id: 'mark_done', title: 'Mark Done' },
-            { id: 'snooze', title: 'Snooze 10m' }
+            { id: 'mark_done', title: '✓ Mark Done' },
+            { id: 'start_focus', title: '⚡ Start Focus' },
+            { id: 'snooze_10', title: 'Snooze 10m' }
           ]
         },
         {
-          id: 'DAILY_BRIEFING_ACTIONS',
+          id: HABIT_ACTION_TYPE,
           actions: [
-            { id: 'open_app', title: 'View Day' }
+            { id: 'check_in', title: '✓ Check In' },
+            { id: 'snooze_30', title: 'Snooze 30m' }
+          ]
+        },
+        {
+          id: DAILY_BRIEFING_ACTION_TYPE,
+          actions: [
+            { id: 'open_app', title: 'View Agenda' }
           ]
         }
       ]
@@ -85,7 +95,7 @@ export const setupNotificationChannels = async () => {
       sound: 'default',
       vibration: true,
       lights: true,
-      lightColor: '#4F46E5'
+      lightColor: '#3B82F6'
     });
 
     await LocalNotifications.createChannel({
@@ -97,7 +107,7 @@ export const setupNotificationChannels = async () => {
       sound: 'default',
       vibration: true,
       lights: true,
-      lightColor: '#10B981'
+      lightColor: '#8B5CF6'
     });
 
     await LocalNotifications.createChannel({
@@ -110,11 +120,13 @@ export const setupNotificationChannels = async () => {
 
     await LocalNotifications.createChannel({
       id: 'momentum_alerts',
-      name: 'System & Timer Alerts',
-      description: 'Focus timer completion chimes, AI suggestions, and system alerts',
+      name: 'System, Replan & Focus Timer Alerts',
+      description: 'Focus timer completion chimes, auto-replan proposals, and system alerts',
       importance: 4,
       visibility: 1,
-      vibration: true
+      vibration: true,
+      lights: true,
+      lightColor: '#F59E0B'
     });
   } catch (e) {
     console.warn("LocalNotifications setup channels error:", e);
@@ -143,16 +155,35 @@ export const setupListeners = () => {
             })
           );
         }
-      } else if (actionId === 'snooze') {
-        // Reschedule for 10 minutes from now
+      } else if (actionId === 'start_focus') {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('momentum:notification_action', {
+              detail: { actionId: 'start_focus', taskId: extra.taskId }
+            })
+          );
+        }
+      } else if (actionId === 'check_in') {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('momentum:notification_action', {
+              detail: { actionId: 'check_in_habit', habitId: extra.habitId }
+            })
+          );
+        }
+      } else if (actionId && actionId.startsWith('snooze')) {
+        let mins = 10;
+        if (actionId === 'snooze_5') mins = 5;
+        if (actionId === 'snooze_30') mins = 30;
+
         LocalNotifications.schedule({
           notifications: [
             {
               id: (notification.id + 10000) % 2147483647,
               title: notification.title,
-              body: `(Snoozed) ${notification.body}`,
+              body: `(Snoozed ${mins}m) ${notification.body}`,
               channelId: notification.channelId || 'momentum_reminders',
-              schedule: { at: new Date(Date.now() + 10 * 60000) },
+              schedule: { at: new Date(Date.now() + mins * 60000) },
               actionTypeId: notification.actionTypeId || SCHEDULE_ACTION_TYPE,
               extra
             }
@@ -256,19 +287,23 @@ const stringToNumericId = (str) => {
 /**
  * Sync schedule block reminders (classes, lectures, labs).
  */
-export const syncScheduleReminders = async (schedules) => {
+export const syncScheduleReminders = async (schedules, settings = {}) => {
   if (!isNative() || !Array.isArray(schedules) || schedules.length === 0) return;
 
   try {
     const notificationsToSchedule = [];
     const now = new Date();
     const currentMins = now.getHours() * 60 + now.getMinutes();
+    const travelMin = Number(settings?.travelMin ?? 35);
+    const prepMin = Number(settings?.prepMin ?? 10);
 
     schedules.forEach(sched => {
       if (!sched.startTime) return;
       const { hour, minute } = getReminderTime(sched.startTime, 10);
       const reminderMins = hour * 60 + minute;
       const baseId = stringToNumericId(`sched-${sched.id}`);
+      const hallText = sched.room || sched.location || sched.hall ? `${sched.room || sched.location || sched.hall} • ` : '';
+      const bodyText = `${hallText}${sched.startTime} – ${sched.endTime || ''} (Includes ${travelMin}m transit & ${prepMin}m prep buffer)`;
 
       const days = Array.isArray(sched.repeatDays) ? sched.repeatDays : [];
       if (days.length === 0) {
@@ -279,7 +314,7 @@ export const syncScheduleReminders = async (schedules) => {
           notificationsToSchedule.push({
             id: baseId,
             title: sched.title || "Upcoming Class",
-            body: `Starts in 10 minutes (at ${sched.startTime})`,
+            body: bodyText,
             channelId: 'momentum_reminders',
             schedule: { at: targetDate },
             actionTypeId: SCHEDULE_ACTION_TYPE,
@@ -293,7 +328,7 @@ export const syncScheduleReminders = async (schedules) => {
           notificationsToSchedule.push({
             id: (baseId + capWeekday) % 2000000000,
             title: sched.title || "Upcoming Class",
-            body: `Starts in 10 minutes (at ${sched.startTime})`,
+            body: bodyText,
             channelId: 'momentum_reminders',
             schedule: { on: { weekday: capWeekday, hour, minute } },
             actionTypeId: SCHEDULE_ACTION_TYPE,
@@ -312,7 +347,7 @@ export const syncScheduleReminders = async (schedules) => {
 };
 
 /**
- * Sync timed task reminders (Option: 10m pre-start heads-up for scheduled tasks).
+ * Sync timed task reminders (10m pre-start heads-up for scheduled deep work tasks).
  */
 export const syncTaskReminders = async (tasks) => {
   if (!isNative() || !Array.isArray(tasks) || tasks.length === 0) return;
@@ -337,11 +372,13 @@ export const syncTaskReminders = async (tasks) => {
         const targetDate = new Date();
         targetDate.setHours(hour, minute, 0, 0);
         const taskId = stringToNumericId(`task-${task.id}`);
+        const durationText = task.durationMinutes || task.duration ? `${task.durationMinutes || task.duration}m deep block` : 'Scheduled deep work';
+        const energyText = task.energy ? ` • Energy: ${task.energy}` : '';
 
         notificationsToSchedule.push({
           id: taskId,
           title: task.title || "Upcoming Task",
-          body: `Task starts in 10 minutes (at ${task.startTime})`,
+          body: `${durationText} starts at ${task.startTime}${energyText}`,
           channelId: 'momentum_tasks',
           schedule: { at: targetDate },
           actionTypeId: TASK_ACTION_TYPE,
@@ -355,5 +392,52 @@ export const syncTaskReminders = async (tasks) => {
     }
   } catch (e) {
     console.warn("Error syncing task reminders:", e);
+  }
+};
+
+/**
+ * Sync habit ritual check-in reminders (Evening Wind-Down & Daily Anchors).
+ */
+export const syncHabitReminders = async (habits) => {
+  if (!isNative() || !Array.isArray(habits) || habits.length === 0) return;
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+    const notificationsToSchedule = [];
+
+    habits.forEach(habit => {
+      // Check if habit is already completed today
+      const completedDates = habit.completedDates || [];
+      if (completedDates.includes(today)) return;
+
+      // Use habit.time or default evening habit check-in (20:30)
+      const habitTime = habit.time || habit.startTime || '20:30';
+      const { hour, minute } = parseTime(habitTime);
+      const habitMins = hour * 60 + minute;
+
+      if (habitMins > currentMins) {
+        const targetDate = new Date();
+        targetDate.setHours(hour, minute, 0, 0);
+        const habitId = stringToNumericId(`habit-${habit.id}`);
+
+        notificationsToSchedule.push({
+          id: habitId,
+          title: `${habit.title || 'Habit Ritual'} • Streak Active 🔥`,
+          body: `Evening ritual reminder. Tap Check In to extend your streak!`,
+          channelId: 'momentum_reminders',
+          schedule: { at: targetDate },
+          actionTypeId: HABIT_ACTION_TYPE,
+          extra: { habitId: habit.id }
+        });
+      }
+    });
+
+    if (notificationsToSchedule.length > 0) {
+      await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+    }
+  } catch (e) {
+    console.warn("Error syncing habit reminders:", e);
   }
 };

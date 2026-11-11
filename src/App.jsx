@@ -24,7 +24,7 @@ import HabitModal from './components/HabitModal';
 import AiCopilotModal from './components/AiCopilotModal';
 import ApiKeyModal from './components/ApiKeyModal';
 import AndroidWidgetSync from './components/AndroidWidgetSync';
-import { requestNotificationPermissions, setupNotificationChannels, setupListeners, syncDailyBriefing, syncScheduleReminders, syncTaskReminders } from './lib/notifications';
+import { requestNotificationPermissions, setupNotificationChannels, setupListeners, syncDailyBriefing, syncScheduleReminders, syncTaskReminders, syncHabitReminders } from './lib/notifications';
 import { useAutonomousAgent } from './hooks/useAutonomousAgent';
 import AgentFlowDiffModal from './components/agent/AgentFlowDiffModal';
 import AgentForensicReport from './components/agent/AgentForensicReport';
@@ -108,26 +108,36 @@ export default function App() {
       }
     });
 
-    // Listen for interactive action button events (e.g. "Mark Done" tapped on Android notification tray)
+    // Listen for interactive action button events (e.g. "Mark Done" or "Start Focus" tapped on Android notification tray)
     const handleNotificationAction = (e) => {
-      const { actionId, taskId } = e.detail || {};
+      const { actionId, taskId, habitId } = e.detail || {};
       if (actionId === 'mark_done' && taskId) {
         storeRef.current?.toggleTask?.(taskId, true);
+      } else if (actionId === 'start_focus' && taskId) {
+        const task = storeRef.current?.tasks?.find(t => String(t.id) === String(taskId));
+        if (task) {
+          startFocusForTask(task);
+        }
+      } else if (actionId === 'check_in_habit' && habitId) {
+        storeRef.current?.checkInHabit?.(habitId);
       }
     };
     window.addEventListener('momentum:notification_action', handleNotificationAction);
     return () => window.removeEventListener('momentum:notification_action', handleNotificationAction);
-  }, []);
+  }, [startFocusForTask]);
 
   useEffect(() => {
-    // Re-sync schedule & task reminders whenever schedules or tasks change
+    // Re-sync schedule, task & habit reminders whenever schedules, tasks, or habits change
     if (store.schedules && store.schedules.length > 0) {
-      syncScheduleReminders(store.schedules);
+      syncScheduleReminders(store.schedules, store.settings);
     }
     if (store.tasks && store.tasks.length > 0) {
       syncTaskReminders(store.tasks);
     }
-  }, [store.schedules, store.tasks]);
+    if (store.habits && store.habits.length > 0) {
+      syncHabitReminders(store.habits);
+    }
+  }, [store.schedules, store.tasks, store.habits, store.settings]);
 
   // Memoize common view props to preserve React.memo on TodayView, DashboardView, and GoalsView
   const common = useMemo(() => ({
