@@ -1936,27 +1936,6 @@ async function executeTool(
       dailyAnchors
     };
   }
-    if (args.candidate && typeof args.candidate === 'object') {
-      const cand = args.candidate as any;
-      const reconciled = reconcileTimeAndDuration(cand.startTime, cand.endTime, cand.durationMinutes);
-      items.push({
-        id: 'candidate-probe',
-        title: cand.title || 'Proposed Block',
-        startTime: reconciled.startTime,
-        endTime: reconciled.endTime,
-        durationMinutes: reconciled.durationMinutes,
-        itemType: 'candidate'
-      });
-    }
-
-    const conflicts = detectCollisions(items);
-    return {
-      date: targetDate,
-      hasConflicts: conflicts.length > 0,
-      conflictCount: conflicts.length,
-      conflicts
-    };
-  }
 
   /* ── 4. manage_timetable ── */
   if (toolName === 'manage_timetable') {
