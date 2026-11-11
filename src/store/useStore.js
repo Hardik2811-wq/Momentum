@@ -1347,7 +1347,16 @@ export default function useStore() {
     setTasks(prev => {
       const updated = prev.map(t => {
         if (String(t.id) === String(id)) {
-          const merged = { ...t, ...patch };
+          let endTime = patch.endTime;
+          const nextStart = patch.startTime !== undefined ? patch.startTime : t.startTime;
+          const nextDur = patch.durationMinutes !== undefined ? patch.durationMinutes : t.durationMinutes;
+
+          // Recompute end time if start or duration changed without an explicit end time
+          if ((patch.startTime !== undefined || patch.durationMinutes !== undefined) && patch.endTime === undefined) {
+            endTime = (nextStart && nextDur) ? calculateEndTime(nextStart, nextDur) : null;
+          }
+
+          const merged = { ...t, ...patch, ...(endTime !== undefined ? { endTime } : {}) };
           learnFromTaskSave(merged);
           return merged;
         }

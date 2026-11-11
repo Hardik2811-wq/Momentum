@@ -73,7 +73,8 @@ test('2. Somatic-Cognitive Clash Detection in Context Gathering', () => {
     settings: { todayDateKey: todayPlanDate() }
   };
 
-  const context = assembleAutonomousContext(mockStore);
+  const morningTime = new Date(`${todayPlanDate()}T08:30:00`);
+  const context = assembleAutonomousContext(mockStore, { currentTime: morningTime });
   assert.equal(context.energyClashes.length > 0, true, 'Should detect somatic-cognitive clash');
   const clash = context.energyClashes[0];
   assert.equal(clash.type, 'SOMATIC_COGNITIVE_CLASH');
@@ -110,7 +111,8 @@ test('3. Cognitive Audit & 4-Perspective Benefit Attribution', () => {
     focusSessions: []
   };
 
-  const context = assembleAutonomousContext(mockStore);
+  const morningTime = new Date(`${todayPlanDate()}T08:30:00`);
+  const context = assembleAutonomousContext(mockStore, { currentTime: morningTime });
   const audit = runCognitiveAutonomousAudit(context);
 
   assert.equal(audit.proposals.length > 0, true);
@@ -335,7 +337,8 @@ test('10. 12-Vector Forensic Audit Engine - Compiles structured diagnostic repor
     settings: { todayDateKey: todayPlanDate() }
   };
 
-  const context = assembleAutonomousContext(mockStore);
+  const morningTime = new Date(`${todayPlanDate()}T08:30:00`);
+  const context = assembleAutonomousContext(mockStore, { currentTime: morningTime });
   const audit = runCognitiveAutonomousAudit(context);
 
   assert.ok(audit.forensicReport, 'Must contain forensic report');

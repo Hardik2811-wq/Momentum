@@ -65,40 +65,110 @@ function calculateEndTime(startTime: string, durationMinutes: number): string {
   return `${hh}:${mm}`;
 }
 
+interface ReconcileOptions {
+  startTime?: string | null;
+  endTime?: string | null;
+  durationMinutes?: number | null;
+  existingStartTime?: string | null;
+  existingEndTime?: string | null;
+  existingDurationMinutes?: number | null;
+}
+
 /**
  * Reconciles startTime, endTime, and durationMinutes so they never disagree.
- * Priority: If both startTime and endTime are valid, durationMinutes is derived from them.
- * If only startTime and durationMinutes are given, endTime is calculated.
+ * Source of truth: startTime + durationMinutes.
+ * In updates: if start or duration is patched, endTime is recomputed from start + duration.
+ * Stale existing.endTime is NEVER allowed to inflate duration.
+ * Blocks crossing midnight are handled by adding 24h to the end time.
  */
 function reconcileTimeAndDuration(
-  startTime?: string | null,
-  endTime?: string | null,
-  durationMinutes?: number | null
-): { startTime: string; endTime: string; durationMinutes: number } {
-  let start = (startTime && typeof startTime === 'string' && startTime.trim()) ? startTime.trim() : '09:00';
+  optsOrStartTime?: ReconcileOptions | string | null,
+  paramEndTime?: string | null,
+  paramDurationMinutes?: number | null
+): { startTime: string; endTime: string; durationMinutes: number; warning?: string } {
+  let startTime: string | null | undefined;
+  let endTime: string | null | undefined;
+  let durationMinutes: number | null | undefined;
+  let existingStartTime: string | null | undefined;
+  let existingEndTime: string | null | undefined;
+  let existingDurationMinutes: number | null | undefined;
+
+  if (optsOrStartTime && typeof optsOrStartTime === 'object') {
+    startTime = optsOrStartTime.startTime;
+    endTime = optsOrStartTime.endTime;
+    durationMinutes = optsOrStartTime.durationMinutes;
+    existingStartTime = optsOrStartTime.existingStartTime;
+    existingEndTime = optsOrStartTime.existingEndTime;
+    existingDurationMinutes = optsOrStartTime.existingDurationMinutes;
+  } else {
+    startTime = optsOrStartTime as string | null | undefined;
+    endTime = paramEndTime;
+    durationMinutes = paramDurationMinutes;
+  }
+
+  const hasExplicitStart = startTime !== undefined && startTime !== null && String(startTime).trim() !== '';
+  const hasExplicitEnd = endTime !== undefined && endTime !== null && String(endTime).trim() !== '';
+  const hasExplicitDur = durationMinutes !== undefined && durationMinutes !== null && !isNaN(Number(durationMinutes)) && Number(durationMinutes) > 0;
+
+  // Resolve start time
+  let start = hasExplicitStart ? String(startTime).trim() : (existingStartTime ? String(existingStartTime).trim() : '09:00');
   if (timeToMinutes(start) === null) start = '09:00';
+  const startMins = timeToMinutes(start)!;
 
   let dur: number;
   let end: string;
+  let warning: string | undefined;
 
-  const startMins = timeToMinutes(start)!;
-  const endMins = (endTime && typeof endTime === 'string') ? timeToMinutes(endTime.trim()) : null;
-
-  if (endMins !== null && endMins > startMins) {
-    dur = endMins - startMins;
-    end = endTime!.trim();
-  } else if (durationMinutes && Number(durationMinutes) > 0) {
-    dur = Number(durationMinutes);
+  // Case 1: Start or Duration was explicitly provided, but End was NOT explicitly provided in patch
+  if ((hasExplicitStart || hasExplicitDur) && !hasExplicitEnd) {
+    const rawDur = hasExplicitDur
+      ? Number(durationMinutes)
+      : (existingDurationMinutes ? Number(existingDurationMinutes) : 45);
+    dur = rawDur > 0 ? rawDur : 45;
     end = minutesToTime(startMins + dur);
-  } else if (endMins !== null) {
-    dur = (endMins + 1440 - startMins) % 1440 || 60;
-    end = endTime!.trim();
-  } else {
-    dur = 60;
+  }
+  // Case 2: Only End was explicitly provided in patch (Start & Duration not passed in patch)
+  else if (hasExplicitEnd && !hasExplicitStart && !hasExplicitDur) {
+    end = String(endTime).trim();
+    let endMins = timeToMinutes(end);
+    if (endMins === null) {
+      dur = Number(existingDurationMinutes) || 45;
+      end = minutesToTime(startMins + dur);
+    } else {
+      // Midnight crossing: if end <= start, add 24 hours
+      const effectiveEndMins = endMins <= startMins ? endMins + 1440 : endMins;
+      dur = Math.max(15, effectiveEndMins - startMins);
+    }
+  }
+  // Case 3: Both Start and End explicitly provided, but NO duration
+  else if (hasExplicitEnd && !hasExplicitDur) {
+    end = String(endTime).trim();
+    let endMins = timeToMinutes(end);
+    if (endMins === null) {
+      dur = 45;
+      end = minutesToTime(startMins + dur);
+    } else {
+      const effectiveEndMins = endMins <= startMins ? endMins + 1440 : endMins;
+      dur = Math.max(15, effectiveEndMins - startMins);
+    }
+  }
+  // Case 4: Duration AND End both provided (or Start + End + Duration all provided)
+  else if (hasExplicitDur) {
+    dur = Number(durationMinutes);
+    const computedEnd = minutesToTime(startMins + dur);
+    if (hasExplicitEnd && String(endTime).trim() !== computedEnd) {
+      warning = `Specified endTime "${endTime}" conflicted with startTime "${start}" + duration ${dur}m. Recomputed endTime to "${computedEnd}".`;
+    }
+    end = computedEnd;
+  }
+  // Case 5: Fallback default
+  else {
+    const rawDur = Number(existingDurationMinutes) || 45;
+    dur = rawDur > 0 ? rawDur : 45;
     end = minutesToTime(startMins + dur);
   }
 
-  return { startTime: start, endTime: end, durationMinutes: dur };
+  return { startTime: start, endTime: end, durationMinutes: dur, warning };
 }
 
 /**
@@ -1157,11 +1227,14 @@ async function executeTool(
           validationErrors.push(`Invalid endDate "${patch.endDate}" at index ${i}. Expected YYYY-MM-DD.`);
         }
 
-        const reconciled = reconcileTimeAndDuration(
-          patch.startTime !== undefined ? patch.startTime : existing.startTime,
-          patch.endTime !== undefined ? patch.endTime : existing.endTime,
-          patch.durationMinutes !== undefined ? patch.durationMinutes : existing.durationMinutes
-        );
+        const reconciled = reconcileTimeAndDuration({
+          startTime: patch.startTime,
+          endTime: patch.endTime,
+          durationMinutes: patch.durationMinutes,
+          existingStartTime: existing.startTime,
+          existingEndTime: existing.endTime,
+          existingDurationMinutes: existing.durationMinutes
+        });
 
         const repeatDays = patch.repeatDays !== undefined ? normalizeRepeatDays(patch.repeatDays) : existing.repeatDays;
         const startDate = patch.startDate || patch.plannedDate || existing.startDate || existing.plannedDate;
@@ -1345,6 +1418,7 @@ async function executeTool(
     if (action === 'update') {
       const updatedTasks: any[] = [];
       const validationErrors: string[] = [];
+      const taskWarnings: string[] = [];
 
       for (let i = 0; i < inputTasks.length; i++) {
         const patch = inputTasks[i] as any;
@@ -1360,12 +1434,19 @@ async function executeTool(
         }
 
         const reconciled = (patch.startTime !== undefined || patch.endTime !== undefined || patch.durationMinutes !== undefined)
-          ? reconcileTimeAndDuration(
-              patch.startTime !== undefined ? patch.startTime : existing.startTime,
-              patch.endTime !== undefined ? patch.endTime : existing.endTime,
-              patch.durationMinutes !== undefined ? patch.durationMinutes : existing.durationMinutes
-            )
+          ? reconcileTimeAndDuration({
+              startTime: patch.startTime,
+              endTime: patch.endTime,
+              durationMinutes: patch.durationMinutes,
+              existingStartTime: existing.startTime,
+              existingEndTime: existing.endTime,
+              existingDurationMinutes: existing.durationMinutes
+            })
           : null;
+
+        if (reconciled?.warning) {
+          taskWarnings.push(`Task "${existing.title}" (${patch.id}): ${reconciled.warning}`);
+        }
 
         const merged = {
           ...existing,
@@ -1396,6 +1477,7 @@ async function executeTool(
         dryRun: isDryRun,
         updatedIds: updatedTasks.map((t) => t.id),
         tasks: updatedTasks,
+        warnings: taskWarnings.length > 0 ? taskWarnings : undefined,
         totalTasks: nextTasks.length
       };
     }
@@ -1577,7 +1659,17 @@ async function executeTool(
     if (Array.isArray(args.updateHabits)) {
       for (const patch of args.updateHabits as any[]) {
         if (!patch?.id) continue;
-        nextHabits = nextHabits.map((h) => (String(h.id) === String(patch.id) ? { ...h, ...patch } : h));
+        const resolvedGoalId = patch.goalId !== undefined ? patch.goalId : patch.linkedGoalId;
+        const resolvedGoalTitle = patch.linkedGoal !== undefined ? patch.linkedGoal : (resolvedGoalId ? nextGoals.find((g) => String(g.id) === String(resolvedGoalId))?.title : undefined);
+        nextHabits = nextHabits.map((h) => {
+          if (String(h.id) !== String(patch.id)) return h;
+          return {
+            ...h,
+            ...patch,
+            ...(resolvedGoalId !== undefined ? { linkedGoalId: resolvedGoalId } : {}),
+            ...(resolvedGoalTitle !== undefined ? { linkedGoal: resolvedGoalTitle } : {})
+          };
+        });
       }
     }
     if (Array.isArray(args.updateSchedules)) {
@@ -1614,11 +1706,35 @@ async function executeTool(
     }
 
     const createdHabitIds: string[] = [];
+    const habitWarnings: string[] = [];
     if (Array.isArray(args.habits)) {
       args.habits.forEach((raw: any, i: number) => {
         if (!raw?.title) return;
         const id = raw.id || `habit-mcp-${Date.now()}-${i}`;
         createdHabitIds.push(id);
+
+        let resolvedGoalId = raw.existingGoalId || raw.goalId || raw.linkedGoalId || null;
+        if (typeof raw.goalIndex === 'number') {
+          if (createdGoalIds[raw.goalIndex]) {
+            resolvedGoalId = createdGoalIds[raw.goalIndex];
+          } else {
+            habitWarnings.push(`Habit "${raw.title}" referenced goalIndex ${raw.goalIndex}, but only ${createdGoalIds.length} goals were created in this plan.`);
+          }
+        }
+
+        const linkedGoalObj = resolvedGoalId ? nextGoals.find((g) => String(g.id) === String(resolvedGoalId)) : null;
+        const resolvedGoalTitle = raw.linkedGoal || linkedGoalObj?.title || '';
+
+        // Two-way link: add habit ID to goal's linkedHabitIds
+        if (resolvedGoalId) {
+          nextGoals = nextGoals.map((g) => {
+            if (String(g.id) !== String(resolvedGoalId)) return g;
+            const existingHIds = Array.isArray(g.linkedHabitIds) ? [...g.linkedHabitIds] : [];
+            if (!existingHIds.includes(id)) existingHIds.push(id);
+            return { ...g, linkedHabitIds: existingHIds };
+          });
+        }
+
         nextHabits.push({
           id,
           title: String(raw.title).trim(),
@@ -1629,7 +1745,8 @@ async function executeTool(
           targetFrequency: raw.targetFrequency || raw.frequency || 'Every Day',
           icon: raw.icon || 'bolt',
           colorToken: raw.colorToken || 'primary',
-          linkedGoal: raw.linkedGoal || '',
+          linkedGoal: resolvedGoalTitle,
+          linkedGoalId: resolvedGoalId || null,
           graceDays: 2,
           completedDays: []
         });
@@ -1754,7 +1871,8 @@ async function executeTool(
         tasks: createdTaskIds
       },
       duplicatesDetected,
-      conflicts
+      conflicts,
+      warnings: habitWarnings.length > 0 ? habitWarnings : undefined
     };
   }
 
