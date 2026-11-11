@@ -720,9 +720,19 @@ const DEFAULT_SETTINGS = {
   autoBreaks: true,
   soundEffects: true,
   showFocusBar: true,
+  prepMin: 60,
+  travelMin: 35,
+  deepWorkCeilingMin: 240,
+  anchors: {
+    breakfast: { enabled: true, title: 'Breakfast', startTime: '08:00', durationMinutes: 30 },
+    dinner: { enabled: true, title: 'Dinner', startTime: '19:30', durationMinutes: 45 },
+    lightsOut: { enabled: true, title: 'Sleep / Lights Out', startTime: '23:30', durationMinutes: 420 }
+  },
   profile: {
     name: 'Hardik',
     role: 'Principal Systems Architect',
+    prepMin: 60,
+    travelMin: 35,
     timezone: (typeof Intl !== 'undefined' && Intl.DateTimeFormat) ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
   },
   customUiLayout: {},

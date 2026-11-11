@@ -387,6 +387,759 @@ function findScheduleDuplicates(
   });
 }
 
+/* ──────────────── Circadian Energy Model & Buffers ──────────────── */
+
+const CIRCADIAN_ZONES = [
+  { start: '06:00', end: '10:00', label: 'PEAK_COGNITIVE', type: 'peak', multiplier: 1.0, ideal: ['Deep Focus', 'Synthesis'], desc: 'Maximum prefrontal cortex alertness & working memory' },
+  { start: '10:00', end: '12:30', label: 'SUSTAIN_CREATIVE', type: 'peak', multiplier: 0.85, ideal: ['Problem Solving', 'Learning'], desc: 'High mental bandwidth, low distractibility' },
+  { start: '12:30', end: '13:30', label: 'LUNCH_TRANSITION', type: 'dip', multiplier: 0.5, ideal: ['Decompression', 'Admin'], desc: 'Digestive downshift & metabolic diversion' },
+  { start: '13:30', end: '15:30', label: 'POST_LUNCH_TROUGH', type: 'dip', multiplier: 0.35, ideal: ['Admin', 'Low Effort', 'Light Review'], desc: 'Biological alertness dip; avoid heavy logic synthesis' },
+  { start: '15:30', end: '18:00', label: 'SECOND_WIND', type: 'second_wind', multiplier: 0.75, ideal: ['Collaboration', 'Creative Polish', 'Execution'], desc: 'Rebound alertness, strong verbal & collaborative flow' },
+  { start: '18:00', end: '20:30', label: 'DECLINING_EXECUTIVE', type: 'evening_low', multiplier: 0.55, ideal: ['Exercise', 'Routine Logistics'], desc: 'Physical motor strength peak, declining willpower reserves' },
+  { start: '20:30', end: '23:59', label: 'EVENING_LOW', type: 'evening_low', multiplier: 0.3, ideal: ['Wind Down', 'Passive Review'], desc: 'Melatonin release priming; low cognitive stamina' }
+];
+
+function getCircadianZone(timeStr = '10:00') {
+  const baseMinutes = timeToMinutes(timeStr) ?? 600;
+  for (const zone of CIRCADIAN_ZONES) {
+    const s = timeToMinutes(zone.start) ?? 0;
+    const e = timeToMinutes(zone.end) ?? 1440;
+    if (baseMinutes >= s && baseMinutes < e) {
+      return zone;
+    }
+  }
+  return CIRCADIAN_ZONES[CIRCADIAN_ZONES.length - 1];
+}
+
+/**
+ * Calculates commute and prep buffers for university class schedules on a given date.
+ * Groups classes into one campus trip:
+ * - Prep Buffer: [firstClassStart - travelMin - prepMin, firstClassStart - travelMin]
+ * - Commute to Campus: [firstClassStart - travelMin, firstClassStart]
+ * - Commute Home: [lastClassEnd, lastClassEnd + travelMin]
+ */
+function getDayTripBuffers(schedules: any[] = [], dateStr: string, settings: any = {}): any[] {
+  if (!dateStr || !Array.isArray(schedules) || schedules.length === 0) return [];
+
+  const activeClasses = schedules.filter((s) => {
+    if (!isScheduleActiveOnDate(s, dateStr)) return false;
+    const cat = String(s.category || 'College').toLowerCase();
+    return cat !== 'personal' && cat !== 'anchor' && cat !== 'buffer';
+  });
+
+  if (activeClasses.length === 0) return [];
+
+  const sorted = [...activeClasses].sort((a, b) => {
+    const sA = timeToMinutes(a.startTime) ?? 1440;
+    const sB = timeToMinutes(b.startTime) ?? 1440;
+    return sA - sB;
+  });
+
+  const firstClass = sorted[0];
+  const lastClass = sorted[sorted.length - 1];
+
+  const firstClassStart = timeToMinutes(firstClass.startTime);
+  if (firstClassStart === null) return [];
+
+  let lastClassEnd = timeToMinutes(lastClass.endTime);
+  if (lastClassEnd === null) {
+    const dur = Number(lastClass.durationMinutes) || 60;
+    const s = timeToMinutes(lastClass.startTime);
+    lastClassEnd = s !== null ? s + dur : firstClassStart + 60;
+  }
+
+  const prepMin = Number(settings?.profile?.prepMin ?? settings?.prepMin ?? 60);
+  const travelMin = Number(settings?.profile?.travelMin ?? settings?.travelMin ?? 35);
+
+  const buffers: any[] = [];
+
+  // 1. Morning Prep Buffer
+  const prepStart = Math.max(0, firstClassStart - travelMin - prepMin);
+  const prepEnd = Math.max(0, firstClassStart - travelMin);
+  if (prepEnd > prepStart) {
+    buffers.push({
+      id: `buffer-prep-${dateStr}`,
+      title: 'Trip: Morning Prep',
+      startTime: minutesToTime(prepStart),
+      endTime: minutesToTime(prepEnd),
+      durationMinutes: prepEnd - prepStart,
+      category: 'Buffer',
+      isBuffer: true,
+      isFixed: true,
+      readOnly: true,
+      striped: true,
+      itemType: 'buffer',
+      plannedDate: dateStr
+    });
+  }
+
+  // 2. Commute to Campus (Travel)
+  const travelToStart = prepEnd;
+  const travelToEnd = firstClassStart;
+  if (travelToEnd > travelToStart) {
+    buffers.push({
+      id: `buffer-commute-to-${dateStr}`,
+      title: 'Trip: Commute to Campus',
+      startTime: minutesToTime(travelToStart),
+      endTime: minutesToTime(travelToEnd),
+      durationMinutes: travelToEnd - travelToStart,
+      category: 'Buffer',
+      isBuffer: true,
+      isFixed: true,
+      readOnly: true,
+      striped: true,
+      itemType: 'buffer',
+      plannedDate: dateStr
+    });
+  }
+
+  // 3. Commute Home (Travel)
+  const travelHomeStart = lastClassEnd;
+  const travelHomeEnd = Math.min(1439, lastClassEnd + travelMin);
+  if (travelHomeEnd > travelHomeStart) {
+    buffers.push({
+      id: `buffer-commute-home-${dateStr}`,
+      title: 'Trip: Commute Home',
+      startTime: minutesToTime(travelHomeStart),
+      endTime: minutesToTime(travelHomeEnd),
+      durationMinutes: travelHomeEnd - travelHomeStart,
+      category: 'Buffer',
+      isBuffer: true,
+      isFixed: true,
+      readOnly: true,
+      striped: true,
+      itemType: 'buffer',
+      plannedDate: dateStr
+    });
+  }
+
+  return buffers;
+}
+
+/**
+ * Calculates daily anchors (breakfast, dinner, sleep/lights out) for collision guard and free windows.
+ */
+function getDayAnchors(settings: any = {}, dateStr: string): any[] {
+  const anchorsConfig = settings?.anchors || {};
+  const anchors: any[] = [];
+
+  // Breakfast: default 08:00 - 08:30
+  const bConf = anchorsConfig.breakfast !== undefined ? anchorsConfig.breakfast : { enabled: true, startTime: '08:00', durationMinutes: 30, title: 'Breakfast' };
+  if (bConf && bConf.enabled !== false && bConf.startTime) {
+    const dur = Number(bConf.durationMinutes) || 30;
+    const startMins = timeToMinutes(bConf.startTime);
+    if (startMins !== null) {
+      anchors.push({
+        id: `anchor-breakfast-${dateStr}`,
+        title: bConf.title || 'Breakfast',
+        startTime: bConf.startTime,
+        endTime: minutesToTime(startMins + dur),
+        durationMinutes: dur,
+        category: 'Anchor',
+        isAnchor: true,
+        isFixed: true,
+        readOnly: true,
+        striped: true,
+        itemType: 'anchor',
+        plannedDate: dateStr
+      });
+    }
+  }
+
+  // Dinner: default 19:30 - 20:15
+  const dConf = anchorsConfig.dinner !== undefined ? anchorsConfig.dinner : { enabled: true, startTime: '19:30', durationMinutes: 45, title: 'Dinner' };
+  if (dConf && dConf.enabled !== false && dConf.startTime) {
+    const dur = Number(dConf.durationMinutes) || 45;
+    const startMins = timeToMinutes(dConf.startTime);
+    if (startMins !== null) {
+      anchors.push({
+        id: `anchor-dinner-${dateStr}`,
+        title: dConf.title || 'Dinner',
+        startTime: dConf.startTime,
+        endTime: minutesToTime(startMins + dur),
+        durationMinutes: dur,
+        category: 'Anchor',
+        isAnchor: true,
+        isFixed: true,
+        readOnly: true,
+        striped: true,
+        itemType: 'anchor',
+        plannedDate: dateStr
+      });
+    }
+  }
+
+  // Sleep / Lights Out: default 23:30 - 06:30
+  const sConf = anchorsConfig.lightsOut !== undefined ? anchorsConfig.lightsOut : { enabled: true, startTime: '23:30', durationMinutes: 420, title: 'Sleep / Lights Out' };
+  if (sConf && sConf.enabled !== false && sConf.startTime) {
+    const startMins = timeToMinutes(sConf.startTime);
+    if (startMins !== null) {
+      const dur = Number(sConf.durationMinutes) || 420;
+      anchors.push({
+        id: `anchor-lights-out-${dateStr}`,
+        title: sConf.title || 'Sleep / Lights Out',
+        startTime: sConf.startTime,
+        endTime: minutesToTime(Math.min(1439, startMins + Math.min(dur, 1440 - startMins))),
+        durationMinutes: Math.min(dur, 1440 - startMins),
+        category: 'Anchor',
+        isAnchor: true,
+        isFixed: true,
+        readOnly: true,
+        striped: true,
+        itemType: 'anchor',
+        plannedDate: dateStr
+      });
+    }
+  }
+
+  return anchors;
+}
+
+/**
+ * Resolves a habit's effective time and duration for target date.
+ * Supports per-day habit rules (classDay vs freeDay, or specific weekdays),
+ * single-day overrides, and excluded dates.
+ */
+function resolveHabitForDate(habit: any = {}, dateStr: string, schedules: any[] = []): any {
+  if (!habit) return null;
+
+  // 1. Excluded dates
+  if (Array.isArray(habit.excludedDates) && habit.excludedDates.includes(dateStr)) {
+    return { ...habit, isExcluded: true, active: false, skipReason: 'Excluded date' };
+  }
+
+  // 2. Single-day override
+  const override = habit.overrides && habit.overrides[dateStr];
+  if (override) {
+    if (override.skipped) {
+      return { ...habit, isExcluded: true, active: false, skipReason: 'Single-day skip override' };
+    }
+    return {
+      ...habit,
+      startTime: override.startTime || habit.startTime,
+      durationMinutes: Number(override.durationMinutes || habit.durationMinutes) || 15,
+      isOverride: true,
+      active: true
+    };
+  }
+
+  // 3. habit.rules[]
+  if (Array.isArray(habit.rules) && habit.rules.length > 0) {
+    const targetDate = new Date(`${dateStr}T12:00:00`);
+    const dayOfWeek = isNaN(targetDate.getTime()) ? 0 : targetDate.getDay();
+
+    const hasClasses = Array.isArray(schedules) && schedules.some((s) => {
+      if (!isScheduleActiveOnDate(s, dateStr)) return false;
+      const cat = String(s.category || 'College').toLowerCase();
+      return cat !== 'personal' && cat !== 'anchor' && cat !== 'buffer';
+    });
+    const currentDayType = hasClasses ? 'classDay' : 'freeDay';
+
+    let matchedRule = null;
+    for (const rule of habit.rules) {
+      if (rule.days) {
+        const normDays = normalizeRepeatDays(rule.days);
+        if (normDays.includes(dayOfWeek)) {
+          matchedRule = rule;
+          break;
+        }
+      } else if (rule.dayType && rule.dayType === currentDayType) {
+        matchedRule = rule;
+        break;
+      }
+    }
+
+    if (matchedRule) {
+      return {
+        ...habit,
+        startTime: matchedRule.startTime || habit.startTime,
+        durationMinutes: Number(matchedRule.durationMinutes || matchedRule.duration || habit.durationMinutes) || 15,
+        matchedRule,
+        dayType: currentDayType,
+        active: true
+      };
+    }
+  }
+
+  // 4. Fallback: existing habit properties
+  return {
+    ...habit,
+    startTime: habit.startTime || null,
+    durationMinutes: Number(habit.durationMinutes || habit.duration) || 15,
+    active: true
+  };
+}
+
+/**
+ * Calculates open free intervals on a date after subtracting:
+ * - Timetable classes
+ * - Commute & prep buffers (morning prep, travel to/from campus)
+ * - Daily anchors (breakfast, dinner, sleep/lights out)
+ * - Timed tasks & habits
+ */
+function calculateFreeWindows({
+  date,
+  tasks = [],
+  schedules = [],
+  habits = [],
+  settings = {},
+  workDayStart = '06:00',
+  workDayEnd = '23:30',
+  minDurationMinutes = 15,
+  now = new Date()
+}: {
+  date: string;
+  tasks?: any[];
+  schedules?: any[];
+  habits?: any[];
+  settings?: any;
+  workDayStart?: string;
+  workDayEnd?: string;
+  minDurationMinutes?: number;
+  now?: Date;
+}) {
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+  const todayStr = now.toISOString().slice(0, 10);
+  const isToday = date === todayStr;
+
+  const startLimit = Math.max(0, timeToMinutes(workDayStart) ?? 360);
+  const endLimit = Math.min(1439, timeToMinutes(workDayEnd) ?? 1410);
+
+  const occupied: any[] = [];
+
+  // 1. Classes
+  const activeSchedules = (schedules || []).filter((s) => isScheduleActiveOnDate(s, date));
+  for (const s of activeSchedules) {
+    const sM = timeToMinutes(s.startTime);
+    if (sM === null) continue;
+    let dur = Number(s.durationMinutes);
+    if (!dur || isNaN(dur)) {
+      if (s.endTime) {
+        const eM = timeToMinutes(s.endTime);
+        if (eM !== null && eM > sM) dur = eM - sM;
+      }
+    }
+    if (!dur || isNaN(dur)) dur = 60;
+    occupied.push({
+      startMins: sM,
+      endMins: sM + dur,
+      title: s.title || 'Schedule Block',
+      category: s.category || 'College',
+      itemType: 'schedule',
+      startTime: s.startTime,
+      endTime: s.endTime || minutesToTime(sM + dur),
+      durationMinutes: dur
+    });
+  }
+
+  // 2. Trip buffers
+  const tripBuffers = getDayTripBuffers(schedules, date, settings);
+  for (const b of tripBuffers) {
+    const sM = timeToMinutes(b.startTime);
+    const eM = timeToMinutes(b.endTime);
+    if (sM !== null && eM !== null && eM > sM) {
+      occupied.push({
+        startMins: sM,
+        endMins: eM,
+        title: b.title,
+        category: 'Buffer',
+        itemType: 'buffer',
+        startTime: b.startTime,
+        endTime: b.endTime,
+        durationMinutes: eM - sM
+      });
+    }
+  }
+
+  // 3. Daily anchors
+  const anchors = getDayAnchors(settings, date);
+  for (const a of anchors) {
+    const sM = timeToMinutes(a.startTime);
+    const eM = timeToMinutes(a.endTime);
+    if (sM !== null && eM !== null && eM > sM) {
+      occupied.push({
+        startMins: sM,
+        endMins: eM,
+        title: a.title,
+        category: 'Anchor',
+        itemType: 'anchor',
+        startTime: a.startTime,
+        endTime: a.endTime,
+        durationMinutes: eM - sM
+      });
+    }
+  }
+
+  // 4. Timed tasks
+  for (const t of tasks || []) {
+    if (t.isBacklog || t.dueDate === 'Someday') continue;
+    if (!isTaskActiveOnDate(t, date)) continue;
+    if (!t.startTime) continue;
+    const sM = timeToMinutes(t.startTime);
+    if (sM === null) continue;
+    const dur = Number(t.durationMinutes) || 45;
+    occupied.push({
+      startMins: sM,
+      endMins: sM + dur,
+      title: t.title || 'Task',
+      category: (Array.isArray(t.areas) ? t.areas[0] : t.category) || 'Tasks',
+      itemType: 'task',
+      startTime: t.startTime,
+      endTime: t.endTime || minutesToTime(sM + dur),
+      durationMinutes: dur,
+      completed: Boolean(t.completed)
+    });
+  }
+
+  // 5. Timed habits
+  for (const h of habits || []) {
+    const resolved = resolveHabitForDate(h, date, schedules);
+    if (!resolved || !resolved.active || !resolved.startTime) continue;
+    const sM = timeToMinutes(resolved.startTime);
+    if (sM === null) continue;
+    const dur = Number(resolved.durationMinutes) || 15;
+    occupied.push({
+      startMins: sM,
+      endMins: sM + dur,
+      title: resolved.title || 'Habit',
+      category: 'Habit',
+      itemType: 'habit',
+      startTime: resolved.startTime,
+      endTime: minutesToTime(sM + dur),
+      durationMinutes: dur
+    });
+  }
+
+  // Merge occupied
+  occupied.sort((a, b) => a.startMins - b.startMins);
+  const mergedBusy: Array<{ startMins: number; endMins: number }> = [];
+  for (const item of occupied) {
+    const s = Math.max(startLimit, item.startMins);
+    const e = Math.min(endLimit, item.endMins);
+    if (e <= s) continue;
+    if (mergedBusy.length === 0) {
+      mergedBusy.push({ startMins: s, endMins: e });
+    } else {
+      const last = mergedBusy[mergedBusy.length - 1];
+      if (s <= last.endMins) {
+        last.endMins = Math.max(last.endMins, e);
+      } else {
+        mergedBusy.push({ startMins: s, endMins: e });
+      }
+    }
+  }
+
+  // Invert for free windows
+  const rawWindows: Array<{ startMins: number; endMins: number; durationMinutes: number }> = [];
+  let cursor = startLimit;
+  for (const busy of mergedBusy) {
+    if (busy.startMins > cursor) {
+      const freeDur = busy.startMins - cursor;
+      if (freeDur >= minDurationMinutes) {
+        rawWindows.push({ startMins: cursor, endMins: busy.startMins, durationMinutes: freeDur });
+      }
+    }
+    cursor = Math.max(cursor, busy.endMins);
+  }
+  if (cursor < endLimit) {
+    const freeDur = endLimit - cursor;
+    if (freeDur >= minDurationMinutes) {
+      rawWindows.push({ startMins: cursor, endMins: endLimit, durationMinutes: freeDur });
+    }
+  }
+
+  // Enrich with circadian metadata
+  const windows = rawWindows.map((w) => {
+    const startTime = minutesToTime(w.startMins);
+    const endTime = minutesToTime(w.endMins);
+    const zone = getCircadianZone(startTime);
+    const isPast = isToday && w.endMins <= currentMins;
+    const isCurrent = isToday && currentMins >= w.startMins && currentMins < w.endMins;
+    const remainingMinutes = isCurrent ? w.endMins - currentMins : (isPast ? 0 : w.durationMinutes);
+
+    return {
+      startTime,
+      endTime,
+      durationMinutes: w.durationMinutes,
+      startMins: w.startMins,
+      endMins: w.endMins,
+      circadianZone: zone.label,
+      circadianType: zone.type || 'peak',
+      circadianMultiplier: zone.multiplier,
+      recommendedModality: (zone.ideal && zone.ideal[0]) || 'Deep Focus',
+      description: zone.desc,
+      isCurrent,
+      isPast,
+      remainingMinutes
+    };
+  });
+
+  const totalFreeMinutes = windows.reduce((acc, w) => acc + (w.isPast ? 0 : w.remainingMinutes || w.durationMinutes), 0);
+  const dayType = activeSchedules.length > 0 ? 'classDay' : 'freeDay';
+
+  return {
+    date,
+    dayType,
+    totalFreeMinutes,
+    windows,
+    occupiedBlocks: occupied
+  };
+}
+
+/**
+ * Replan from now engine:
+ * Reschedules missed and upcoming unpinned tasks into optimal free slots from fromTime forward.
+ */
+function replanFromNowHandler({
+  date,
+  fromTime,
+  tasks = [],
+  schedules = [],
+  habits = [],
+  settings = {},
+  taskIds = null,
+  deepWorkCeilingMin = 240,
+  dryRun = true,
+  now = new Date()
+}: {
+  date: string;
+  fromTime?: string | null;
+  tasks?: any[];
+  schedules?: any[];
+  habits?: any[];
+  settings?: any;
+  taskIds?: string[] | null;
+  deepWorkCeilingMin?: number;
+  dryRun?: boolean;
+  now?: Date;
+}) {
+  const isToday = date === now.toISOString().slice(0, 10);
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+
+  let fromMins: number;
+  if (fromTime) {
+    fromMins = timeToMinutes(fromTime) ?? (isToday ? currentMins : 8 * 60);
+  } else {
+    fromMins = isToday ? currentMins : 8 * 60;
+  }
+  fromMins = Math.ceil(fromMins / 5) * 5;
+
+  const ceilingMin = Number(deepWorkCeilingMin ?? settings?.deepWorkCeilingMin ?? 240);
+  const targetIdSet = Array.isArray(taskIds) && taskIds.length > 0 ? new Set(taskIds.map(String)) : null;
+
+  const pinnedTasks: any[] = [];
+  const candidateTasks: any[] = [];
+  const untouchedTasks: any[] = [];
+
+  for (const t of tasks || []) {
+    if (t.isBacklog || t.dueDate === 'Someday' || t.completed) {
+      untouchedTasks.push(t);
+      continue;
+    }
+
+    const isScheduled = isTaskActiveOnDate(t, date);
+    const matchesIdFilter = targetIdSet ? targetIdSet.has(String(t.id)) : true;
+
+    if (t.isPinned || t.pinned) {
+      pinnedTasks.push(t);
+      continue;
+    }
+
+    if (targetIdSet) {
+      if (matchesIdFilter) {
+        candidateTasks.push(t);
+      } else {
+        untouchedTasks.push(t);
+      }
+      continue;
+    }
+
+    if (!isScheduled) {
+      untouchedTasks.push(t);
+      continue;
+    }
+
+    candidateTasks.push(t);
+  }
+
+  // Treat pinned tasks as fixed schedules
+  const effectiveSchedules = [
+    ...(schedules || []),
+    ...pinnedTasks.map((pt) => ({
+      ...pt,
+      isSchedule: true,
+      category: 'PinnedTask'
+    }))
+  ];
+
+  const freeWindowsResult = calculateFreeWindows({
+    date,
+    tasks: [],
+    schedules: effectiveSchedules,
+    habits,
+    settings,
+    workDayStart: minutesToTime(fromMins),
+    workDayEnd: settings?.anchors?.lightsOut?.startTime || '23:30',
+    minDurationMinutes: 10,
+    now
+  });
+
+  const availableWindows = freeWindowsResult.windows.filter((w) => w.endMins > fromMins).map((w) => ({
+    ...w,
+    startMins: Math.max(w.startMins, fromMins),
+    durationMinutes: w.endMins - Math.max(w.startMins, fromMins)
+  }));
+
+  const priorityRank = (p = '') => {
+    const s = String(p).toLowerCase();
+    if (s === 'high' || s === 'urgent') return 3;
+    if (s === 'normal' || s === 'medium') return 2;
+    return 1;
+  };
+
+  candidateTasks.sort((a, b) => {
+    if (Array.isArray(b.dependsOn) && b.dependsOn.includes(a.id)) return -1;
+    if (Array.isArray(a.dependsOn) && a.dependsOn.includes(b.id)) return 1;
+
+    if (a.dueDate && b.dueDate && a.dueDate !== b.dueDate) {
+      return a.dueDate.localeCompare(b.dueDate);
+    }
+
+    const pDiff = priorityRank(b.priority) - priorityRank(a.priority);
+    if (pDiff !== 0) return pDiff;
+
+    const sA = timeToMinutes(a.startTime) ?? 9999;
+    const sB = timeToMinutes(b.startTime) ?? 9999;
+    return sA - sB;
+  });
+
+  const movedTasks: any[] = [];
+  const unplacedTasks: any[] = [];
+  let accumulatedDeepWorkMins = 0;
+
+  for (const pt of pinnedTasks) {
+    if (pt.energy === 'High' || pt.effort === 'high') {
+      accumulatedDeepWorkMins += Number(pt.durationMinutes) || 45;
+    }
+  }
+
+  for (const task of candidateTasks) {
+    const dur = Number(task.durationMinutes) || 45;
+    const isDeepWork = task.energy === 'High' || task.effort === 'high';
+
+    let placed = false;
+
+    for (let i = 0; i < availableWindows.length; i++) {
+      const win = availableWindows[i];
+      if (win.durationMinutes >= dur) {
+        let exceedsDeepWork = false;
+        if (isDeepWork && (accumulatedDeepWorkMins + dur > ceilingMin)) {
+          exceedsDeepWork = true;
+        }
+
+        const newStartMins = win.startMins;
+        const newEndMins = newStartMins + dur;
+        const newStart = minutesToTime(newStartMins);
+        const newEnd = minutesToTime(newEndMins);
+
+        let shortfallMinutes = 0;
+        let warning: string | undefined;
+        if (task.deadlineTime) {
+          const deadMins = timeToMinutes(task.deadlineTime);
+          if (deadMins !== null && newEndMins > deadMins) {
+            shortfallMinutes = newEndMins - deadMins;
+            warning = `Task misses deadline (${task.deadlineTime}) by ${shortfallMinutes} minutes`;
+          }
+        }
+
+        if (exceedsDeepWork) {
+          warning = (warning ? warning + '. ' : '') + `Exceeds deep work daily ceiling (${ceilingMin}m).`;
+        }
+
+        const zone = getCircadianZone(newStart);
+
+        movedTasks.push({
+          id: task.id,
+          title: task.title,
+          oldStartTime: task.startTime || null,
+          oldEndTime: task.endTime || null,
+          newStartTime: newStart,
+          newEndTime: newEnd,
+          durationMinutes: dur,
+          plannedDate: date,
+          circadianZone: zone.label,
+          circadianType: zone.type || 'peak',
+          warning
+        });
+
+        if (isDeepWork) accumulatedDeepWorkMins += dur;
+
+        const nextStartMins = newEndMins + 5;
+        if (nextStartMins < win.endMins) {
+          win.startMins = nextStartMins;
+          win.durationMinutes = win.endMins - nextStartMins;
+        } else {
+          availableWindows.splice(i, 1);
+        }
+
+        placed = true;
+        break;
+      }
+    }
+
+    if (!placed) {
+      unplacedTasks.push({
+        id: task.id,
+        title: task.title,
+        durationMinutes: dur,
+        reason: 'No remaining free window of required duration before day end',
+        shortfallMinutes: dur
+      });
+    }
+  }
+
+  const movedMap = new Map(movedTasks.map((m) => [String(m.id), m]));
+  const updatedTasks = (tasks || []).map((t) => {
+    const moved = movedMap.get(String(t.id));
+    if (moved) {
+      return {
+        ...t,
+        startTime: moved.newStartTime,
+        endTime: moved.newEndTime,
+        durationMinutes: moved.durationMinutes,
+        plannedDate: moved.plannedDate,
+        date: moved.plannedDate
+      };
+    }
+    return t;
+  });
+
+  return {
+    date,
+    fromTime: minutesToTime(fromMins),
+    dryRun: Boolean(dryRun),
+    deepWorkCeilingMin: ceilingMin,
+    accumulatedDeepWorkMinutes: accumulatedDeepWorkMins,
+    totalCandidates: candidateTasks.length,
+    movedCount: movedTasks.length,
+    unplacedCount: unplacedTasks.length,
+    movedTasks,
+    pinnedTasksSkipped: pinnedTasks.map((p) => ({
+      id: p.id,
+      title: p.title,
+      startTime: p.startTime,
+      reason: 'Pinned by user'
+    })),
+    unplacedTasks,
+    remainingFreeWindows: availableWindows.map((w) => ({
+      startTime: minutesToTime(w.startMins),
+      endTime: minutesToTime(w.endMins),
+      durationMinutes: w.durationMinutes
+    })),
+    updatedTasks
+  };
+}
+
 /**
  * Renders expanded daily calendar view for date range [startDate, endDate].
  */
@@ -396,7 +1149,8 @@ function renderCalendar(
   habits: any[],
   startDate: string,
   endDate: string,
-  now = new Date()
+  now = new Date(),
+  settings: any = {}
 ) {
   const result: any[] = [];
   const start = new Date(`${startDate}T12:00:00`);
@@ -426,6 +1180,9 @@ function renderCalendar(
         itemType: 'schedule'
       }));
 
+    const tripBuffers = getDayTripBuffers(schedules, dStr, settings);
+    const dailyAnchors = getDayAnchors(settings, dStr);
+
     const dayTasks = tasks
       .filter((t) => isTaskActiveOnDate(t, dStr))
       .map((t) => ({
@@ -441,7 +1198,7 @@ function renderCalendar(
         itemType: 'task'
       }));
 
-    const combinedItems = [...daySchedules, ...dayTasks];
+    const combinedItems = [...daySchedules, ...tripBuffers, ...dailyAnchors, ...dayTasks];
     const collisions = detectCollisions(combinedItems);
 
     const past: any[] = [];
@@ -472,19 +1229,28 @@ function renderCalendar(
       }
     }
 
-    const dayHabits = habits.map((h) => ({
-      id: h.id,
-      title: h.title,
-      cadence: h.cadence || 'Anytime',
-      startTime: h.startTime || null,
-      completed: Array.isArray(h.completedDays) && h.completedDays.includes(dStr)
-    }));
+    const dayHabits = habits.map((h) => {
+      const resolved = resolveHabitForDate(h, dStr, schedules);
+      return {
+        id: h.id,
+        title: h.title,
+        cadence: h.cadence || 'Anytime',
+        startTime: resolved.startTime,
+        durationMinutes: resolved.durationMinutes,
+        completed: Array.isArray(h.completedDays) && h.completedDays.includes(dStr),
+        isExcluded: Boolean(resolved.isExcluded),
+        isClassDay: resolved.dayType === 'classDay'
+      };
+    });
 
     result.push({
       date: dStr,
       dayOfWeek,
+      dayType: daySchedules.length > 0 ? 'classDay' : 'freeDay',
       timeline: { past, activeNow, upcoming },
       schedules: daySchedules,
+      tripBuffers,
+      dailyAnchors,
       tasks: dayTasks,
       habits: dayHabits,
       collisions
@@ -712,15 +1478,100 @@ const MCP_TOOLS = [
   },
   {
     name: 'manage_habits',
-    description: 'Create, update in-place, check-in, or delete daily habits in Momentum OS.',
+    description: 'Create, update in-place, check-in, complete, or delete daily habits in Momentum OS. Supports per-day rules (classDay vs freeDay, or specific weekdays), single-day overrides, and excluded dates.',
     inputSchema: {
       type: 'object',
       required: ['action'],
       properties: {
-        action: { type: 'string', enum: ['create', 'update', 'checkin', 'delete'] },
-        habits: { type: 'array', items: { type: 'object' } },
+        action: { type: 'string', enum: ['create', 'update', 'checkin', 'complete', 'delete'] },
+        habits: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              startTime: { type: 'string' },
+              durationMinutes: { type: 'number' },
+              cadence: { type: 'string' },
+              rules: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    dayType: { type: 'string', enum: ['classDay', 'freeDay'] },
+                    days: { type: 'array', items: { type: ['number', 'string'] } },
+                    startTime: { type: 'string' },
+                    durationMinutes: { type: 'number' }
+                  }
+                }
+              },
+              excludedDates: { type: 'array', items: { type: 'string' } },
+              overrides: { type: 'object' }
+            }
+          }
+        },
+        habitId: { type: 'string', description: 'Single habit ID for checkin/complete/delete.' },
         habitIds: { type: 'array', items: { type: 'string' } },
-        date: { type: 'string' }
+        date: { type: 'string', description: 'Date to check in for (defaults to today).' }
+      }
+    }
+  },
+  {
+    name: 'get_free_windows',
+    description:
+      'Return free time intervals for a given date after accounting for university classes, commute/prep buffers (60m prep, 35m travel), daily anchors (meals, sleep), and existing tasks. Tagged with circadian energy curve (peak, dip, second_wind, evening_low) and recommended modalities.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'Target date in YYYY-MM-DD format (defaults to today).' },
+        workDayStart: { type: 'string', description: 'Start of waking day, e.g. "06:00" (default: "06:00").' },
+        workDayEnd: { type: 'string', description: 'End of waking day, e.g. "23:30" (default: "23:30").' },
+        minDurationMinutes: { type: 'number', description: 'Minimum free window size in minutes (default: 15).' },
+        includePast: { type: 'boolean', description: 'If true, returns earlier windows from today that have passed.' }
+      }
+    }
+  },
+  {
+    name: 'replan_from_now',
+    description:
+      'Intelligently reschedule missed and upcoming unpinned tasks into optimal free slots from the current time forward. Respects pinned tasks (never moves them), university classes, commute buffers, meals/sleep anchors, and circadian energy curve. Enforces daily deep work ceiling and flags deadline shortfalls. Supports dryRun diff preview.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'Target YYYY-MM-DD date (defaults to today).' },
+        fromTime: { type: 'string', description: 'Start time for replanning in HH:MM format (defaults to current time if today).' },
+        taskIds: { type: 'array', items: { type: 'string' }, description: 'Optional list of specific task IDs to replan.' },
+        deepWorkCeilingMin: { type: 'number', description: 'Max deep work minutes allowed today (default 240).' },
+        dryRun: { type: 'boolean', description: 'If true, returns preview diff without committing changes (default true).' }
+      }
+    }
+  },
+  {
+    name: 'manage_settings',
+    description:
+      'View or update user preferences and scheduling parameters: prepMin, travelMin, deepWorkCeilingMin, and daily anchors (breakfast, dinner, sleep/lights out).',
+    inputSchema: {
+      type: 'object',
+      required: ['action'],
+      properties: {
+        action: { type: 'string', enum: ['get', 'update'] },
+        settings: {
+          type: 'object',
+          properties: {
+            prepMin: { type: 'number', description: 'Prep buffer before campus departure in minutes (default 60).' },
+            travelMin: { type: 'number', description: 'One-way commute duration in minutes (default 35).' },
+            deepWorkCeilingMin: { type: 'number', description: 'Daily deep work ceiling in minutes (default 240).' },
+            anchors: {
+              type: 'object',
+              properties: {
+                breakfast: { type: 'object' },
+                dinner: { type: 'object' },
+                lightsOut: { type: 'object' }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -863,20 +1714,23 @@ async function executeTool(
   const goals: any[] = Array.isArray(workspace.goals) ? [...workspace.goals] : [];
   const habits: any[] = Array.isArray(workspace.habits) ? [...workspace.habits] : [];
   const schedules: any[] = Array.isArray(workspace.schedules) ? [...workspace.schedules] : [];
+  const settings: Record<string, any> = workspace.settings && typeof workspace.settings === 'object' ? { ...workspace.settings } : {};
 
   const saveWorkspace = async (
     nextTasks = tasks,
     nextGoals = goals,
     nextHabits = habits,
     nextSchedules = schedules,
-    actionSummary = ''
+    actionSummary = '',
+    nextSettings = settings
   ) => {
     // Retain up to 5 snapshots in undo history
     const prevSnapshot = {
       tasks: [...tasks],
       goals: [...goals],
       habits: [...habits],
-      schedules: [...schedules]
+      schedules: [...schedules],
+      settings: { ...settings }
     };
     const history = Array.isArray(workspace._undoHistory) ? [...workspace._undoHistory] : [];
     history.unshift({
@@ -892,6 +1746,7 @@ async function executeTool(
       goals: nextGoals,
       habits: nextHabits,
       schedules: nextSchedules,
+      settings: nextSettings,
       _undoHistory: history,
       _mcpUpdated: Date.now()
     };
@@ -918,7 +1773,10 @@ async function executeTool(
       .filter((t) => isTaskActiveOnDate(t, targetDate))
       .map((t) => ({ ...t, itemType: 'task' }));
 
-    const combined = [...daySchedules, ...dayTasks];
+    const tripBuffers = getDayTripBuffers(schedules, targetDate, settings);
+    const dailyAnchors = getDayAnchors(settings, targetDate);
+
+    const combined = [...daySchedules, ...tripBuffers, ...dailyAnchors, ...dayTasks];
     const conflicts = detectCollisions(combined);
 
     const past: any[] = [];
@@ -954,12 +1812,13 @@ async function executeTool(
     const rangeStart = typeof args.startDate === 'string' ? args.startDate : (typeof args.daysAhead === 'number' ? targetDate : null);
     const rangeEnd = typeof args.endDate === 'string' ? args.endDate : (typeof args.daysAhead === 'number' ? addDays(targetDate, Number(args.daysAhead)) : null);
     if (rangeStart && rangeEnd) {
-      renderedCalendar = renderCalendar(tasks, schedules, habits, rangeStart, rangeEnd, now);
+      renderedCalendar = renderCalendar(tasks, schedules, habits, rangeStart, rangeEnd, now, settings);
     }
 
     return {
       todayDate: today,
       targetDate,
+      dayType: daySchedules.length > 0 ? 'classDay' : 'freeDay',
       counts: {
         tasks: tasks.length,
         openTasks: tasks.filter((t) => !t.completed).length,
@@ -969,6 +1828,9 @@ async function executeTool(
       },
       timeline: { past, activeNow, upcoming },
       conflicts,
+      tripBuffers,
+      dailyAnchors,
+      settings,
       goals: goals.map((g) => ({
         id: g.id,
         title: g.title,
@@ -977,17 +1839,25 @@ async function executeTool(
         targetDate: g.targetDate || 'open',
         why: g.why || ''
       })),
-      habits: habits.map((h) => ({
-        id: h.id,
-        title: h.title,
-        cadence: h.cadence || 'Anytime',
-        startTime: h.startTime || null,
-        duration: h.duration || '30 mins',
-        targetFrequency: h.targetFrequency || 'Every Day',
-        graceDays: h.graceDays ?? 0,
-        completedToday: Array.isArray(h.completedDays) && h.completedDays.includes(targetDate),
-        linkedGoal: h.linkedGoal || null
-      })),
+      habits: habits.map((h) => {
+        const resolved = resolveHabitForDate(h, targetDate, schedules);
+        return {
+          id: h.id,
+          title: h.title,
+          cadence: h.cadence || 'Anytime',
+          startTime: resolved.startTime,
+          durationMinutes: resolved.durationMinutes,
+          rules: h.rules || [],
+          excludedDates: h.excludedDates || [],
+          overrides: h.overrides || {},
+          targetFrequency: h.targetFrequency || 'Every Day',
+          graceDays: h.graceDays ?? 2,
+          completedToday: Array.isArray(h.completedDays) && h.completedDays.includes(targetDate),
+          linkedGoal: h.linkedGoal || null,
+          isClassDay: resolved.dayType === 'classDay',
+          isExcluded: Boolean(resolved.isExcluded)
+        };
+      }),
       schedules: schedules.map((s) => ({
         id: s.id,
         title: s.title,
@@ -1024,7 +1894,7 @@ async function executeTool(
   if (toolName === 'get_calendar_view') {
     const startDate = typeof args.startDate === 'string' && args.startDate ? args.startDate : today;
     const endDate = typeof args.endDate === 'string' && args.endDate ? args.endDate : addDays(startDate, 7);
-    const rendered = renderCalendar(tasks, schedules, habits, startDate, endDate);
+    const rendered = renderCalendar(tasks, schedules, habits, startDate, endDate, new Date(), settings);
     return {
       startDate,
       endDate,
@@ -1039,7 +1909,33 @@ async function executeTool(
     const activeScheds = schedules.filter((s) => isScheduleActiveOnDate(s, targetDate)).map((s) => ({ ...s, itemType: 'schedule' }));
     const activeTasks = tasks.filter((t) => isTaskActiveOnDate(t, targetDate)).map((t) => ({ ...t, itemType: 'task' }));
 
-    const items = [...activeScheds, ...activeTasks];
+    const tripBuffers = getDayTripBuffers(schedules, targetDate, settings);
+    const dailyAnchors = getDayAnchors(settings, targetDate);
+
+    const items = [...activeScheds, ...tripBuffers, ...dailyAnchors, ...activeTasks];
+    if (args.candidate && typeof args.candidate === 'object') {
+      const cand = args.candidate as any;
+      const reconciled = reconcileTimeAndDuration(cand.startTime, cand.endTime, cand.durationMinutes);
+      items.push({
+        id: 'candidate-probe',
+        title: cand.title || 'Proposed Block',
+        startTime: reconciled.startTime,
+        endTime: reconciled.endTime,
+        durationMinutes: reconciled.durationMinutes,
+        itemType: 'candidate'
+      });
+    }
+
+    const conflicts = detectCollisions(items);
+    return {
+      date: targetDate,
+      hasConflicts: conflicts.length > 0,
+      conflictCount: conflicts.length,
+      conflicts,
+      tripBuffers,
+      dailyAnchors
+    };
+  }
     if (args.candidate && typeof args.candidate === 'object') {
       const cand = args.candidate as any;
       const reconciled = reconcileTimeAndDuration(cand.startTime, cand.endTime, cand.durationMinutes);
@@ -1548,12 +2444,13 @@ async function executeTool(
     const action = String(args.action || 'create');
     const inputHabits = Array.isArray(args.habits) ? args.habits : [];
     const targetIds = new Set(Array.isArray(args.habitIds) ? args.habitIds.map(String) : []);
+    if (args.habitId) targetIds.add(String(args.habitId));
     const checkDate = typeof args.date === 'string' && args.date ? args.date : today;
     let nextHabits = [...habits];
 
     if (action === 'delete') {
       nextHabits = nextHabits.filter((h) => !targetIds.has(String(h.id)));
-    } else if (action === 'checkin') {
+    } else if (action === 'checkin' || action === 'complete') {
       nextHabits = nextHabits.map((h) => {
         if (!targetIds.has(String(h.id))) return h;
         const days = Array.isArray(h.completedDays) ? [...h.completedDays] : [];
@@ -1576,10 +2473,14 @@ async function executeTool(
           startTime: raw.startTime || null,
           isTimeBlocked: Boolean(raw.startTime),
           duration: raw.duration || '30 mins',
+          durationMinutes: Number(raw.durationMinutes) || 30,
           targetFrequency: raw.targetFrequency || 'Every Day',
           icon: raw.icon || 'bolt',
           colorToken: raw.colorToken || 'primary',
           linkedGoal: raw.linkedGoal || '',
+          rules: Array.isArray(raw.rules) ? raw.rules : [],
+          excludedDates: Array.isArray(raw.excludedDates) ? raw.excludedDates : [],
+          overrides: raw.overrides || {},
           graceDays: 2,
           completedDays: []
         });
@@ -1587,7 +2488,21 @@ async function executeTool(
     }
 
     await saveWorkspace(tasks, goals, nextHabits, schedules, `Managed habits: ${action}`);
-    return { success: true, action, totalHabits: nextHabits.length };
+    return {
+      success: true,
+      action,
+      totalHabits: nextHabits.length,
+      habits: nextHabits.map((h) => ({
+        id: h.id,
+        title: h.title,
+        startTime: h.startTime,
+        durationMinutes: h.durationMinutes || 30,
+        rules: h.rules || [],
+        excludedDates: h.excludedDates || [],
+        overrides: h.overrides || {},
+        effectiveForDate: resolveHabitForDate(h, checkDate, schedules)
+      }))
+    };
   }
 
   /* ── 7. manage_goals ── */
@@ -1890,6 +2805,7 @@ async function executeTool(
       goals: restored.goals || [],
       habits: restored.habits || [],
       schedules: restored.schedules || [],
+      ...(restored.settings ? { settings: restored.settings } : {}),
       _undoHistory: history,
       _mcpUpdated: Date.now()
     };
@@ -1909,6 +2825,125 @@ async function executeTool(
         goals: updatedData.goals.length,
         habits: updatedData.habits.length
       }
+    };
+  }
+
+  /* ── 10. get_free_windows ── */
+  if (toolName === 'get_free_windows') {
+    const targetDate = typeof args.date === 'string' && args.date ? args.date : today;
+    const workDayStart = typeof args.workDayStart === 'string' && args.workDayStart ? args.workDayStart : '06:00';
+    const workDayEnd = typeof args.workDayEnd === 'string' && args.workDayEnd ? args.workDayEnd : '23:30';
+    const minDur = typeof args.minDurationMinutes === 'number' ? args.minDurationMinutes : 15;
+    const includePast = Boolean(args.includePast);
+
+    const result = calculateFreeWindows({
+      date: targetDate,
+      tasks,
+      schedules,
+      habits,
+      settings,
+      workDayStart,
+      workDayEnd,
+      minDurationMinutes: minDur,
+      now: new Date()
+    });
+
+    const filteredWindows = includePast ? result.windows : result.windows.filter((w: any) => !w.isPast);
+
+    return {
+      success: true,
+      date: targetDate,
+      dayType: result.dayType,
+      totalFreeMinutes: result.totalFreeMinutes,
+      freeWindowCount: filteredWindows.length,
+      windows: filteredWindows,
+      occupiedBlocks: result.occupiedBlocks,
+      summary: `Found ${filteredWindows.length} free windows (${result.totalFreeMinutes}m total) on ${targetDate} (${result.dayType}).`
+    };
+  }
+
+  /* ── 11. replan_from_now ── */
+  if (toolName === 'replan_from_now' || toolName === 'replan_day') {
+    const targetDate = typeof args.date === 'string' && args.date ? args.date : today;
+    const fromTime = typeof args.fromTime === 'string' ? args.fromTime : null;
+    const isDryRun = args.dryRun !== undefined ? Boolean(args.dryRun) : true;
+    const taskIds = Array.isArray(args.taskIds) ? args.taskIds.map(String) : null;
+    const deepWorkCeilingMin = typeof args.deepWorkCeilingMin === 'number' ? args.deepWorkCeilingMin : (settings.deepWorkCeilingMin || 240);
+
+    const replanResult = replanFromNowHandler({
+      date: targetDate,
+      fromTime,
+      tasks,
+      schedules,
+      habits,
+      settings,
+      taskIds,
+      deepWorkCeilingMin,
+      dryRun: isDryRun,
+      now: new Date()
+    });
+
+    if (!isDryRun && replanResult.movedTasks.length > 0) {
+      await saveWorkspace(
+        replanResult.updatedTasks,
+        goals,
+        habits,
+        schedules,
+        `Replan from now: shifted ${replanResult.movedTasks.length} tasks`
+      );
+    }
+
+    return {
+      success: true,
+      action: 'replan_from_now',
+      date: targetDate,
+      fromTime: replanResult.fromTime,
+      dryRun: isDryRun,
+      deepWorkCeilingMin: replanResult.deepWorkCeilingMin,
+      accumulatedDeepWorkMinutes: replanResult.accumulatedDeepWorkMinutes,
+      totalCandidates: replanResult.totalCandidates,
+      movedCount: replanResult.movedCount,
+      unplacedCount: replanResult.unplacedCount,
+      movedTasks: replanResult.movedTasks,
+      pinnedTasksSkipped: replanResult.pinnedTasksSkipped,
+      unplacedTasks: replanResult.unplacedTasks,
+      remainingFreeWindows: replanResult.remainingFreeWindows,
+      summary: isDryRun
+        ? `[Dry Run] Simulated moving ${replanResult.movedCount} tasks into optimal free slots. Pass dryRun: false to apply.`
+        : `Successfully replanned and persisted ${replanResult.movedCount} tasks into optimal free slots.`
+    };
+  }
+
+  /* ── 12. manage_settings ── */
+  if (toolName === 'manage_settings') {
+    const action = String(args.action || 'get');
+    if (action === 'update' && args.settings && typeof args.settings === 'object') {
+      const incoming = args.settings as Record<string, any>;
+      const nextSettings = {
+        ...settings,
+        ...incoming,
+        profile: {
+          ...(settings.profile || {}),
+          ...(incoming.profile || {}),
+          ...(incoming.prepMin !== undefined ? { prepMin: incoming.prepMin } : {}),
+          ...(incoming.travelMin !== undefined ? { travelMin: incoming.travelMin } : {})
+        },
+        anchors: {
+          ...(settings.anchors || {}),
+          ...(incoming.anchors || {})
+        }
+      };
+      await saveWorkspace(tasks, goals, habits, schedules, 'Updated user settings', nextSettings);
+      return {
+        success: true,
+        action: 'update',
+        settings: nextSettings
+      };
+    }
+    return {
+      success: true,
+      action: 'get',
+      settings
     };
   }
 
@@ -2096,6 +3131,12 @@ Deno.serve(async (request) => {
     return jsonResponse(result);
   }
 
+  if (request.method === 'GET' && path.endsWith('/free-windows')) {
+    const dateParam = url.searchParams.get('date') || '';
+    const result = await executeTool('get_free_windows', { date: dateParam }, auth.userId, auth.workspace, admin);
+    return jsonResponse(result);
+  }
+
   const restRouteMap: Record<string, string> = {
     '/tasks': 'schedule_tasks',
     '/timetable': 'manage_timetable',
@@ -2103,7 +3144,10 @@ Deno.serve(async (request) => {
     '/goals': 'manage_goals',
     '/plan': 'apply_executive_plan',
     '/conflicts': 'detect_schedule_conflicts',
-    '/undo': 'undo_workspace_change'
+    '/undo': 'undo_workspace_change',
+    '/free-windows': 'get_free_windows',
+    '/replan': 'replan_from_now',
+    '/settings': 'manage_settings'
   };
 
   for (const [suffix, toolName] of Object.entries(restRouteMap)) {

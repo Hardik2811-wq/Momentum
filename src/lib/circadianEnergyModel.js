@@ -7,14 +7,19 @@
 import { COGNITIVE_MODALITIES } from './autonomousSemanticOntology.js';
 
 export const CIRCADIAN_ZONES = [
-  { start: '06:00', end: '10:00', label: 'PEAK_COGNITIVE', multiplier: 1.0, ideal: [COGNITIVE_MODALITIES.DEEP_CREATION], desc: 'Maximum prefrontal cortex alertness & working memory' },
-  { start: '10:00', end: '12:30', label: 'SUSTAIN_CREATIVE', multiplier: 0.85, ideal: [COGNITIVE_MODALITIES.DEEP_CREATION, COGNITIVE_MODALITIES.INTELLECTUAL_ABSORPTION], desc: 'High mental bandwidth, low distractibility' },
-  { start: '12:30', end: '13:30', label: 'LUNCH_TRANSITION', multiplier: 0.5, ideal: [COGNITIVE_MODALITIES.DECOMPRESSION_REST, COGNITIVE_MODALITIES.ADMINISTRATIVE_FRICTION], desc: 'Digestive downshift & metabolic diversion' },
-  { start: '13:30', end: '15:30', label: 'POST_LUNCH_TROUGH', multiplier: 0.35, ideal: [COGNITIVE_MODALITIES.ADMINISTRATIVE_FRICTION, COGNITIVE_MODALITIES.DECOMPRESSION_REST], desc: 'Biological alertness dip; avoid heavy logic synthesis' },
-  { start: '15:30', end: '18:00', label: 'SECOND_WIND', multiplier: 0.75, ideal: [COGNITIVE_MODALITIES.EMOTIONAL_SOCIAL, COGNITIVE_MODALITIES.INTELLECTUAL_ABSORPTION], desc: 'Rebound alertness, strong verbal & collaborative flow' },
-  { start: '18:00', end: '20:30', label: 'DECLINING_EXECUTIVE', multiplier: 0.55, ideal: [COGNITIVE_MODALITIES.PHYSICAL_EXHAUSTION, COGNITIVE_MODALITIES.ADMINISTRATIVE_FRICTION], desc: 'Physical motor strength peak, declining willpower reserves' },
-  { start: '20:30', end: '23:59', label: 'EVENING_LOW', multiplier: 0.3, ideal: [COGNITIVE_MODALITIES.DECOMPRESSION_REST], desc: 'Melatonin release priming; low cognitive stamina' }
+  { start: '06:00', end: '10:00', label: 'PEAK_COGNITIVE', type: 'peak', multiplier: 1.0, ideal: [COGNITIVE_MODALITIES.DEEP_CREATION], desc: 'Maximum prefrontal cortex alertness & working memory' },
+  { start: '10:00', end: '12:30', label: 'SUSTAIN_CREATIVE', type: 'peak', multiplier: 0.85, ideal: [COGNITIVE_MODALITIES.DEEP_CREATION, COGNITIVE_MODALITIES.INTELLECTUAL_ABSORPTION], desc: 'High mental bandwidth, low distractibility' },
+  { start: '12:30', end: '13:30', label: 'LUNCH_TRANSITION', type: 'dip', multiplier: 0.5, ideal: [COGNITIVE_MODALITIES.DECOMPRESSION_REST, COGNITIVE_MODALITIES.ADMINISTRATIVE_FRICTION], desc: 'Digestive downshift & metabolic diversion' },
+  { start: '13:30', end: '15:30', label: 'POST_LUNCH_TROUGH', type: 'dip', multiplier: 0.35, ideal: [COGNITIVE_MODALITIES.ADMINISTRATIVE_FRICTION, COGNITIVE_MODALITIES.DECOMPRESSION_REST], desc: 'Biological alertness dip; avoid heavy logic synthesis' },
+  { start: '15:30', end: '18:00', label: 'SECOND_WIND', type: 'second_wind', multiplier: 0.75, ideal: [COGNITIVE_MODALITIES.EMOTIONAL_SOCIAL, COGNITIVE_MODALITIES.INTELLECTUAL_ABSORPTION], desc: 'Rebound alertness, strong verbal & collaborative flow' },
+  { start: '18:00', end: '20:30', label: 'DECLINING_EXECUTIVE', type: 'evening_low', multiplier: 0.55, ideal: [COGNITIVE_MODALITIES.PHYSICAL_EXHAUSTION, COGNITIVE_MODALITIES.ADMINISTRATIVE_FRICTION], desc: 'Physical motor strength peak, declining willpower reserves' },
+  { start: '20:30', end: '23:59', label: 'EVENING_LOW', type: 'evening_low', multiplier: 0.3, ideal: [COGNITIVE_MODALITIES.DECOMPRESSION_REST], desc: 'Melatonin release priming; low cognitive stamina' }
 ];
+
+export function getCircadianType(timeStr = '10:00') {
+  const zone = getCircadianZone(timeStr);
+  return zone?.type || 'peak';
+}
 
 function timeToMin(t = '00:00') {
   const [h, m] = t.split(':').map(Number);
